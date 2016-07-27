@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -141,7 +142,9 @@ public class CouchbaseSourceTask extends SourceTask {
                     // TODO: figure out what offset for snapshot markers mean
                     return null;
             }
-            final Map<String, Long> offset = Collections.singletonMap("bySeqno", record.getInt64("bySeqno"));
+            final Map<String, Object> offset = new HashMap<String, Object>(2);
+            offset.put("partition", record.getInt16("partition"));
+            offset.put("bySeqno", record.getInt64("bySeqno"));
             final Map<String, String> partition = Collections.singletonMap("bucket", bucket);
 
             return new SourceRecord(partition, offset, topic, schema, record);
