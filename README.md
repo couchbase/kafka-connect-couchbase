@@ -12,7 +12,7 @@ Build the connector jar:
 
 After this command, you've got package directory which has the same structure as other Confluent
 connectors and ready to be installed into the system. Assuming you have Confluent platform
-installed as in this guide: http://docs.confluent.io/2.0.0/installation.html, you can copy
+installed as in this guide: http://docs.confluent.io/3.0.0/installation.html, you can copy
 the package to the system location:
 
     $ sudo cp -a target/kafka-connect-couchbase-1.0.0-package/share /usr/
