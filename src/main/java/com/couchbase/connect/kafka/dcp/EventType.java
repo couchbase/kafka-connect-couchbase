@@ -16,11 +16,10 @@
 
 package com.couchbase.connect.kafka.dcp;
 
-import com.couchbase.client.core.message.dcp.DCPRequest;
-import com.couchbase.client.core.message.dcp.ExpirationMessage;
-import com.couchbase.client.core.message.dcp.MutationMessage;
-import com.couchbase.client.core.message.dcp.RemoveMessage;
-import com.couchbase.client.core.message.dcp.SnapshotMarkerMessage;
+import com.couchbase.client.dcp.message.DcpDeletionMessage;
+import com.couchbase.client.dcp.message.DcpExpirationMessage;
+import com.couchbase.client.dcp.message.DcpMutationMessage;
+import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 
@@ -65,13 +64,6 @@ public enum EventType {
         builder.field("bySeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
         builder.field("revSeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
         SCHEMAS.put(EventType.EXPIRATION, builder.build());
-
-        builder = SchemaBuilder.struct().name(EventType.SNAPSHOT.schemaName());
-        builder.field("partition", org.apache.kafka.connect.data.Schema.INT16_SCHEMA);
-        builder.field("startSeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("endSeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("flags", org.apache.kafka.connect.data.Schema.INT32_SCHEMA);
-        SCHEMAS.put(EventType.SNAPSHOT, builder.build());
     }
 
     private final String schemaName;
@@ -80,15 +72,13 @@ public enum EventType {
         this.schemaName = schemaName;
     }
 
-    public static EventType of(DCPRequest message) {
-        if (message instanceof MutationMessage) {
+    public static EventType of(ByteBuf message) {
+        if (DcpMutationMessage.is(message)) {
             return EventType.MUTATION;
-        } else if (message instanceof RemoveMessage) {
+        } else if (DcpDeletionMessage.is(message)) {
             return EventType.DELETION;
-        } else if (message instanceof ExpirationMessage) {
+        } else if (DcpExpirationMessage.is(message)) {
             return EventType.EXPIRATION;
-        } else if (message instanceof SnapshotMarkerMessage) {
-            return EventType.SNAPSHOT;
         }
         return null;
     }

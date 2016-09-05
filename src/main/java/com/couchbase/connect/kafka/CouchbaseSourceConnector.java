@@ -16,12 +16,14 @@
 package com.couchbase.connect.kafka;
 
 
+import com.couchbase.connect.kafka.util.StringUtils;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceConnector;
+import org.apache.kafka.connect.util.ConnectorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +36,13 @@ public class CouchbaseSourceConnector extends SourceConnector {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
     private Map<String, String> configProperties;
     private CouchbaseSourceConnectorConfig config;
+    private static final List<String> partitions = new ArrayList<String>(1024);
+
+    static {
+        for (int i = 0; i < 1024; i++) {
+            partitions.add(Integer.toString(i));
+        }
+    }
 
     @Override
     public String version() {
@@ -57,13 +66,19 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
-        List<Map<String, String>> taskConfigs = new ArrayList<Map<String, String>>(1);
-        Map<String, String> taskProps = new HashMap<>(configProperties);
-        // FIXME: use real partitions
-        taskProps.put(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG, "1,2,3,4,5");
-        taskConfigs.add(taskProps);
+        int numGroups = Math.min(partitions.size(), maxTasks);
+
+        List<List<String>> partitionsGrouped = ConnectorUtils.groupPartitions(partitions, numGroups);
+        List<Map<String, String>> taskConfigs = new ArrayList<Map<String, String>>(partitionsGrouped.size());
+        for (List<String> taskPartitions : partitionsGrouped) {
+            Map<String, String> taskProps = new HashMap<String, String>(configProperties);
+            taskProps.put(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG,
+                    StringUtils.join(taskPartitions, ","));
+            taskConfigs.add(taskProps);
+        }
         return taskConfigs;
     }
+
 
     @Override
     public void stop() {

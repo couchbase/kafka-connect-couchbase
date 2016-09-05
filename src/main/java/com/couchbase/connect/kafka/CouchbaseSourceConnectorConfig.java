@@ -85,6 +85,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
                 .define(CONNECTION_TIMEOUT_MS_CONFIG,
                         ConfigDef.Type.LONG,
+                        10000L,
                         ConfigDef.Importance.LOW,
                         CONNECTION_TIMEOUT_MS_DOC,
                         DATABASE_GROUP, 1,

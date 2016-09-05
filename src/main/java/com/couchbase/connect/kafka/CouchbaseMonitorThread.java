@@ -16,128 +16,73 @@
 
 package com.couchbase.connect.kafka;
 
-import com.couchbase.client.core.CouchbaseCore;
-import com.couchbase.client.core.config.CouchbaseBucketConfig;
-import com.couchbase.client.core.endpoint.dcp.DCPConnection;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.DefaultCoreEnvironment;
-import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.cluster.DisconnectRequest;
-import com.couchbase.client.core.message.cluster.GetClusterConfigRequest;
-import com.couchbase.client.core.message.cluster.GetClusterConfigResponse;
-import com.couchbase.client.core.message.cluster.OpenBucketRequest;
-import com.couchbase.client.core.message.cluster.OpenBucketResponse;
-import com.couchbase.client.core.message.cluster.SeedNodesRequest;
-import com.couchbase.client.core.message.cluster.SeedNodesResponse;
-import com.couchbase.client.core.message.dcp.DCPRequest;
-import com.couchbase.client.core.message.dcp.OpenConnectionRequest;
-import com.couchbase.client.core.message.dcp.OpenConnectionResponse;
+import com.couchbase.client.dcp.Client;
+import com.couchbase.client.dcp.ControlEventHandler;
+import com.couchbase.client.dcp.DataEventHandler;
+import com.couchbase.client.dcp.config.DcpControl;
+import com.couchbase.client.dcp.message.DcpSnapshotMarkerMessage;
+import com.couchbase.client.dcp.message.MessageUtil;
+import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import org.apache.kafka.common.config.types.Password;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.functions.Action1;
-import rx.functions.Func1;
+import rx.Subscription;
 
-import java.util.List;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 public class CouchbaseMonitorThread extends Thread {
-    private static final Random RND = new Random();
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseMonitorThread.class);
 
-    private final String clusterAddress;
-    private final String bucket;
-    private final Password password;
-    private final BlockingQueue<DCPRequest> queue;
-    private final String connectionName;
-    private final CouchbaseCore core;
     private final long connectionTimeout;
+    private final Client client;
+    private final Integer[] partitions;
+    private Subscription subscription;
 
     public CouchbaseMonitorThread(String clusterAddress, String bucket, Password password, long connectionTimeout,
-                                  BlockingQueue<DCPRequest> queue) {
-        this.clusterAddress = clusterAddress;
-        this.bucket = bucket;
-        this.password = password;
+                                  final BlockingQueue<ByteBuf> queue, Integer[] partitions) {
         this.connectionTimeout = connectionTimeout;
-        this.queue = queue;
-        this.connectionName = generateConnectionName();
-        CoreEnvironment env = DefaultCoreEnvironment.builder()
-                .dcpEnabled(true)
-                .dcpConnectionName(connectionName)
+        this.partitions = partitions;
+        client = Client.configure()
+                .hostnames(clusterAddress)
+                .bucket(bucket)
+                .password(password.value())
+                .controlParam(DcpControl.Names.CONNECTION_BUFFER_SIZE, 20480)
+                .bufferAckWatermark(60)
                 .build();
-
-        core = new CouchbaseCore(env);
+        client.controlEventHandler(new ControlEventHandler() {
+            @Override
+            public void onEvent(ByteBuf event) {
+                if (DcpSnapshotMarkerMessage.is(event)) {
+                    client.acknowledgeBuffer(event);
+                }
+                event.release();
+            }
+        });
+        client.dataEventHandler(new DataEventHandler() {
+            @Override
+            public void onEvent(ByteBuf event) {
+                try {
+                    queue.put(event);
+                } catch (InterruptedException e) {
+                    LOGGER.error("Unable to put DCP request into the queue", e);
+                }
+            }
+        });
     }
 
-    private static String generateConnectionName() {
-        return "cbConnect-" + System.currentTimeMillis() + "-" + RND.nextInt();
+    public void acknowledgeBuffer(ByteBuf event) {
+        client.acknowledgeBuffer(event);
     }
 
     @Override
     public void run() {
-        OpenConnectionResponse response = core
-                .<SeedNodesResponse>send(new SeedNodesRequest(clusterAddress))
-                .flatMap(new Func1<SeedNodesResponse, Observable<OpenBucketResponse>>() {
-                    @Override
-                    public Observable<OpenBucketResponse> call(SeedNodesResponse response) {
-                        return core.send(new OpenBucketRequest(bucket, password.value()));
-                    }
-                })
-                .flatMap(new Func1<OpenBucketResponse, Observable<OpenConnectionResponse>>() {
-                    @Override
-                    public Observable<OpenConnectionResponse> call(OpenBucketResponse response) {
-                        return core.send(new OpenConnectionRequest(connectionName, bucket));
-                    }
-                })
-                .timeout(connectionTimeout, TimeUnit.MILLISECONDS)
-                .toBlocking()
-                .single();
-        LOGGER.info("Established DCP connection {}", connectionName);
-        final DCPConnection connection = response.connection();
-        Observable.range(0, numberOfPartitions())
-                .flatMap(new Func1<Integer, Observable<ResponseStatus>>() {
-                    @Override
-                    public Observable<ResponseStatus> call(Integer partition) {
-                        return connection.addStream(partition.shortValue());
-                    }
-                })
-                .toList()
-                .flatMap(new Func1<List<ResponseStatus>, Observable<DCPRequest>>() {
-                    @Override
-                    public Observable<DCPRequest> call(List<ResponseStatus> statuses) {
-                        return connection.subject();
-                    }
-                })
-                .toBlocking()
-                .forEach(new Action1<DCPRequest>() {
-                    @Override
-                    public void call(DCPRequest event) {
-                        try {
-                            queue.put(event);
-                        } catch (InterruptedException e) {
-                            LOGGER.error("Unable to put DCP request into the queue", e);
-                        }
-                    }
-                });
+        client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
+        client.initializeFromBeginningToNoEnd().await();
+        subscription = client.startStreams(partitions).subscribe();
     }
 
     public void shutdown() {
-        LOGGER.info("Shutting down DCP connection {}", connectionName);
-        core.send(new DisconnectRequest()).subscribe();
-    }
-
-    private int numberOfPartitions() {
-        return core
-                .<GetClusterConfigResponse>send(new GetClusterConfigRequest())
-                .map(new Func1<GetClusterConfigResponse, Integer>() {
-                    @Override
-                    public Integer call(GetClusterConfigResponse response) {
-                        CouchbaseBucketConfig config = (CouchbaseBucketConfig) response.config().bucketConfig(bucket);
-                        return config.numberOfPartitions();
-                    }
-                }).toBlocking().singleOrDefault(0);
+        subscription.unsubscribe();
+        client.disconnect().await();
     }
 }

@@ -16,11 +16,11 @@
 
 package com.couchbase.connect.kafka;
 
-import com.couchbase.client.core.message.dcp.DCPRequest;
-import com.couchbase.client.core.message.dcp.ExpirationMessage;
-import com.couchbase.client.core.message.dcp.MutationMessage;
-import com.couchbase.client.core.message.dcp.RemoveMessage;
-import com.couchbase.client.core.message.dcp.SnapshotMarkerMessage;
+import com.couchbase.client.dcp.message.DcpDeletionMessage;
+import com.couchbase.client.dcp.message.DcpExpirationMessage;
+import com.couchbase.client.dcp.message.DcpMutationMessage;
+import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigException;
@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +51,7 @@ public class CouchbaseSourceTask extends SourceTask {
     private CouchbaseSourceConnectorConfig config;
     private Map<String, String> configProperties;
     private CouchbaseMonitorThread couchbaseMonitorThread;
-    private BlockingQueue<DCPRequest> queue;
+    private BlockingQueue<ByteBuf> queue;
     private String topic;
     private String bucket;
 
@@ -73,9 +74,14 @@ public class CouchbaseSourceTask extends SourceTask {
         Password password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
         String clusterAddress = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
+        List<String> partitionsList = config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG);
+        Integer[] partitions = new Integer[partitionsList.size()];
+        for (int i = 0; i < partitionsList.size(); i++) {
+            partitions[i] = Integer.parseInt(partitionsList.get(i));
+        }
 
-        queue = new LinkedBlockingQueue<DCPRequest>();
-        couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout, queue);
+        queue = new LinkedBlockingQueue<ByteBuf>();
+        couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout, queue, partitions);
         couchbaseMonitorThread.start();
     }
 
@@ -84,12 +90,14 @@ public class CouchbaseSourceTask extends SourceTask {
         List<SourceRecord> results = new ArrayList<SourceRecord>();
 
         while (true) {
-            DCPRequest event = queue.poll(100, TimeUnit.MILLISECONDS);
+            ByteBuf event = queue.poll(100, TimeUnit.MILLISECONDS);
             if (event != null) {
                 SourceRecord record = convert(event);
                 if (record != null) {
                     results.add(record);
                 }
+                couchbaseMonitorThread.acknowledgeBuffer(event);
+                event.release();
             } else if (!results.isEmpty()) {
                 LOGGER.info("Poll returns {} result(s)", results.size());
                 return results;
@@ -97,50 +105,34 @@ public class CouchbaseSourceTask extends SourceTask {
         }
     }
 
-    public SourceRecord convert(DCPRequest event) {
+    public SourceRecord convert(ByteBuf event) {
         EventType type = EventType.of(event);
         if (type != null) {
             Schema schema = EventType.SCHEMAS.get(type);
             Struct record = new Struct(schema);
-            switch (type) {
-                case MUTATION:
-                    MutationMessage mutation = (MutationMessage) event;
-                    record.put("partition", mutation.partition());
-                    record.put("key", mutation.key());
-                    record.put("expiration", mutation.expiration());
-                    record.put("flags", mutation.flags());
-                    record.put("cas", mutation.cas());
-                    record.put("lockTime", mutation.lockTime());
-                    record.put("bySeqno", mutation.bySequenceNumber());
-                    record.put("revSeqno", mutation.revisionSequenceNumber());
-                    byte[] content = new byte[mutation.content().readableBytes()];
-                    mutation.content().readBytes(content);
-                    record.put("content", content);
-                    break;
-                case DELETION:
-                    RemoveMessage deletion = (RemoveMessage) event;
-                    record.put("partition", deletion.partition());
-                    record.put("key", deletion.key());
-                    record.put("cas", deletion.cas());
-                    record.put("bySeqno", deletion.bySequenceNumber());
-                    record.put("revSeqno", deletion.revisionSequenceNumber());
-                    break;
-                case EXPIRATION:
-                    ExpirationMessage expiration = (ExpirationMessage) event;
-                    record.put("partition", expiration.partition());
-                    record.put("key", expiration.key());
-                    record.put("cas", expiration.cas());
-                    record.put("bySeqno", expiration.bySequenceNumber());
-                    record.put("revSeqno", expiration.revisionSequenceNumber());
-                    break;
-                case SNAPSHOT:
-                    SnapshotMarkerMessage snapshot = (SnapshotMarkerMessage) event;
-                    record.put("partition", snapshot.partition());
-                    record.put("startSeqno", snapshot.startSequenceNumber());
-                    record.put("endSeqno", snapshot.endSequenceNumber());
-                    record.put("flags", snapshot.flags());
-                    // TODO: figure out what offset for snapshot markers mean
-                    return null;
+            if (DcpMutationMessage.is(event)) {
+                record.put("partition", DcpMutationMessage.partition(event));
+                record.put("key", bufToString(DcpMutationMessage.key(event)));
+                record.put("expiration", DcpMutationMessage.expiry(event));
+                record.put("flags", DcpMutationMessage.flags(event));
+                record.put("cas", DcpMutationMessage.cas(event));
+                record.put("lockTime", DcpMutationMessage.lockTime(event));
+                record.put("bySeqno", DcpMutationMessage.bySeqno(event));
+                record.put("revSeqno", DcpMutationMessage.revisionSeqno(event));
+                record.put("content", bufToBytes(DcpMutationMessage.content(event)));
+            } else if (DcpDeletionMessage.is(event)) {
+                record.put("partition", DcpDeletionMessage.partition(event));
+                record.put("key", bufToString(DcpDeletionMessage.key(event)));
+                record.put("cas", DcpDeletionMessage.cas(event));
+                record.put("bySeqno", DcpDeletionMessage.bySeqno(event));
+                record.put("revSeqno", DcpDeletionMessage.revisionSeqno(event));
+            } else if (DcpExpirationMessage.is(event)) {
+                record.put("partition", DcpExpirationMessage.partition(event));
+                // FIXME: uncomment in next version
+                // record.put("key", bufToString(DcpExpirationMessage.key(event)));
+                // record.put("cas", DcpExpirationMessage.cas(event));
+                record.put("bySeqno", DcpExpirationMessage.bySeqno(event));
+                record.put("revSeqno", DcpExpirationMessage.revisionSeqno(event));
             }
             final Map<String, Object> offset = new HashMap<String, Object>(2);
             offset.put("partition", record.getInt16("partition"));
@@ -160,5 +152,16 @@ public class CouchbaseSourceTask extends SourceTask {
         } catch (InterruptedException e) {
             // Ignore, shouldn't be interrupted
         }
+    }
+    
+    private static String bufToString(ByteBuf buf) {
+        return new String(bufToBytes(buf), CharsetUtil.UTF_8);
+    }
+
+    private static byte[] bufToBytes(ByteBuf buf) {
+        byte[] bytes;
+        bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        return bytes;
     }
 }
