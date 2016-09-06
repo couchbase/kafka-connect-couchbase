@@ -1,12 +1,14 @@
-# Couchbase Connector
+# Kafka Connect Couchbase Connector
 
-The Couchbase connector allows you to import data from Couchbase Server into Kafka topics.
+kafka-connect-couchbase is a [Kafka Connector](http://kafka.apache.org/documentation.html#connect)
+for loading data from Couchbase Server database into Kafka.
 
 ## Quickstart
 
 Start by setting up Couchbase Server, and loading sample bucket called `travel-sample`.
 
-Build the connector jar:
+To build a development version you'll need a recent version of Kafka. You can build
+kafka-connect-couchbase with Maven using the standard lifecycle phases. Build the connector jar:
 
     $ mvn package
 
@@ -51,3 +53,12 @@ To observe replicated events from the cluster, run CLI kafka consumer:
 
     $ kafka-avro-console-consumer --new-consumer --bootstrap-server localhost:9092 \
                                   --topic test-couchbase --from-beginning
+
+# Contribute
+
+- Source Code: https://github.com/couchbaselabs/kafka-connect-couchbase
+- Issue Tracker: https://issues.couchbase.com/projects/KAFKAC
+
+# License
+
+The project is licensed under the Apache 2 license.
