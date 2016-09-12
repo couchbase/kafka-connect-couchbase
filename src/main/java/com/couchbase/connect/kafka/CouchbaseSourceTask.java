@@ -24,7 +24,6 @@ import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.common.config.types.Password;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -71,8 +70,9 @@ public class CouchbaseSourceTask extends SourceTask {
 
         topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
         bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-        Password password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
+        String password = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
         List<String> clusterAddress = getList(config, CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         List<String> partitionsList = config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG);
         Integer[] partitions = new Integer[partitionsList.size()];

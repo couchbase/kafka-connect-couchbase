@@ -75,7 +75,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTION_BUCKET_DISPLAY)
 
                 .define(CONNECTION_PASSWORD_CONFIG,
-                        ConfigDef.Type.PASSWORD,
+                        ConfigDef.Type.STRING,
                         CONNECTION_PASSWORD_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_PASSWORD_DOC,

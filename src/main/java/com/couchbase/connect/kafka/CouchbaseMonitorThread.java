@@ -39,14 +39,14 @@ public class CouchbaseMonitorThread extends Thread {
     private final Integer[] partitions;
     private Subscription subscription;
 
-    public CouchbaseMonitorThread(List<String> clusterAddress, String bucket, Password password, long connectionTimeout,
+    public CouchbaseMonitorThread(List<String> clusterAddress, String bucket, String password, long connectionTimeout,
                                   final BlockingQueue<ByteBuf> queue, Integer[] partitions) {
         this.connectionTimeout = connectionTimeout;
         this.partitions = partitions;
         client = Client.configure()
                 .hostnames(clusterAddress)
                 .bucket(bucket)
-                .password(password.value())
+                .password(password)
                 .controlParam(DcpControl.Names.CONNECTION_BUFFER_SIZE, 20480)
                 .bufferAckWatermark(60)
                 .build();
