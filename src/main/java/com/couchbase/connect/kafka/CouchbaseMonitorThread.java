@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Subscription;
 
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 public class CouchbaseMonitorThread extends Thread {
@@ -38,7 +39,7 @@ public class CouchbaseMonitorThread extends Thread {
     private final Integer[] partitions;
     private Subscription subscription;
 
-    public CouchbaseMonitorThread(String clusterAddress, String bucket, Password password, long connectionTimeout,
+    public CouchbaseMonitorThread(List<String> clusterAddress, String bucket, Password password, long connectionTimeout,
                                   final BlockingQueue<ByteBuf> queue, Integer[] partitions) {
         this.connectionTimeout = connectionTimeout;
         this.partitions = partitions;
