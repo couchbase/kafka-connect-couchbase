@@ -70,7 +70,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         ConfigDef.Type.STRING,
                         ConfigDef.Importance.HIGH,
                         CONNECTION_BUCKET_DOC,
-                        DATABASE_GROUP, 1,
+                        DATABASE_GROUP, 2,
                         ConfigDef.Width.LONG,
                         CONNECTION_BUCKET_DISPLAY)
 
@@ -79,7 +79,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTION_PASSWORD_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_PASSWORD_DOC,
-                        DATABASE_GROUP, 1,
+                        DATABASE_GROUP, 3,
                         ConfigDef.Width.LONG,
                         CONNECTION_PASSWORD_DISPLAY)
 
@@ -88,7 +88,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         10000L,
                         ConfigDef.Importance.LOW,
                         CONNECTION_TIMEOUT_MS_DOC,
-                        DATABASE_GROUP, 1,
+                        DATABASE_GROUP, 4,
                         ConfigDef.Width.LONG,
                         CONNECTION_TIMEOUT_MS_DISPLAY)
 
