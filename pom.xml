@@ -52,9 +52,9 @@
     <properties>
         <java-compat.version>1.6</java-compat.version>
         <confluent.version>3.0.0</confluent.version>
-        <kafka.version>0.10.0.0-cp1</kafka.version>
+        <kafka.version>0.10.0.1</kafka.version>
         <junit.version>4.12</junit.version>
-        <dcp-client.version>0.1.0</dcp-client.version>
+        <dcp-client.version>0.3.0</dcp-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
     </properties>

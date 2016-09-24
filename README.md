@@ -46,7 +46,7 @@ Start the Schema Registry, also in its own terminal.
 Now, run the connector in a standalone Kafka Connect worker in another terminal (this assumes
 Avro settings and that Kafka and the Schema Registry are running locally on the default ports):
 
-    $ sudo connect-standalone /etc/schema-registry/connect-avro-standalone.properties \
+    $ sudo connect-standalone /etc/kafka/connect-standalone.properties \
                               /etc/kafka-connect-couchbase/quickstart-couchbase.properties
 
 To observe replicated events from the cluster, run CLI kafka consumer:

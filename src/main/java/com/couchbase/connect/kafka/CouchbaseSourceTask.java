@@ -19,6 +19,9 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
+import com.couchbase.client.dcp.state.PartitionState;
+import com.couchbase.client.dcp.state.SessionState;
+import com.couchbase.client.dcp.state.StateFormat;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.dcp.EventType;
@@ -53,6 +56,7 @@ public class CouchbaseSourceTask extends SourceTask {
     private BlockingQueue<ByteBuf> queue;
     private String topic;
     private String bucket;
+    private volatile boolean running;
 
     @Override
     public String version() {
@@ -75,13 +79,37 @@ public class CouchbaseSourceTask extends SourceTask {
 
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         List<String> partitionsList = config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG);
-        Integer[] partitions = new Integer[partitionsList.size()];
+
+        Short[] partitions = new Short[partitionsList.size()];
+        List<Map<String, String>> kafkaPartitions = new ArrayList<Map<String, String>>(1);
         for (int i = 0; i < partitionsList.size(); i++) {
-            partitions[i] = Integer.parseInt(partitionsList.get(i));
+            partitions[i] = Short.parseShort(partitionsList.get(i));
+            Map<String, String> kafkaPartition = new HashMap<String, String>(2);
+            kafkaPartition.put("bucket", bucket);
+            kafkaPartition.put("partition", partitions[i].toString());
+            kafkaPartitions.add(kafkaPartition);
+        }
+        Map<Map<String, String>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(kafkaPartitions);
+        SessionState sessionState = new SessionState();
+        sessionState.setToBeginningWithNoEnd(1024); // FIXME: literal
+        for (Map<String, String> kafkaPartition : kafkaPartitions) {
+            Map<String, Object> offset = offsets.get(kafkaPartition);
+            Short partition = Short.parseShort(kafkaPartition.get("partition"));
+            PartitionState partitionState = sessionState.get(partition);
+            long startSeqno = 0;
+            if (offset != null && offset.containsKey("bySeqno")) {
+                startSeqno = (Long) offset.get("bySeqno");
+            }
+            partitionState.setStartSeqno(startSeqno);
+            partitionState.setEndSeqno(0xffffffff);
+            partitionState.setSnapshotStartSeqno(startSeqno);
+            partitionState.setSnapshotEndSeqno(startSeqno);
+            sessionState.set(partition, partitionState);
         }
 
+        running = true;
         queue = new LinkedBlockingQueue<ByteBuf>();
-        couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout, queue, partitions);
+        couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout, queue, partitions, sessionState);
         couchbaseMonitorThread.start();
     }
 
@@ -99,7 +127,7 @@ public class CouchbaseSourceTask extends SourceTask {
     public List<SourceRecord> poll() throws InterruptedException {
         List<SourceRecord> results = new ArrayList<SourceRecord>();
 
-        while (true) {
+        while (running) {
             ByteBuf event = queue.poll(100, TimeUnit.MILLISECONDS);
             if (event != null) {
                 SourceRecord record = convert(event);
@@ -113,6 +141,7 @@ public class CouchbaseSourceTask extends SourceTask {
                 return results;
             }
         }
+        return results;
     }
 
     public SourceRecord convert(ByteBuf event) {
@@ -138,16 +167,16 @@ public class CouchbaseSourceTask extends SourceTask {
                 record.put("revSeqno", DcpDeletionMessage.revisionSeqno(event));
             } else if (DcpExpirationMessage.is(event)) {
                 record.put("partition", DcpExpirationMessage.partition(event));
-                // FIXME: uncomment in next version
-                // record.put("key", bufToString(DcpExpirationMessage.key(event)));
-                // record.put("cas", DcpExpirationMessage.cas(event));
+                record.put("key", bufToString(DcpExpirationMessage.key(event)));
+                record.put("cas", DcpExpirationMessage.cas(event));
                 record.put("bySeqno", DcpExpirationMessage.bySeqno(event));
                 record.put("revSeqno", DcpExpirationMessage.revisionSeqno(event));
             }
             final Map<String, Object> offset = new HashMap<String, Object>(2);
-            offset.put("partition", record.getInt16("partition"));
             offset.put("bySeqno", record.getInt64("bySeqno"));
-            final Map<String, String> partition = Collections.singletonMap("bucket", bucket);
+            final Map<String, String> partition = new HashMap<String, String>(2);
+            partition.put("bucket", bucket);
+            partition.put("partition", record.getInt16("partition").toString());
 
             return new SourceRecord(partition, offset, topic, schema, record);
         }
@@ -156,6 +185,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
     @Override
     public void stop() {
+        running = false;
         couchbaseMonitorThread.shutdown();
         try {
             couchbaseMonitorThread.join(MAX_TIMEOUT);

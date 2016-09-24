@@ -19,14 +19,18 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
+import com.couchbase.client.dcp.StreamFrom;
+import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.DcpControl;
+import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.DcpSnapshotMarkerMessage;
-import com.couchbase.client.dcp.message.MessageUtil;
+import com.couchbase.client.dcp.state.PartitionState;
+import com.couchbase.client.dcp.state.SessionState;
+import com.couchbase.client.dcp.state.StateFormat;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import org.apache.kafka.common.config.types.Password;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Subscription;
+import rx.functions.Action1;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -36,13 +40,14 @@ public class CouchbaseMonitorThread extends Thread {
 
     private final long connectionTimeout;
     private final Client client;
-    private final Integer[] partitions;
-    private Subscription subscription;
+    private final Short[] partitions;
+    private final SessionState initialSessionState;
 
     public CouchbaseMonitorThread(List<String> clusterAddress, String bucket, String password, long connectionTimeout,
-                                  final BlockingQueue<ByteBuf> queue, Integer[] partitions) {
+                                  final BlockingQueue<ByteBuf> queue, Short[] partitions, SessionState sessionState) {
         this.connectionTimeout = connectionTimeout;
         this.partitions = partitions;
+        this.initialSessionState = sessionState;
         client = Client.configure()
                 .hostnames(clusterAddress)
                 .bucket(bucket)
@@ -78,12 +83,26 @@ public class CouchbaseMonitorThread extends Thread {
     @Override
     public void run() {
         client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
-        client.initializeFromBeginningToNoEnd().await();
-        subscription = client.startStreams(partitions).subscribe();
+        client.initializeState(StreamFrom.BEGINNING, StreamTo.INFINITY).await();
+        client.failoverLogs(partitions).forEach(new Action1<ByteBuf>() {
+            @Override
+            public void call(ByteBuf event) {
+                short partition = DcpFailoverLogResponse.vbucket(event);
+                int numEntries = DcpFailoverLogResponse.numLogEntries(event);
+                PartitionState ps = initialSessionState.get(partition);
+                for (int i = 0; i < numEntries; i++) {
+                    ps.addToFailoverLog(
+                            DcpFailoverLogResponse.seqnoEntry(event, i),
+                            DcpFailoverLogResponse.vbuuidEntry(event, i)
+                    );
+                }
+                client.sessionState().set(partition, ps);
+            }
+        });
+        client.startStreaming(partitions).await();
     }
 
     public void shutdown() {
-        subscription.unsubscribe();
         client.disconnect().await();
     }
 }
