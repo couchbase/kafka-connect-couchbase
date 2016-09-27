@@ -51,7 +51,7 @@ Avro settings and that Kafka and the Schema Registry are running locally on the 
 
 To observe replicated events from the cluster, run CLI kafka consumer:
 
-    $ kafka-avro-console-consumer --new-consumer --bootstrap-server localhost:9092 \
+    $ kafka-console-consumer --new-consumer --bootstrap-server localhost:9092 \
                                   --topic test-couchbase --from-beginning
 
 # Contribute
