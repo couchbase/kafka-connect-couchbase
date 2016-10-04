@@ -19,12 +19,14 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
+import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.dcp.state.StateFormat;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.dcp.EventType;
+import com.couchbase.connect.kafka.util.Schemas;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.data.Schema;
@@ -147,38 +149,49 @@ public class CouchbaseSourceTask extends SourceTask {
     public SourceRecord convert(ByteBuf event) {
         EventType type = EventType.of(event);
         if (type != null) {
-            Schema schema = EventType.SCHEMAS.get(type);
+            Schema schema = Schemas.VALUE_SCHEMAS.get(type);
             Struct record = new Struct(schema);
+            String key;
+            long seqno;
             if (DcpMutationMessage.is(event)) {
+                key = bufToString(DcpMutationMessage.key(event));
+                seqno = DcpMutationMessage.bySeqno(event);
                 record.put("partition", DcpMutationMessage.partition(event));
-                record.put("key", bufToString(DcpMutationMessage.key(event)));
+                record.put("key", key);
                 record.put("expiration", DcpMutationMessage.expiry(event));
                 record.put("flags", DcpMutationMessage.flags(event));
                 record.put("cas", DcpMutationMessage.cas(event));
                 record.put("lockTime", DcpMutationMessage.lockTime(event));
-                record.put("bySeqno", DcpMutationMessage.bySeqno(event));
+                record.put("bySeqno", seqno);
                 record.put("revSeqno", DcpMutationMessage.revisionSeqno(event));
                 record.put("content", bufToBytes(DcpMutationMessage.content(event)));
             } else if (DcpDeletionMessage.is(event)) {
+                key = bufToString(DcpDeletionMessage.key(event));
+                seqno = DcpDeletionMessage.bySeqno(event);
                 record.put("partition", DcpDeletionMessage.partition(event));
-                record.put("key", bufToString(DcpDeletionMessage.key(event)));
+                record.put("key", key);
                 record.put("cas", DcpDeletionMessage.cas(event));
-                record.put("bySeqno", DcpDeletionMessage.bySeqno(event));
+                record.put("bySeqno", seqno);
                 record.put("revSeqno", DcpDeletionMessage.revisionSeqno(event));
             } else if (DcpExpirationMessage.is(event)) {
+                key = bufToString(DcpExpirationMessage.key(event));
+                seqno = DcpExpirationMessage.bySeqno(event);
                 record.put("partition", DcpExpirationMessage.partition(event));
-                record.put("key", bufToString(DcpExpirationMessage.key(event)));
+                record.put("key", key);
                 record.put("cas", DcpExpirationMessage.cas(event));
-                record.put("bySeqno", DcpExpirationMessage.bySeqno(event));
+                record.put("bySeqno", seqno);
                 record.put("revSeqno", DcpExpirationMessage.revisionSeqno(event));
+            } else {
+                LOGGER.warn("unexpected event type {}", event.getByte(1));
+                return null;
             }
             final Map<String, Object> offset = new HashMap<String, Object>(2);
-            offset.put("bySeqno", record.getInt64("bySeqno"));
+            offset.put("bySeqno", seqno);
             final Map<String, String> partition = new HashMap<String, String>(2);
             partition.put("bucket", bucket);
             partition.put("partition", record.getInt16("partition").toString());
 
-            return new SourceRecord(partition, offset, topic, schema, record);
+            return new SourceRecord(partition, offset, topic, Schemas.KEY_SCHEMA, key, schema, record);
         }
         return null;
     }

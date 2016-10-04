@@ -32,40 +32,6 @@ public enum EventType {
     EXPIRATION("expiration"),
     SNAPSHOT("snapshot");
 
-    public static final Map<EventType, Schema> SCHEMAS = new HashMap<EventType, Schema>();
-
-    static {
-        SchemaBuilder builder;
-
-        builder = SchemaBuilder.struct().name(EventType.MUTATION.schemaName());
-        builder.field("partition", org.apache.kafka.connect.data.Schema.INT16_SCHEMA);
-        builder.field("key", org.apache.kafka.connect.data.Schema.STRING_SCHEMA);
-        builder.field("expiration", org.apache.kafka.connect.data.Schema.INT32_SCHEMA);
-        builder.field("flags", org.apache.kafka.connect.data.Schema.INT32_SCHEMA);
-        builder.field("cas", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("lockTime", org.apache.kafka.connect.data.Schema.INT32_SCHEMA);
-        builder.field("bySeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("revSeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("content", org.apache.kafka.connect.data.Schema.BYTES_SCHEMA);
-        SCHEMAS.put(EventType.MUTATION, builder.build());
-
-        builder = SchemaBuilder.struct().name(EventType.DELETION.schemaName());
-        builder.field("partition", org.apache.kafka.connect.data.Schema.INT16_SCHEMA);
-        builder.field("key", org.apache.kafka.connect.data.Schema.STRING_SCHEMA);
-        builder.field("cas", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("bySeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("revSeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        SCHEMAS.put(EventType.DELETION, builder.build());
-
-        builder = SchemaBuilder.struct().name(EventType.EXPIRATION.schemaName());
-        builder.field("partition", org.apache.kafka.connect.data.Schema.INT16_SCHEMA);
-        builder.field("key", org.apache.kafka.connect.data.Schema.STRING_SCHEMA);
-        builder.field("cas", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("bySeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        builder.field("revSeqno", org.apache.kafka.connect.data.Schema.INT64_SCHEMA);
-        SCHEMAS.put(EventType.EXPIRATION, builder.build());
-    }
-
     private final String schemaName;
 
     EventType(String schemaName) {
