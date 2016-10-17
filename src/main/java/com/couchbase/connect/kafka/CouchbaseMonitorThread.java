@@ -26,7 +26,6 @@ import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.DcpSnapshotMarkerMessage;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
-import com.couchbase.client.dcp.state.StateFormat;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,17 +37,16 @@ import java.util.concurrent.BlockingQueue;
 public class CouchbaseMonitorThread extends Thread {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseMonitorThread.class);
 
-    private final long connectionTimeout;
     private final Client client;
     private final Short[] partitions;
     private final SessionState initialSessionState;
 
     public CouchbaseMonitorThread(List<String> clusterAddress, String bucket, String password, long connectionTimeout,
                                   final BlockingQueue<ByteBuf> queue, Short[] partitions, SessionState sessionState) {
-        this.connectionTimeout = connectionTimeout;
         this.partitions = partitions;
         this.initialSessionState = sessionState;
         client = Client.configure()
+                .connectTimeout(connectionTimeout)
                 .hostnames(clusterAddress)
                 .bucket(bucket)
                 .password(password)
