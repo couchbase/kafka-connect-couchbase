@@ -19,10 +19,8 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
-import com.couchbase.client.dcp.state.StateFormat;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.dcp.EventType;
@@ -38,8 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +73,7 @@ public class CouchbaseSourceTask extends SourceTask {
         topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
         bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
         String password = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
-        List<String> clusterAddress = getList(config, CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+        List<String> clusterAddress = config.getListWorkaround(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
 
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         List<String> partitionsList = config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG);
@@ -93,7 +89,7 @@ public class CouchbaseSourceTask extends SourceTask {
         }
         Map<Map<String, String>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(kafkaPartitions);
         SessionState sessionState = new SessionState();
-        sessionState.setToBeginningWithNoEnd(1024); // FIXME: literal
+        sessionState.setToBeginningWithNoEnd(1024);
         for (Map<String, String> kafkaPartition : kafkaPartitions) {
             Map<String, Object> offset = offsets.get(kafkaPartition);
             Short partition = Short.parseShort(kafkaPartition.get("partition"));
@@ -113,16 +109,6 @@ public class CouchbaseSourceTask extends SourceTask {
         queue = new LinkedBlockingQueue<ByteBuf>();
         couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout, queue, partitions, sessionState);
         couchbaseMonitorThread.start();
-    }
-
-    // FIXME: remove when type handling will be fixed in Confluent Control Center
-    private static List<String> getList(CouchbaseSourceConnectorConfig config, String key) {
-        String stringValue = config.getString(key);
-        if (stringValue.isEmpty()) {
-            return Collections.emptyList();
-        } else {
-            return Arrays.asList(stringValue.split("\\s*,\\s*", -1));
-        }
     }
 
     @Override

@@ -19,6 +19,9 @@ package com.couchbase.connect.kafka;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class CouchbaseSourceConnectorConfig extends AbstractConfig {
@@ -104,5 +107,15 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
     public static void main(String[] args) {
         System.out.println(config.toRst());
+    }
+
+    // FIXME: remove when type handling will be fixed in Confluent Control Center
+    public List<String> getListWorkaround(String key) {
+        String stringValue = getString(key);
+        if (stringValue.isEmpty()) {
+            return Collections.emptyList();
+        } else {
+            return Arrays.asList(stringValue.split("\\s*,\\s*", -1));
+        }
     }
 }

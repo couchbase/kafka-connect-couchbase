@@ -16,6 +16,7 @@
 package com.couchbase.connect.kafka;
 
 
+import com.couchbase.connect.kafka.util.Cluster;
 import com.couchbase.connect.kafka.util.StringUtils;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigDef;
@@ -28,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,13 +38,8 @@ public class CouchbaseSourceConnector extends SourceConnector {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
     private Map<String, String> configProperties;
     private CouchbaseSourceConnectorConfig config;
-    private static final List<String> partitions = new ArrayList<String>(1024);
-
-    static {
-        for (int i = 0; i < 1024; i++) {
-            partitions.add(Integer.toString(i));
-        }
-    }
+    private int numberOfPartitions;
+    private List<String> partitions;
 
     @Override
     public String version() {
@@ -54,8 +51,20 @@ public class CouchbaseSourceConnector extends SourceConnector {
         try {
             configProperties = properties;
             config = new CouchbaseSourceConnectorConfig(configProperties);
+            String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+            String password = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
+            List<String> clusterAddress = config.getListWorkaround(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+            numberOfPartitions = Cluster.numberOfPartitions(bucket, password, clusterAddress);
+            if (numberOfPartitions == 0) {
+                throw new ConnectException("Cannot determine number of Couchbase partitions");
+            }
+            partitions = new ArrayList<String>(numberOfPartitions);
+            for (int i = 0; i < numberOfPartitions; i++) {
+                partitions.add(Integer.toString(i));
+            }
+            LOGGER.info("partitions: {}", Arrays.toString(partitions.toArray()));
         } catch (ConfigException e) {
-            throw new ConnectException("Couldn't start CouchbaseSourceConnector due to configuration error", e);
+            throw new ConnectException("Cannot start CouchbaseSourceConnector due to configuration error", e);
         }
     }
 
@@ -66,7 +75,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
-        int numGroups = Math.min(partitions.size(), maxTasks);
+        int numGroups = Math.min(numberOfPartitions, maxTasks);
 
         List<List<String>> partitionsGrouped = ConnectorUtils.groupPartitions(partitions, numGroups);
         List<Map<String, String>> taskConfigs = new ArrayList<Map<String, String>>(partitionsGrouped.size());
