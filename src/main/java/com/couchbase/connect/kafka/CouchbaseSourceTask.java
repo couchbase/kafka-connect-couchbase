@@ -19,10 +19,12 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
+import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
+import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.util.Schemas;
 import com.couchbase.connect.kafka.util.Version;
@@ -37,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -51,7 +54,7 @@ public class CouchbaseSourceTask extends SourceTask {
     private CouchbaseSourceConnectorConfig config;
     private Map<String, String> configProperties;
     private CouchbaseMonitorThread couchbaseMonitorThread;
-    private BlockingQueue<ByteBuf> queue;
+    private BlockingQueue<Event> queue;
     private String topic;
     private String bucket;
     private volatile boolean running;
@@ -74,6 +77,7 @@ public class CouchbaseSourceTask extends SourceTask {
         bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
         String password = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
         List<String> clusterAddress = config.getListWorkaround(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+        boolean useSnapshots = config.getBoolean(CouchbaseSourceConnectorConfig.USE_SNAPSHOTS_CONFIG);
 
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         List<String> partitionsList = config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG);
@@ -105,24 +109,29 @@ public class CouchbaseSourceTask extends SourceTask {
         }
 
         running = true;
-        queue = new LinkedBlockingQueue<ByteBuf>();
-        couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout, queue, partitions, sessionState);
+        queue = new LinkedBlockingQueue<Event>();
+        couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout,
+                queue, partitions, sessionState, useSnapshots);
         couchbaseMonitorThread.start();
     }
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
-        List<SourceRecord> results = new ArrayList<SourceRecord>();
+        List<SourceRecord> results = new LinkedList<SourceRecord>();
 
         while (running) {
-            ByteBuf event = queue.poll(100, TimeUnit.MILLISECONDS);
+            Event event = queue.poll(100, TimeUnit.MILLISECONDS);
             if (event != null) {
-                SourceRecord record = convert(event);
-                if (record != null) {
-                    results.add(record);
+                for (ByteBuf message : event) {
+                    SourceRecord record = convert(message);
+                    if (record != null) {
+                        results.add(record);
+                    }
                 }
-                couchbaseMonitorThread.acknowledgeBuffer(event);
-                event.release();
+                couchbaseMonitorThread.acknowledge(event);
+                for (ByteBuf message : event) {
+                    message.release();
+                }
             } else if (!results.isEmpty()) {
                 LOGGER.info("Poll returns {} result(s)", results.size());
                 return results;
@@ -191,7 +200,7 @@ public class CouchbaseSourceTask extends SourceTask {
             // Ignore, shouldn't be interrupted
         }
     }
-    
+
     private static String bufToString(ByteBuf buf) {
         return new String(bufToBytes(buf), CharsetUtil.UTF_8);
     }

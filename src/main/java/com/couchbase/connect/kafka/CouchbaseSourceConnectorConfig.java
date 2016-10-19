@@ -46,6 +46,10 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String TOPIC_NAME_DOC = "Name of the Kafka topic to publish data to.";
     private static final String TOPIC_NAME_DISPLAY = "Topic Name";
 
+    public static final String USE_SNAPSHOTS_CONFIG = "use_snapshots";
+    private static final String USE_SNAPSHOTS_DOC = "If true, it will only commit into Kafka when full snapshot from Couchbase received.";
+    private static final String USE_SNAPSHOTS_DISPLAY = "Use snapshots";
+
     public static final String DATABASE_GROUP = "Database";
     public static final String CONNECTOR_GROUP = "Connector";
 
@@ -102,6 +106,15 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTOR_GROUP, 1,
                         ConfigDef.Width.LONG,
                         TOPIC_NAME_DISPLAY)
+
+                .define(USE_SNAPSHOTS_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        false,
+                        ConfigDef.Importance.LOW,
+                        USE_SNAPSHOTS_DOC,
+                        CONNECTOR_GROUP, 1,
+                        ConfigDef.Width.LONG,
+                        USE_SNAPSHOTS_DISPLAY)
                 ;
     }
 

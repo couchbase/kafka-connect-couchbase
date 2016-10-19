@@ -23,16 +23,22 @@ import com.couchbase.client.dcp.StreamFrom;
 import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.DcpControl;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
+import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.dcp.message.DcpSnapshotMarkerMessage;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.connect.kafka.dcp.Event;
+import com.couchbase.connect.kafka.dcp.Message;
+import com.couchbase.connect.kafka.dcp.Snapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CouchbaseMonitorThread extends Thread {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseMonitorThread.class);
@@ -40,9 +46,12 @@ public class CouchbaseMonitorThread extends Thread {
     private final Client client;
     private final Short[] partitions;
     private final SessionState initialSessionState;
+    private final Map<Short, Snapshot> snapshots;
 
     public CouchbaseMonitorThread(List<String> clusterAddress, String bucket, String password, long connectionTimeout,
-                                  final BlockingQueue<ByteBuf> queue, Short[] partitions, SessionState sessionState) {
+                                  final BlockingQueue<Event> queue, Short[] partitions, SessionState sessionState,
+                                  final boolean useSnapshots) {
+        this.snapshots = new ConcurrentHashMap<Short, Snapshot>(partitions.length);
         this.partitions = partitions;
         this.initialSessionState = sessionState;
         client = Client.configure()
@@ -56,26 +65,64 @@ public class CouchbaseMonitorThread extends Thread {
         client.controlEventHandler(new ControlEventHandler() {
             @Override
             public void onEvent(ByteBuf event) {
-                if (DcpSnapshotMarkerMessage.is(event)) {
-                    client.acknowledgeBuffer(event);
+                if (useSnapshots) {
+                    if (DcpSnapshotMarkerMessage.is(event)) {
+                        Snapshot snapshot = new Snapshot(
+                                DcpSnapshotMarkerMessage.partition(event),
+                                DcpSnapshotMarkerMessage.startSeqno(event),
+                                DcpSnapshotMarkerMessage.endSeqno(event)
+                        );
+                        Snapshot prev = snapshots.put(snapshot.partition(), snapshot);
+                        if (prev != null) {
+                            LOGGER.warn("Incomplete snapshot detected: {}", prev);
+                        }
+                    }
                 }
+                client.acknowledgeBuffer(event);
                 event.release();
             }
         });
         client.dataEventHandler(new DataEventHandler() {
             @Override
             public void onEvent(ByteBuf event) {
-                try {
-                    queue.put(event);
-                } catch (InterruptedException e) {
-                    LOGGER.error("Unable to put DCP request into the queue", e);
+                if (useSnapshots) {
+                    short partition = DcpMutationMessage.partition(event);
+                    long seqno = DcpMutationMessage.bySeqno(event);
+
+                    Snapshot snapshot = snapshots.get(partition);
+                    if (snapshot == null) {
+                        LOGGER.warn("Event with seqno {} for partition {} ignored, because missing snapshot", seqno, partition);
+                    } else if (seqno < snapshot.startSeqno()) {
+                        LOGGER.warn("Event with seqno {} for partition {} ignored, because current snapshot has higher seqno {}",
+                                seqno, partition, snapshot.startSeqno());
+                    } else {
+                        event.retain();
+                        boolean completed = snapshot.add(event);
+                        if (completed) {
+                            Snapshot oldSnapshot = snapshots.remove(partition);
+                            if (snapshot != oldSnapshot) {
+                                LOGGER.warn("Conflict of snapshots detected, expected to remove {}, but removed {}", snapshot, oldSnapshot);
+                            }
+                            queue.add(snapshot);
+                        }
+                    }
+                    client.acknowledgeBuffer(event);
+                    event.release();
+                } else {
+                    try {
+                        queue.put(new Message(event));
+                    } catch (InterruptedException e) {
+                        LOGGER.error("Unable to put DCP request into the queue", e);
+                    }
                 }
             }
         });
     }
 
-    public void acknowledgeBuffer(ByteBuf event) {
-        client.acknowledgeBuffer(event);
+    public void acknowledge(Event event) {
+        if (event instanceof Message) {
+            client.acknowledgeBuffer(((Message) event).message());
+        }
     }
 
     @Override
