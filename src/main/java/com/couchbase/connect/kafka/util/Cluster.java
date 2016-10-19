@@ -44,13 +44,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Cluster {
     private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
 
-    public static int numberOfPartitions(String bucket, String password, List<String> nodes) {
-        final AtomicInteger result = new AtomicInteger(0);
+    public static Config fetchBucketConfig(String bucket, String password, List<String> nodes) {
+        final AtomicReference<CouchbaseBucketConfig> result = new AtomicReference<CouchbaseBucketConfig>(null);
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             for (final String hostname : nodes) {
@@ -70,9 +70,7 @@ public class Cluster {
                                                 protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                                                     if (msg.getStatus().equals(HttpResponseStatus.OK)) {
                                                         String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
-                                                        CouchbaseBucketConfig config =
-                                                                (CouchbaseBucketConfig) BucketConfigParser.parse(body);
-                                                        result.set(config.numberOfPartitions());
+                                                        result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body));
                                                     }
                                                     latch.countDown();
                                                 }
@@ -97,9 +95,9 @@ public class Cluster {
                     channel.writeAndFlush(request);
                     latch.await();
                     channel.closeFuture().sync();
-                    int numPartitions = result.get();
-                    if (numPartitions > 0) {
-                        return numPartitions;
+                    CouchbaseBucketConfig config = result.get();
+                    if (config != null) {
+                        return new Config(config);
                     }
                 } catch (Exception e) {
                     LOGGER.warn("Ignoring error for node {} when getting number of partitions", hostname, e);
@@ -108,6 +106,6 @@ public class Cluster {
         } finally {
             group.shutdownGracefully();
         }
-        return 0;
+        return null;
     }
 }

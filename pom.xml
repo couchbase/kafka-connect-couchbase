@@ -157,5 +157,17 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>unit</id>
+            <activation>
+                <property>
+                    <name>unit</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <test-source-directory>src/test/java</test-source-directory>
+            </properties>
+        </profile>
     </profiles>
 </project>
