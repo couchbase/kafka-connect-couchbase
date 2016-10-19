@@ -89,11 +89,10 @@ public class CouchbaseSourceTask extends SourceTask {
         }
         Map<Map<String, String>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(kafkaPartitions);
         SessionState sessionState = new SessionState();
-        sessionState.setToBeginningWithNoEnd(1024); // No public constructor of PartitionState
         for (Map<String, String> kafkaPartition : kafkaPartitions) {
             Map<String, Object> offset = offsets.get(kafkaPartition);
             Short partition = Short.parseShort(kafkaPartition.get("partition"));
-            PartitionState partitionState = sessionState.get(partition);
+            PartitionState partitionState = new PartitionState();
             long startSeqno = 0;
             if (offset != null && offset.containsKey("bySeqno")) {
                 startSeqno = (Long) offset.get("bySeqno");
