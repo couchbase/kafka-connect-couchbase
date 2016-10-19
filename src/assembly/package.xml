@@ -32,6 +32,7 @@
             <useTransitiveFiltering>true</useTransitiveFiltering>
             <excludes>
                 <exclude>org.apache.kafka:connect-api</exclude>
+                <exclude>io.confluent:kafka-connect-avro-converter</exclude>
             </excludes>
         </dependencySet>
     </dependencySets>
