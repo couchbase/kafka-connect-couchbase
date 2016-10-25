@@ -28,7 +28,6 @@ import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.util.Schemas;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -57,6 +56,17 @@ public class CouchbaseSourceTask extends SourceTask {
     private String topic;
     private String bucket;
     private volatile boolean running;
+
+    private static String bufToString(ByteBuf buf) {
+        return new String(bufToBytes(buf), CharsetUtil.UTF_8);
+    }
+
+    private static byte[] bufToBytes(ByteBuf buf) {
+        byte[] bytes;
+        bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        return bytes;
+    }
 
     @Override
     public String version() {
@@ -142,13 +152,13 @@ public class CouchbaseSourceTask extends SourceTask {
     public SourceRecord convert(ByteBuf event) {
         EventType type = EventType.of(event);
         if (type != null) {
-            Schema schema = Schemas.VALUE_SCHEMAS.get(type);
-            Struct record = new Struct(schema);
+            Struct record = new Struct(Schemas.VALUE_DEFAULT_SCHEMA);
             String key;
             long seqno;
             if (DcpMutationMessage.is(event)) {
                 key = bufToString(DcpMutationMessage.key(event));
                 seqno = DcpMutationMessage.bySeqno(event);
+                record.put("event", "mutation");
                 record.put("partition", DcpMutationMessage.partition(event));
                 record.put("key", key);
                 record.put("expiration", DcpMutationMessage.expiry(event));
@@ -161,6 +171,7 @@ public class CouchbaseSourceTask extends SourceTask {
             } else if (DcpDeletionMessage.is(event)) {
                 key = bufToString(DcpDeletionMessage.key(event));
                 seqno = DcpDeletionMessage.bySeqno(event);
+                record.put("event", "deletion");
                 record.put("partition", DcpDeletionMessage.partition(event));
                 record.put("key", key);
                 record.put("cas", DcpDeletionMessage.cas(event));
@@ -169,6 +180,7 @@ public class CouchbaseSourceTask extends SourceTask {
             } else if (DcpExpirationMessage.is(event)) {
                 key = bufToString(DcpExpirationMessage.key(event));
                 seqno = DcpExpirationMessage.bySeqno(event);
+                record.put("event", "expiration");
                 record.put("partition", DcpExpirationMessage.partition(event));
                 record.put("key", key);
                 record.put("cas", DcpExpirationMessage.cas(event));
@@ -184,7 +196,9 @@ public class CouchbaseSourceTask extends SourceTask {
             partition.put("bucket", bucket);
             partition.put("partition", record.getInt16("partition").toString());
 
-            return new SourceRecord(partition, offset, topic, Schemas.KEY_SCHEMA, key, schema, record);
+            return new SourceRecord(partition, offset, topic,
+                    Schemas.KEY_SCHEMA, key,
+                    Schemas.VALUE_DEFAULT_SCHEMA, record);
         }
         return null;
     }
@@ -198,16 +212,5 @@ public class CouchbaseSourceTask extends SourceTask {
         } catch (InterruptedException e) {
             // Ignore, shouldn't be interrupted
         }
-    }
-
-    private static String bufToString(ByteBuf buf) {
-        return new String(bufToBytes(buf), CharsetUtil.UTF_8);
-    }
-
-    private static byte[] bufToBytes(ByteBuf buf) {
-        byte[] bytes;
-        bytes = new byte[buf.readableBytes()];
-        buf.readBytes(bytes);
-        return bytes;
     }
 }
