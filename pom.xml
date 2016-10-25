@@ -23,7 +23,7 @@
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
     <packaging>jar</packaging>
-    <version>3.0.0-DP3</version>
+    <version>3.0.0-DP4</version>
     <name>kafka-connect-couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
