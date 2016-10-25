@@ -40,17 +40,17 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class CouchbaseMonitorThread extends Thread {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseMonitorThread.class);
+public class CouchbaseReader extends Thread {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseReader.class);
 
     private final Client client;
     private final Short[] partitions;
     private final SessionState initialSessionState;
     private final Map<Short, Snapshot> snapshots;
 
-    public CouchbaseMonitorThread(List<String> clusterAddress, String bucket, String password, long connectionTimeout,
-                                  final BlockingQueue<Event> queue, Short[] partitions, SessionState sessionState,
-                                  final boolean useSnapshots) {
+    public CouchbaseReader(List<String> clusterAddress, String bucket, String password, long connectionTimeout,
+                           final BlockingQueue<Event> queue, Short[] partitions, SessionState sessionState,
+                           final boolean useSnapshots) {
         this.snapshots = new ConcurrentHashMap<Short, Snapshot>(partitions.length);
         this.partitions = partitions;
         this.initialSessionState = sessionState;

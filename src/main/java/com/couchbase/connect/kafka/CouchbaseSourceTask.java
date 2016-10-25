@@ -19,7 +19,6 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
@@ -53,7 +52,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
     private CouchbaseSourceConnectorConfig config;
     private Map<String, String> configProperties;
-    private CouchbaseMonitorThread couchbaseMonitorThread;
+    private CouchbaseReader couchbaseReader;
     private BlockingQueue<Event> queue;
     private String topic;
     private String bucket;
@@ -110,9 +109,9 @@ public class CouchbaseSourceTask extends SourceTask {
 
         running = true;
         queue = new LinkedBlockingQueue<Event>();
-        couchbaseMonitorThread = new CouchbaseMonitorThread(clusterAddress, bucket, password, connectionTimeout,
+        couchbaseReader = new CouchbaseReader(clusterAddress, bucket, password, connectionTimeout,
                 queue, partitions, sessionState, useSnapshots);
-        couchbaseMonitorThread.start();
+        couchbaseReader.start();
     }
 
     @Override
@@ -128,7 +127,7 @@ public class CouchbaseSourceTask extends SourceTask {
                         results.add(record);
                     }
                 }
-                couchbaseMonitorThread.acknowledge(event);
+                couchbaseReader.acknowledge(event);
                 for (ByteBuf message : event) {
                     message.release();
                 }
@@ -193,9 +192,9 @@ public class CouchbaseSourceTask extends SourceTask {
     @Override
     public void stop() {
         running = false;
-        couchbaseMonitorThread.shutdown();
+        couchbaseReader.shutdown();
         try {
-            couchbaseMonitorThread.join(MAX_TIMEOUT);
+            couchbaseReader.join(MAX_TIMEOUT);
         } catch (InterruptedException e) {
             // Ignore, shouldn't be interrupted
         }
