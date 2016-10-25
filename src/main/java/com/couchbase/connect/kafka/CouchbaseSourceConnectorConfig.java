@@ -38,7 +38,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String CONNECTION_PASSWORD_DISPLAY = "Couchbase Password";
     private static final String CONNECTION_PASSWORD_DEFAULT = "";
 
-    public static final String CONNECTION_TIMEOUT_MS_CONFIG = "connection.timeout_ms";
+    public static final String CONNECTION_TIMEOUT_MS_CONFIG = "connection.timeout.ms";
     private static final String CONNECTION_TIMEOUT_MS_DOC = "Connection timeout in milliseconds.";
     private static final String CONNECTION_TIMEOUT_MS_DISPLAY = "Connection Timeout";
 

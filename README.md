@@ -28,7 +28,7 @@ the following settings:
     tasks.max=1
     connection.cluster_address=127.0.0.1
     connection.bucket=travel-sample
-    connection.timeout_ms=2000
+    connection.timeout.ms=2000
     topic.name=test-couchbase
 
 Start Zookeeper. Since this is a long-running service, you should run it in its own terminal.
