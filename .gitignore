@@ -1,9 +1,6 @@
-# Build products
-target/
-
-# IntelliJ data
 *.iml
+.DS_Store
 .idea/
 .ipr
-
-.DS_Store
+dependency-reduced-pom.xml
+target/

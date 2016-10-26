@@ -24,8 +24,12 @@ public class CouchbaseSourceTaskConfig extends CouchbaseSourceConnectorConfig {
     public static final String PARTITIONS_CONFIG = "partitions";
     private static final String PARTITIONS_DOC = "List of partitions for this task to watch for changes.";
 
+    public static final String SCHEMA_STRING_CONFIG = "schema.string";
+    private static final String SCHEMA_STRING_DOC = "String representing custom schema for value.";
+
     private static ConfigDef config = baseConfigDef()
-            .define(PARTITIONS_CONFIG, ConfigDef.Type.LIST, ConfigDef.Importance.HIGH, PARTITIONS_DOC);
+            .define(PARTITIONS_CONFIG, ConfigDef.Type.LIST, ConfigDef.Importance.HIGH, PARTITIONS_DOC)
+            .define(SCHEMA_STRING_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.MEDIUM, SCHEMA_STRING_DOC);
 
     public CouchbaseSourceTaskConfig(Map<String, String> props) {
         super(config, props);

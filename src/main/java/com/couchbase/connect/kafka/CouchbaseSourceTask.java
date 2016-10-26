@@ -21,13 +21,17 @@ import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
+import com.couchbase.client.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.util.Schemas;
 import com.couchbase.connect.kafka.util.Version;
+import io.confluent.connect.avro.AvroData;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -35,6 +39,7 @@ import org.apache.kafka.connect.source.SourceTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -48,14 +53,17 @@ public class CouchbaseSourceTask extends SourceTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
 
     private static final long MAX_TIMEOUT = 10000L;
+    private static ObjectMapper JSON = new ObjectMapper();
 
-    private CouchbaseSourceConnectorConfig config;
+    private CouchbaseSourceTaskConfig config;
     private Map<String, String> configProperties;
     private CouchbaseReader couchbaseReader;
     private BlockingQueue<Event> queue;
     private String topic;
     private String bucket;
     private volatile boolean running;
+    private Schema valueSchema;
+    private boolean valueSchemaIsCustom = false;
 
     private static String bufToString(ByteBuf buf) {
         return new String(bufToBytes(buf), CharsetUtil.UTF_8);
@@ -117,6 +125,14 @@ public class CouchbaseSourceTask extends SourceTask {
             sessionState.set(partition, partitionState);
         }
 
+        valueSchema = Schemas.VALUE_DEFAULT_SCHEMA;
+        String schemaString = config.getString(CouchbaseSourceTaskConfig.SCHEMA_STRING_CONFIG);
+        if (schemaString != null) {
+            valueSchema = new AvroData(1).toConnectSchema(
+                    new org.apache.avro.Schema.Parser().parse(schemaString));
+            valueSchemaIsCustom = true;
+        }
+
         running = true;
         queue = new LinkedBlockingQueue<Event>();
         couchbaseReader = new CouchbaseReader(clusterAddress, bucket, password, connectionTimeout,
@@ -149,10 +165,20 @@ public class CouchbaseSourceTask extends SourceTask {
         return results;
     }
 
+    private Struct parseDocument(byte[] content, Schema documentSchema) {
+        try {
+            JsonNode doc = JSON.readTree(content);
+            Struct record = new Struct(documentSchema);
+            return record;
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     public SourceRecord convert(ByteBuf event) {
         EventType type = EventType.of(event);
         if (type != null) {
-            Struct record = new Struct(Schemas.VALUE_DEFAULT_SCHEMA);
+            Struct record = new Struct(valueSchema);
             String key;
             long seqno;
             if (DcpMutationMessage.is(event)) {
@@ -167,7 +193,14 @@ public class CouchbaseSourceTask extends SourceTask {
                 record.put("lockTime", DcpMutationMessage.lockTime(event));
                 record.put("bySeqno", seqno);
                 record.put("revSeqno", DcpMutationMessage.revisionSeqno(event));
-                record.put("content", bufToBytes(DcpMutationMessage.content(event)));
+                byte[] content = bufToBytes(DcpMutationMessage.content(event));
+                if (valueSchemaIsCustom) {
+                    Schema documentSchema = valueSchema.field("content").schema();
+                    Struct document = parseDocument(content, documentSchema);
+                    record.put("content", document == null ? content : document);
+                } else {
+                    record.put("content", content);
+                }
             } else if (DcpDeletionMessage.is(event)) {
                 key = bufToString(DcpDeletionMessage.key(event));
                 seqno = DcpDeletionMessage.bySeqno(event);

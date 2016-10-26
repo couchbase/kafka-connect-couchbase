@@ -50,6 +50,10 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String USE_SNAPSHOTS_DOC = "If true, it will only commit into Kafka when full snapshot from Couchbase received.";
     private static final String USE_SNAPSHOTS_DISPLAY = "Use snapshots";
 
+    public static final String SCHEMA_URI_CONFIG = "schema.url";
+    private static final String SCHEMA_URI_DOC = "URI of custom schema for messages.";
+    private static final String SCHEMA_URI_DISPLAY = "Custom schema URI";
+
     public static final String DATABASE_GROUP = "Database";
     public static final String CONNECTOR_GROUP = "Connector";
 
@@ -112,9 +116,18 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         false,
                         ConfigDef.Importance.LOW,
                         USE_SNAPSHOTS_DOC,
-                        CONNECTOR_GROUP, 1,
+                        CONNECTOR_GROUP, 2,
                         ConfigDef.Width.LONG,
                         USE_SNAPSHOTS_DISPLAY)
+
+                .define(SCHEMA_URI_CONFIG,
+                        ConfigDef.Type.STRING,
+                        null,
+                        ConfigDef.Importance.MEDIUM,
+                        SCHEMA_URI_DOC,
+                        CONNECTOR_GROUP, 3,
+                        ConfigDef.Width.LONG,
+                        SCHEMA_URI_DISPLAY)
                 ;
     }
 

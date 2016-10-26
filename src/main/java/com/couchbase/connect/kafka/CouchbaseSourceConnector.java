@@ -18,10 +18,13 @@ package com.couchbase.connect.kafka;
 
 import com.couchbase.connect.kafka.util.Cluster;
 import com.couchbase.connect.kafka.util.Config;
+import com.couchbase.connect.kafka.util.Schemas;
 import com.couchbase.connect.kafka.util.StringUtils;
 import com.couchbase.connect.kafka.util.Version;
+import io.confluent.connect.avro.AvroData;
+import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel;
+import org.apache.avro.Schema;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceConnector;
@@ -38,6 +41,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
     private Map<String, String> configProperties;
     private CouchbaseSourceConnectorConfig config;
     private Config bucketConfig;
+    private String customSchemaString;
 
     @Override
     public String version() {
@@ -46,18 +50,27 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
     @Override
     public void start(Map<String, String> properties) {
-        try {
-            configProperties = properties;
-            config = new CouchbaseSourceConnectorConfig(configProperties);
-            String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-            String password = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
-            List<String> clusterAddress = config.getListWorkaround(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
-            bucketConfig = Cluster.fetchBucketConfig(bucket, password, clusterAddress);
-            if (bucketConfig == null) {
-                throw new ConnectException("Cannot fetch configuration for bucket " + bucket);
+        configProperties = properties;
+        config = new CouchbaseSourceConnectorConfig(configProperties);
+        String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        String password = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG);
+        List<String> clusterAddress = config.getListWorkaround(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+        bucketConfig = Cluster.fetchBucketConfig(bucket, password, clusterAddress);
+        if (bucketConfig == null) {
+            throw new ConnectException("Cannot fetch configuration for bucket " + bucket);
+        }
+        String schemaUri = config.getString(CouchbaseSourceConnectorConfig.SCHEMA_URI_CONFIG);
+        if (schemaUri != null) {
+            String schemaString = Schemas.fetchSchemaString(schemaUri);
+            if (schemaString == null) {
+                LOGGER.warn("Unable to fetch schema {}, falling back to default schema", schemaUri);
             }
-        } catch (ConfigException e) {
-            throw new ConnectException("Cannot start CouchbaseSourceConnector due to configuration error", e);
+            Schema defaultSchema = new AvroData(1).fromConnectSchema(Schemas.VALUE_DEFAULT_SCHEMA);
+            Schema schema = new Schema.Parser().parse(schemaString);
+            if (!AvroCompatibilityLevel.BACKWARD.compatibilityChecker.isCompatible(schema, defaultSchema)) {
+                LOGGER.warn("Specified schema {} is not backward compatible with default, falling back to default schema");
+            }
+            customSchemaString = schemaString;
         }
     }
 

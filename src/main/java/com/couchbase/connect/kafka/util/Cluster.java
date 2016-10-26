@@ -68,11 +68,14 @@ public class Cluster {
                                             .addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
                                                 @Override
                                                 protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-                                                    if (msg.getStatus().equals(HttpResponseStatus.OK)) {
-                                                        String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
-                                                        result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body));
+                                                    try {
+                                                        if (msg.getStatus().equals(HttpResponseStatus.OK)) {
+                                                            String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
+                                                            result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body));
+                                                        }
+                                                    } finally {
+                                                        latch.countDown();
                                                     }
-                                                    latch.countDown();
                                                 }
                                             });
                                 }

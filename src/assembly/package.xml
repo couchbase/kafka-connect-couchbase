@@ -33,6 +33,7 @@
             <excludes>
                 <exclude>org.apache.kafka:connect-api</exclude>
                 <exclude>io.confluent:kafka-connect-avro-converter</exclude>
+                <exclude>net.sf.jopt-simple:jopt-simple</exclude>
             </excludes>
         </dependencySet>
     </dependencySets>
