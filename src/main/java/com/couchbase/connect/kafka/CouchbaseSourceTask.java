@@ -45,7 +45,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class CouchbaseSourceTask extends SourceTask {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
 
     private static final long MAX_TIMEOUT = 10000L;
 
