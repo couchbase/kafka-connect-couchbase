@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.util;
 
-import com.couchbase.connect.kafka.dcp.EventType;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 
