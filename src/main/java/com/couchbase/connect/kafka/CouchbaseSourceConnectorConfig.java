@@ -16,6 +16,8 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.connect.kafka.converter.SchemaConverter;
+import com.couchbase.connect.kafka.filter.AllPassFilter;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
@@ -52,6 +54,14 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
     public static final String DATABASE_GROUP = "Database";
     public static final String CONNECTOR_GROUP = "Connector";
+
+    public static final String DCP_MESSAGE_CONVERTER_CLASS_CONFIG = "dcp.message.converter.class";
+    private static final String DCP_MESSAGE_CONVERTER_CLASS_DOC = "The class name of the message converter to use.";
+    private static final String DCP_MESSAGE_CONVERTER_CLASS_DISPLAY = "Message converter";
+
+    public static final String EVENT_FILTER_CLASS_CONFIG = "event.filter.class";
+    private static final String EVENT_FILTER_CLASS_DOC = "The class name of the event filter to use.";
+    private static final String EVENT_FILTER_CLASS_DISPLAY = "Event filter";
 
     static ConfigDef config = baseConfigDef();
 
@@ -115,6 +125,24 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTOR_GROUP, 1,
                         ConfigDef.Width.LONG,
                         USE_SNAPSHOTS_DISPLAY)
+
+                .define(DCP_MESSAGE_CONVERTER_CLASS_CONFIG,
+                        ConfigDef.Type.STRING,
+                        SchemaConverter.class.getName(),
+                        ConfigDef.Importance.LOW,
+                        DCP_MESSAGE_CONVERTER_CLASS_DOC,
+                        CONNECTOR_GROUP, 2,
+                        ConfigDef.Width.LONG,
+                        DCP_MESSAGE_CONVERTER_CLASS_DISPLAY)
+
+                .define(EVENT_FILTER_CLASS_CONFIG,
+                        ConfigDef.Type.STRING,
+                        AllPassFilter.class.getName(),
+                        ConfigDef.Importance.LOW,
+                        EVENT_FILTER_CLASS_DOC,
+                        CONNECTOR_GROUP, 3,
+                        ConfigDef.Width.LONG,
+                        EVENT_FILTER_CLASS_DISPLAY)
                 ;
     }
 
