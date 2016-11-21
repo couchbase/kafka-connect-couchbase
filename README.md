@@ -5,7 +5,7 @@ for loading data from Couchbase Server database into Kafka.
 
 ## Quickstart
 
-Start by setting up Couchbase Server, and loading sample bucket called `travel-sample`.
+Start by setting up Couchbase Server and loading sample bucket called `travel-sample`.
 
 To build a development version you'll need a recent version of Kafka. You can build
 kafka-connect-couchbase with Maven using the standard lifecycle phases. Build the connector jar:
