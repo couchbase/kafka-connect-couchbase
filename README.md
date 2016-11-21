@@ -43,7 +43,7 @@ Start the Schema Registry, also in its own terminal.
 
     $ sudo schema-registry-start /etc/schema-registry/schema-registry.properties
 
-Create new settings for Connect, which force Avro converter (this assumes that Kafka and 
+Create new settings for Connect which force Avro converter (this assumes that Kafka and 
 the Schema Registry are running locally on the default ports
 `/etc/kafka-connect-couchbase/connect-standalone.properties`:
 
