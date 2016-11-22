@@ -28,7 +28,7 @@ import java.util.Map;
 
 public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     public static final String CONNECTION_CLUSTER_ADDRESS_CONFIG = "connection.cluster_address";
-    private static final String CONNECTION_CLUSTER_ADDRESS_DOC = "Couchbase Cluster address to listen.";
+    private static final String CONNECTION_CLUSTER_ADDRESS_DOC = "Couchbase Cluster addresses to listen (use comma to specify several).";
     private static final String CONNECTION_CLUSTER_ADDRESS_DISPLAY = "Couchbase Cluster Address";
 
     public static final String CONNECTION_BUCKET_CONFIG = "connection.bucket";
@@ -76,7 +76,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     public static ConfigDef baseConfigDef() {
         return new ConfigDef()
                 .define(CONNECTION_CLUSTER_ADDRESS_CONFIG,
-                        ConfigDef.Type.STRING,
+                        ConfigDef.Type.LIST,
                         ConfigDef.Importance.HIGH,
                         CONNECTION_CLUSTER_ADDRESS_DOC,
                         DATABASE_GROUP, 1,
@@ -148,15 +148,5 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
     public static void main(String[] args) {
         System.out.println(config.toRst());
-    }
-
-    // FIXME: remove when type handling will be fixed in Confluent Control Center
-    public List<String> getListWorkaround(String key) {
-        String stringValue = getString(key);
-        if (stringValue.isEmpty()) {
-            return Collections.emptyList();
-        } else {
-            return Arrays.asList(stringValue.split("\\s*,\\s*", -1));
-        }
     }
 }

@@ -51,7 +51,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
             config = new CouchbaseSourceConnectorConfig(configProperties);
             String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
             String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).toString();
-            List<String> clusterAddress = config.getListWorkaround(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+            List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
             bucketConfig = Cluster.fetchBucketConfig(bucket, password, clusterAddress);
             if (bucketConfig == null) {
                 throw new ConnectException("Cannot fetch configuration for bucket " + bucket);
