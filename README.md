@@ -75,7 +75,7 @@ To observe replicated events from the cluster, run CLI kafka consumer:
 
 # Contribute
 
-- Source Code: https://github.com/couchbaselabs/kafka-connect-couchbase
+- Source Code: https://github.com/couchbase/kafka-connect-couchbase
 - Issue Tracker: https://issues.couchbase.com/projects/KAFKAC
 
 # License
