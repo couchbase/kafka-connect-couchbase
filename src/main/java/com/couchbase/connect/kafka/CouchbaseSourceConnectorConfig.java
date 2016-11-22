@@ -20,13 +20,20 @@ import com.couchbase.connect.kafka.converter.SchemaConverter;
 import com.couchbase.connect.kafka.filter.AllPassFilter;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 public class CouchbaseSourceConnectorConfig extends AbstractConfig {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnectorConfig.class);
+
+    public static final String DATABASE_GROUP = "Database";
+    public static final String CONNECTOR_GROUP = "Connector";
+
     public static final String CONNECTION_CLUSTER_ADDRESS_CONFIG = "connection.cluster_address";
     private static final String CONNECTION_CLUSTER_ADDRESS_DOC = "Couchbase Cluster addresses to listen (use comma to specify several).";
     private static final String CONNECTION_CLUSTER_ADDRESS_DISPLAY = "Couchbase Cluster Address";
@@ -40,6 +47,21 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String CONNECTION_PASSWORD_DISPLAY = "Couchbase Password";
     private static final String CONNECTION_PASSWORD_DEFAULT = "";
 
+    public static final String CONNECTION_SSL_ENABLED_CONFIG = "connection.ssl.enabled";
+    private static final String CONNECTION_SSL_ENABLED_DOC = "Use SSL to connect to Couchbase. This feature only available in Couchbase Enterprise.";
+    private static final String CONNECTION_SSL_ENABLED_DISPLAY = "Use SSL";
+    public static final boolean CONNECTION_SSL_ENABLED_DEFAULT = false;
+
+    public static final String CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG = "connection.ssl.keystore.location";
+    private static final String CONNECTION_SSL_KEYSTORE_LOCATION_DOC = "The location of the key store file.";
+    private static final String CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY = "Keystore Location";
+    private static final String CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT = "";
+
+    public static final String CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG = "connection.ssl.keystore.password";
+    private static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DOC = "The password of the private key in the key store file.";
+    private static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY = "Keystore Password";
+    private static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT = "";
+
     public static final String CONNECTION_TIMEOUT_MS_CONFIG = "connection.timeout.ms";
     private static final String CONNECTION_TIMEOUT_MS_DOC = "Connection timeout in milliseconds.";
     private static final String CONNECTION_TIMEOUT_MS_DISPLAY = "Connection Timeout";
@@ -51,9 +73,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     public static final String USE_SNAPSHOTS_CONFIG = "use_snapshots";
     private static final String USE_SNAPSHOTS_DOC = "If true, it will only commit into Kafka when full snapshot from Couchbase received.";
     private static final String USE_SNAPSHOTS_DISPLAY = "Use snapshots";
-
-    public static final String DATABASE_GROUP = "Database";
-    public static final String CONNECTOR_GROUP = "Connector";
+    public static final boolean USE_SNAPSHOTS_DEFAULT = false;
 
     public static final String DCP_MESSAGE_CONVERTER_CLASS_CONFIG = "dcp.message.converter.class";
     private static final String DCP_MESSAGE_CONVERTER_CLASS_DOC = "The class name of the message converter to use.";
@@ -74,6 +94,8 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     }
 
     public static ConfigDef baseConfigDef() {
+        ConfigDef.Recommender sslDependentsRecommender = new BooleanParentRecommender(CONNECTION_SSL_ENABLED_CONFIG);
+
         return new ConfigDef()
                 .define(CONNECTION_CLUSTER_ADDRESS_CONFIG,
                         ConfigDef.Type.LIST,
@@ -109,6 +131,36 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         CONNECTION_TIMEOUT_MS_DISPLAY)
 
+                .define(CONNECTION_SSL_ENABLED_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        CONNECTION_SSL_ENABLED_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        CONNECTION_SSL_ENABLED_DOC,
+                        DATABASE_GROUP, 5,
+                        ConfigDef.Width.SHORT,
+                        CONNECTION_SSL_ENABLED_DISPLAY,
+                        Arrays.asList(CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG, CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG))
+
+                .define(CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG,
+                        ConfigDef.Type.PASSWORD,
+                        CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        CONNECTION_SSL_KEYSTORE_PASSWORD_DOC,
+                        DATABASE_GROUP, 6,
+                        ConfigDef.Width.LONG,
+                        CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY,
+                        sslDependentsRecommender)
+
+                .define(CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG,
+                        ConfigDef.Type.STRING,
+                        CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        CONNECTION_SSL_KEYSTORE_LOCATION_DOC,
+                        DATABASE_GROUP, 7,
+                        ConfigDef.Width.LONG,
+                        CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY,
+                        sslDependentsRecommender)
+
                 .define(TOPIC_NAME_CONFIG,
                         ConfigDef.Type.STRING,
                         ConfigDef.Importance.HIGH,
@@ -119,10 +171,10 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
                 .define(USE_SNAPSHOTS_CONFIG,
                         ConfigDef.Type.BOOLEAN,
-                        false,
+                        USE_SNAPSHOTS_DEFAULT,
                         ConfigDef.Importance.LOW,
                         USE_SNAPSHOTS_DOC,
-                        CONNECTOR_GROUP, 1,
+                        CONNECTOR_GROUP, 2,
                         ConfigDef.Width.LONG,
                         USE_SNAPSHOTS_DISPLAY)
 
@@ -131,7 +183,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         SchemaConverter.class.getName(),
                         ConfigDef.Importance.LOW,
                         DCP_MESSAGE_CONVERTER_CLASS_DOC,
-                        CONNECTOR_GROUP, 2,
+                        CONNECTOR_GROUP, 3,
                         ConfigDef.Width.LONG,
                         DCP_MESSAGE_CONVERTER_CLASS_DISPLAY)
 
@@ -140,7 +192,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         AllPassFilter.class.getName(),
                         ConfigDef.Importance.LOW,
                         EVENT_FILTER_CLASS_DOC,
-                        CONNECTOR_GROUP, 3,
+                        CONNECTOR_GROUP, 4,
                         ConfigDef.Width.LONG,
                         EVENT_FILTER_CLASS_DISPLAY)
                 ;
@@ -148,5 +200,23 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
     public static void main(String[] args) {
         System.out.println(config.toRst());
+    }
+
+    private static class BooleanParentRecommender implements ConfigDef.Recommender {
+        protected String parentConfigName;
+
+        public BooleanParentRecommender(String parentConfigName) {
+            this.parentConfigName = parentConfigName;
+        }
+
+        @Override
+        public List<Object> validValues(String name, Map<String, Object> connectorConfigs) {
+            return new LinkedList<Object>();
+        }
+
+        @Override
+        public boolean visible(String name, Map<String, Object> connectorConfigs) {
+            return (Boolean) connectorConfigs.get(parentConfigName);
+        }
     }
 }

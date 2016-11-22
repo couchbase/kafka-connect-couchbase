@@ -18,6 +18,9 @@ package com.couchbase.connect.kafka.util;
 
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.parser.BucketConfigParser;
+import com.couchbase.client.dcp.config.ClientEnvironment;
+import com.couchbase.client.dcp.config.SSLEngineFactory;
+import com.couchbase.client.dcp.config.SecureEnvironment;
 import com.couchbase.client.deps.io.netty.bootstrap.Bootstrap;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
@@ -38,10 +41,13 @@ import com.couchbase.client.deps.io.netty.handler.codec.http.HttpObjectAggregato
 import com.couchbase.client.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.deps.io.netty.handler.ssl.SslHandler;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
+import com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.KeyStore;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,7 +55,35 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Cluster {
     private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
 
-    public static Config fetchBucketConfig(String bucket, String password, List<String> nodes) {
+    public static Config fetchBucketConfig(final CouchbaseSourceConnectorConfig config) {
+        final List<String> nodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+        final String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        final String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).value();
+        final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
+        final int port = sslEnabled ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
+        final SSLEngineFactory sslEngineFactory =
+                new SSLEngineFactory(new SecureEnvironment() {
+                    @Override
+                    public boolean sslEnabled() {
+                        return sslEnabled;
+                    }
+
+                    @Override
+                    public String sslKeystoreFile() {
+                        return config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
+                    }
+
+                    @Override
+                    public String sslKeystorePassword() {
+                        return config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG).value();
+                    }
+
+                    @Override
+                    public KeyStore sslKeystore() {
+                        return null;
+                    }
+                });
+
         final AtomicReference<CouchbaseBucketConfig> result = new AtomicReference<CouchbaseBucketConfig>(null);
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
@@ -63,6 +97,10 @@ public class Cluster {
                                 @Override
                                 protected void initChannel(Channel channel) throws Exception {
                                     ChannelPipeline pipeline = channel.pipeline();
+                                    if (sslEnabled) {
+                                        pipeline.addLast(new SslHandler(sslEngineFactory.get()));
+                                    }
+
                                     pipeline.addLast(new HttpClientCodec())
                                             .addLast(new HttpObjectAggregator(1048576))
                                             .addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
@@ -82,7 +120,7 @@ public class Cluster {
                             });
 
 
-                    Channel channel = bootstrap.connect(hostname, 8091).sync().channel();
+                    Channel channel = bootstrap.connect(hostname, port).sync().channel();
                     HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
                             "/pools/default/b/" + bucket);
                     request.headers().set(HttpHeaders.Names.HOST, hostname);
@@ -98,9 +136,9 @@ public class Cluster {
                     channel.writeAndFlush(request);
                     latch.await();
                     channel.closeFuture().sync();
-                    CouchbaseBucketConfig config = result.get();
-                    if (config != null) {
-                        return new Config(config);
+                    CouchbaseBucketConfig bucketConfig = result.get();
+                    if (bucketConfig != null) {
+                        return new Config(bucketConfig);
                     }
                 } catch (Exception e) {
                     LOGGER.warn("Ignoring error for node {} when getting number of partitions", hostname, e);
