@@ -17,7 +17,7 @@ connectors and ready to be installed into the system. Assuming you have Confluen
 installed as in this guide: http://docs.confluent.io/3.0.0/installation.html, you can copy
 the package to the system location:
 
-    $ sudo cp -a target/kafka-connect-couchbase-3.0.0-DP4-package/share /usr/
+    $ sudo cp -a target/kafka-connect-couchbase-3.0.0-BETA-package/share /usr/
 
 Now we create a configuration file that will load data from this database. This file is included
 with the connector in `/etc/kafka-connect-couchbase/quickstart-couchbase.properties` and contains
@@ -29,7 +29,11 @@ the following settings:
     connection.cluster_address=127.0.0.1
     connection.bucket=travel-sample
     connection.timeout.ms=2000
+    # connection.ssl.enabled=true
+    # connection.ssl.keystore.location=/tmp/keystore
+    # connection.ssl.keystore.password=secret
     topic.name=test-couchbase
+    use_snapshots=false
 
 Start Zookeeper. Since this is a long-running service, you should run it in its own terminal.
 
