@@ -24,7 +24,7 @@ import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.DcpControl;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.dcp.message.DcpSnapshotMarkerMessage;
+import com.couchbase.client.dcp.message.DcpSnapshotMarkerRequest;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
@@ -66,11 +66,11 @@ public class CouchbaseReader extends Thread {
             @Override
             public void onEvent(ByteBuf event) {
                 if (useSnapshots) {
-                    if (DcpSnapshotMarkerMessage.is(event)) {
+                    if (DcpSnapshotMarkerRequest.is(event)) {
                         Snapshot snapshot = new Snapshot(
-                                DcpSnapshotMarkerMessage.partition(event),
-                                DcpSnapshotMarkerMessage.startSeqno(event),
-                                DcpSnapshotMarkerMessage.endSeqno(event)
+                                DcpSnapshotMarkerRequest.partition(event),
+                                DcpSnapshotMarkerRequest.startSeqno(event),
+                                DcpSnapshotMarkerRequest.endSeqno(event)
                         );
                         Snapshot prev = snapshots.put(snapshot.partition(), snapshot);
                         if (prev != null) {
