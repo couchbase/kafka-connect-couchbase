@@ -90,10 +90,18 @@ public class KafkaStreamsDemo {
                 .getConnection("jdbc:mysql://localhost:3306/beer_sample_sql", "root", "secret");
         final PreparedStatement insertBrewery = connection.prepareStatement(
                 "INSERT INTO breweries (id, name, description, country, city, state, phone, updated_at)" +
-                        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)" +
+                        " ON DUPLICATE KEY UPDATE" +
+                        " name=VALUES(name), description=VALUES(description), country=VALUES(country)," +
+                        " country=VALUES(country), city=VALUES(city), state=VALUES(state)," +
+                        " phone=VALUES(phone), updated_at=VALUES(updated_at)");
         final PreparedStatement insertBeer = connection.prepareStatement(
                 "INSERT INTO beers (id, brewery_id, name, description, category, style, abv, ibu, updated_at)" +
-                        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)" +
+                        " ON DUPLICATE KEY UPDATE" +
+                        " brewery_id=VALUES(brewery_id), name=VALUES(name), description=VALUES(description)," +
+                        " category=VALUES(category), style=VALUES(style), abv=VALUES(abv)," +
+                        " ibu=VALUES(ibu), updated_at=VALUES(updated_at)");
 
         String schemaRegistryUrl = "http://localhost:8081";
 
