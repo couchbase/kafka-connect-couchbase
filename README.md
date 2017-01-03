@@ -85,6 +85,7 @@ Couchbase Server.
     name=test-sink-couchbase
     connector.class=com.couchbase.connect.kafka.CouchbaseSinkConnector
     tasks.max=1
+    topics=my_incoming_topic
     connection.cluster_address=127.0.0.1
     connection.bucket=travel-sample
     # connection.password=
