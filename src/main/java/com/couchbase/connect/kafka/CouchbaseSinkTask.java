@@ -70,10 +70,12 @@ public class CouchbaseSinkTask extends SinkTask {
         boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
         String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
         String sslKeystorePassword = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG).value();
+        Long connectTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
                 .sslEnabled(sslEnabled)
                 .sslKeystoreFile(sslKeystoreLocation)
                 .sslKeystorePassword(sslKeystorePassword)
+                .connectTimeout(connectTimeout)
                 .build();
         cluster = CouchbaseCluster.create(env, clusterAddress);
         bucket = cluster.openBucket(bucketName, password);
