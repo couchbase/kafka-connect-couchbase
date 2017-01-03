@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--~
-    ~ Copyright 2016 Couchbase, Inc.
+    ~ Copyright 2017 Couchbase, Inc.
     ~
     ~ Licensed under the Apache License, Version 2.0 (the "License");
     ~ you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
     <packaging>jar</packaging>
-    <version>3.0.0</version>
+    <version>3.1.0-SNAPSHOT</version>
     <name>kafka-connect-couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
@@ -53,8 +53,10 @@
         <java-compat.version>1.6</java-compat.version>
         <confluent.version>3.1.1</confluent.version>
         <kafka-connect-api.version>0.10.1.0</kafka-connect-api.version>
+        <kafka-connect-json.version>0.10.1.0</kafka-connect-json.version>
         <kafka-streams.version>0.10.1.0</kafka-streams.version>
         <dcp-client.version>0.7.0</dcp-client.version>
+        <java-client.version>2.3.4</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
         <junit.version>4.12</junit.version>
@@ -76,6 +78,11 @@
             <version>${kafka-connect-api.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-json</artifactId>
+            <version>${kafka-connect-json.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-connect-avro-converter</artifactId>
             <version>${confluent.version}</version>
@@ -84,6 +91,11 @@
             <groupId>com.couchbase.client</groupId>
             <artifactId>dcp-client</artifactId>
             <version>${dcp-client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>java-client</artifactId>
+            <version>${java-client.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
@@ -102,6 +114,11 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-json</artifactId>
+            <version>0.10.0.1</version>
         </dependency>
     </dependencies>
 

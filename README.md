@@ -47,7 +47,7 @@ Start the Schema Registry, also in its own terminal.
 
     $ sudo schema-registry-start /etc/schema-registry/schema-registry.properties
 
-Create new settings for Connect which force Avro converter (this assumes that Kafka and 
+Create new settings for Connect which force Avro converter (this assumes that Kafka and
 the Schema Registry are running locally on the default ports
 `/etc/kafka-connect-couchbase/connect-standalone.properties`:
 
@@ -76,6 +76,27 @@ To observe replicated events from the cluster, run CLI kafka consumer:
 
     $ kafka-avro-console-consumer --new-consumer --bootstrap-server localhost:9092 \
                                   --topic test-couchbase --from-beginning
+
+# Experimental Sink Connector
+
+Since release 3.1.0, the library ships experimental Sink Connector, which allows to relay data from Kafka topics into
+Couchbase Server.
+
+    name=test-sink-couchbase
+    connector.class=com.couchbase.connect.kafka.CouchbaseSinkConnector
+    tasks.max=1
+    connection.cluster_address=127.0.0.1
+    connection.bucket=travel-sample
+    # connection.password=
+    connection.timeout.ms=2000
+    # connection.ssl.enabled=true
+    # connection.ssl.keystore.location=/tmp/keystore
+    # connection.ssl.keystore.password=secret
+
+Because the Couchbase is using JSON as the data format, the Sink will try to convert the value into JSON, and fallback
+to String BLOB. As the key it will use key from Kafka, if it represented as primitive type, and generate key as
+`topic/partition/offset` if the key is missing of complex type (array or struct).
+
 
 # Contribute
 

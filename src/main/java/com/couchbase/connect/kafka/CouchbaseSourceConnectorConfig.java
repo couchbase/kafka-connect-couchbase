@@ -35,36 +35,37 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     public static final String CONNECTOR_GROUP = "Connector";
 
     public static final String CONNECTION_CLUSTER_ADDRESS_CONFIG = "connection.cluster_address";
-    private static final String CONNECTION_CLUSTER_ADDRESS_DOC = "Couchbase Cluster addresses to listen (use comma to specify several).";
-    private static final String CONNECTION_CLUSTER_ADDRESS_DISPLAY = "Couchbase Cluster Address";
+    static final String CONNECTION_CLUSTER_ADDRESS_DOC = "Couchbase Cluster addresses to listen (use comma to specify several).";
+    static final String CONNECTION_CLUSTER_ADDRESS_DISPLAY = "Couchbase Cluster Address";
 
     public static final String CONNECTION_BUCKET_CONFIG = "connection.bucket";
-    private static final String CONNECTION_BUCKET_DOC = "Couchbase bucket name.";
-    private static final String CONNECTION_BUCKET_DISPLAY = "Couchbase Bucket";
+    static final String CONNECTION_BUCKET_DOC = "Couchbase bucket name.";
+    static final String CONNECTION_BUCKET_DISPLAY = "Couchbase Bucket";
 
     public static final String CONNECTION_PASSWORD_CONFIG = "connection.password";
-    private static final String CONNECTION_PASSWORD_DOC = "Couchbase password for the bucket.";
-    private static final String CONNECTION_PASSWORD_DISPLAY = "Couchbase Password";
-    private static final String CONNECTION_PASSWORD_DEFAULT = "";
+    static final String CONNECTION_PASSWORD_DOC = "Couchbase password for the bucket.";
+    static final String CONNECTION_PASSWORD_DISPLAY = "Couchbase Password";
+    public static final String CONNECTION_PASSWORD_DEFAULT = "";
 
     public static final String CONNECTION_SSL_ENABLED_CONFIG = "connection.ssl.enabled";
-    private static final String CONNECTION_SSL_ENABLED_DOC = "Use SSL to connect to Couchbase. This feature only available in Couchbase Enterprise.";
-    private static final String CONNECTION_SSL_ENABLED_DISPLAY = "Use SSL";
+    static final String CONNECTION_SSL_ENABLED_DOC = "Use SSL to connect to Couchbase. This feature only available in Couchbase Enterprise.";
+    static final String CONNECTION_SSL_ENABLED_DISPLAY = "Use SSL";
     public static final boolean CONNECTION_SSL_ENABLED_DEFAULT = false;
 
     public static final String CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG = "connection.ssl.keystore.location";
-    private static final String CONNECTION_SSL_KEYSTORE_LOCATION_DOC = "The location of the key store file.";
-    private static final String CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY = "Keystore Location";
-    private static final String CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT = "";
+    static final String CONNECTION_SSL_KEYSTORE_LOCATION_DOC = "The location of the key store file.";
+    static final String CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY = "Keystore Location";
+    public static final String CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT = "";
 
     public static final String CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG = "connection.ssl.keystore.password";
-    private static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DOC = "The password of the private key in the key store file.";
-    private static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY = "Keystore Password";
-    private static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT = "";
+    static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DOC = "The password of the private key in the key store file.";
+    static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY = "Keystore Password";
+    public static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT = "";
 
     public static final String CONNECTION_TIMEOUT_MS_CONFIG = "connection.timeout.ms";
-    private static final String CONNECTION_TIMEOUT_MS_DOC = "Connection timeout in milliseconds.";
-    private static final String CONNECTION_TIMEOUT_MS_DISPLAY = "Connection Timeout";
+    static final String CONNECTION_TIMEOUT_MS_DOC = "Connection timeout in milliseconds.";
+    static final String CONNECTION_TIMEOUT_MS_DISPLAY = "Connection Timeout";
+    public static final long CONNECTION_TIMEOUT_MS_DEFAULT = 10000L;
 
     public static final String TOPIC_NAME_CONFIG = "topic.name";
     private static final String TOPIC_NAME_DOC = "Name of the Kafka topic to publish data to.";
@@ -124,7 +125,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
                 .define(CONNECTION_TIMEOUT_MS_CONFIG,
                         ConfigDef.Type.LONG,
-                        10000L,
+                        CONNECTION_TIMEOUT_MS_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_TIMEOUT_MS_DOC,
                         DATABASE_GROUP, 4,
@@ -202,7 +203,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
         System.out.println(config.toRst());
     }
 
-    private static class BooleanParentRecommender implements ConfigDef.Recommender {
+    static class BooleanParentRecommender implements ConfigDef.Recommender {
         protected String parentConfigName;
 
         public BooleanParentRecommender(String parentConfigName) {
