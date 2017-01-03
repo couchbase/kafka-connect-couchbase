@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
@@ -23,6 +24,7 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.RawJsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
+import com.couchbase.client.java.util.retry.RetryBuilder;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -34,12 +36,16 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Observable;
+import rx.functions.Action1;
+import rx.functions.Func1;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
@@ -90,12 +96,27 @@ public class CouchbaseSinkTask extends SinkTask {
         }
         final SinkRecord first = records.iterator().next();
         final int recordsCount = records.size();
-        LOGGER.info("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
+        LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
                 recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
 
-        for (SinkRecord record : records) {
-            bucket.upsert(convert(record));
-        }
+        //noinspection unchecked
+        Observable.from(records)
+                .flatMap(new Func1<SinkRecord, Observable<Document>>() {
+                    @Override
+                    public Observable<Document> call(SinkRecord record) {
+                        return bucket.async().upsert(convert(record));
+                    }
+                })
+                .retryWhen(
+                        // TODO: make it configurable
+                        RetryBuilder
+                                .anyOf(RuntimeException.class)
+                                .delay(Delay.exponential(TimeUnit.SECONDS, 5))
+                                .max(5)
+                                .build())
+
+                .toBlocking()
+                .last();
     }
 
     private Document convert(SinkRecord record) {
