@@ -19,8 +19,6 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
-import com.couchbase.client.dcp.StreamFrom;
-import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.DcpControl;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
@@ -132,7 +130,6 @@ public class CouchbaseReader extends Thread {
     @Override
     public void run() {
         client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
-        client.initializeState(StreamFrom.BEGINNING, StreamTo.INFINITY).await();
         client.failoverLogs(partitions).toBlocking().forEach(new Action1<ByteBuf>() {
             @Override
             public void call(ByteBuf event) {
