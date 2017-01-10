@@ -38,7 +38,7 @@ public class ConfigTest {
 
     private CouchbaseBucketConfig loadConfig(String resource) {
         String body = Resources.read(resource, getClass());
-        return (CouchbaseBucketConfig) BucketConfigParser.parse(body);
+        return (CouchbaseBucketConfig) BucketConfigParser.parse(body, Cluster.dummyBootstrapEnv);
     }
 
     private int numberOfConnections(CouchbaseBucketConfig bucketConfig, List<List<Short>> groups) {

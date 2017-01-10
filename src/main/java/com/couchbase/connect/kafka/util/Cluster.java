@@ -18,6 +18,10 @@ package com.couchbase.connect.kafka.util;
 
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.parser.BucketConfigParser;
+import com.couchbase.client.core.env.BootstrapEnvironment;
+import com.couchbase.client.core.env.ConfigParserEnvironment;
+import com.couchbase.client.core.node.DefaultMemcachedHashingStrategy;
+import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.dcp.config.ClientEnvironment;
 import com.couchbase.client.dcp.config.SSLEngineFactory;
 import com.couchbase.client.dcp.config.SecureEnvironment;
@@ -54,6 +58,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class Cluster {
     private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
+    static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
+        @Override
+        public MemcachedHashingStrategy memcachedHashingStrategy() {
+            return DefaultMemcachedHashingStrategy.INSTANCE;
+        }
+    };
 
     public static Config fetchBucketConfig(final CouchbaseSourceConnectorConfig config) {
         final List<String> nodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
@@ -109,7 +119,7 @@ public class Cluster {
                                                     try {
                                                         if (msg.getStatus().equals(HttpResponseStatus.OK)) {
                                                             String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
-                                                            result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body));
+                                                            result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv));
                                                         }
                                                     } finally {
                                                         latch.countDown();
