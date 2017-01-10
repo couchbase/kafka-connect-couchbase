@@ -133,7 +133,7 @@ public class CouchbaseReader extends Thread {
     public void run() {
         client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
         client.initializeState(StreamFrom.BEGINNING, StreamTo.INFINITY).await();
-        client.failoverLogs(partitions).forEach(new Action1<ByteBuf>() {
+        client.failoverLogs(partitions).toBlocking().forEach(new Action1<ByteBuf>() {
             @Override
             public void call(ByteBuf event) {
                 short partition = DcpFailoverLogResponse.vbucket(event);
