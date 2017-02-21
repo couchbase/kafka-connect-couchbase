@@ -24,7 +24,7 @@
     <artifactId>kafka-connect-couchbase</artifactId>
     <packaging>jar</packaging>
     <version>3.1.1</version>
-    <name>kafka-connect-couchbase</name>
+    <name>Kafka Connector for Couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
         <url>http://couchbase.com</url>
@@ -48,6 +48,19 @@
         <url>https://github.com/couchbase/kafka-connect-couchbase</url>
         <tag>HEAD</tag>
     </scm>
+
+    <issueManagement>
+        <system>Couchbase JIRA</system>
+        <url>http://www.couchbase.com/issues/browse/JDCP</url>
+    </issueManagement>
+
+    <developers>
+        <developer>
+            <id>avsej</id>
+            <name>Sergey Avseyev</name>
+            <email>sergey@couchbase.com</email>
+        </developer>
+    </developers>
 
     <properties>
         <java-compat.version>1.6</java-compat.version>
