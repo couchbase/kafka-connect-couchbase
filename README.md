@@ -14,10 +14,10 @@ kafka-connect-couchbase with Maven using the standard lifecycle phases. Build th
 
 After this command, you've got package directory which has the same structure as other Confluent
 connectors and ready to be installed into the system. Assuming you have Confluent platform
-installed as in this guide: http://docs.confluent.io/3.1.0/installation.html, you can copy
+installed as in this guide: http://docs.confluent.io/3.1.1/installation.html, you can copy
 the package to the system location:
 
-    $ sudo cp -a target/kafka-connect-couchbase-3.1.0-package/share /usr/
+    $ sudo cp -a target/kafka-connect-couchbase-3.1.1-package/share /usr/
 
 Now we create a configuration file that will load data from this database. This file is included
 with the connector in `/etc/kafka-connect-couchbase/quickstart-couchbase.properties` and contains
@@ -101,10 +101,10 @@ to String BLOB. As the key it will use key from Kafka, if it represented as prim
 
 # Contribute
 
-- Documentation: http://developer.couchbase.com/documentation/server/4.5/connectors/kafka-3.0/kafka-intro.html
+- Documentation: http://developer.couchbase.com/documentation/server/current/connectors/kafka-3.1/kafka-intro.html
 - Source Code: https://github.com/couchbase/kafka-connect-couchbase
 - Issue Tracker: https://issues.couchbase.com/projects/KAFKAC
-- Downloads & Release Notes: http://developer.couchbase.com/documentation/server/4.5/connectors/kafka-3.0/release-notes.html
+- Downloads & Release Notes: http://developer.couchbase.com/documentation/server/current/connectors/kafka-3.1/release-notes.html
 
 # License
 
