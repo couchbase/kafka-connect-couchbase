@@ -23,7 +23,7 @@
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
     <packaging>jar</packaging>
-    <version>3.1.0</version>
+    <version>3.1.1</version>
     <name>kafka-connect-couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
@@ -52,11 +52,11 @@
     <properties>
         <java-compat.version>1.6</java-compat.version>
         <confluent.version>3.1.1</confluent.version>
-        <kafka-connect-api.version>0.10.1.0</kafka-connect-api.version>
-        <kafka-connect-json.version>0.10.1.0</kafka-connect-json.version>
-        <kafka-streams.version>0.10.1.0</kafka-streams.version>
-        <dcp-client.version>0.8.0-SNAPSHOT</dcp-client.version>
-        <java-client.version>2.4.1-SNAPSHOT</java-client.version>
+        <kafka-connect-api.version>0.10.1.1</kafka-connect-api.version>
+        <kafka-connect-json.version>0.10.1.1</kafka-connect-json.version>
+        <kafka-streams.version>0.10.1.1</kafka-streams.version>
+        <dcp-client.version>0.8.0</dcp-client.version>
+        <java-client.version>2.4.2</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
         <junit.version>4.12</junit.version>
