@@ -21,6 +21,7 @@ import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.converter.Converter;
 import com.couchbase.connect.kafka.dcp.Event;
+import com.couchbase.connect.kafka.dcp.Snapshot;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigException;
@@ -54,6 +55,7 @@ public class CouchbaseSourceTask extends SourceTask {
     private volatile boolean running;
     private Filter filter;
     private Converter converter;
+    private int batchSizeMax;
 
     private static byte[] bufToBytes(ByteBuf buf) {
         byte[] bytes;
@@ -88,6 +90,7 @@ public class CouchbaseSourceTask extends SourceTask {
         boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
         String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
         String sslKeystorePassword = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG).value();
+        batchSizeMax = config.getInt(CouchbaseSourceConnectorConfig.BATCH_SIZE_MAX_CONFIG);
 
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         List<String> partitionsList = config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG);
@@ -148,6 +151,7 @@ public class CouchbaseSourceTask extends SourceTask {
     public List<SourceRecord> poll()
             throws InterruptedException {
         List<SourceRecord> results = new LinkedList<SourceRecord>();
+        int batchSize = batchSizeMax;
 
         while (running) {
             Event event = queue.poll(100, TimeUnit.MILLISECONDS);
@@ -166,7 +170,10 @@ public class CouchbaseSourceTask extends SourceTask {
                 for (ByteBuf message : event) {
                     message.release();
                 }
-            } else if (!results.isEmpty()) {
+                batchSize--;
+            }
+            if (!results.isEmpty() &&
+                    (batchSize == 0 || event == null || event instanceof Snapshot)) {
                 LOGGER.info("Poll returns {} result(s)", results.size());
                 return results;
             }

@@ -84,6 +84,11 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String EVENT_FILTER_CLASS_DOC = "The class name of the event filter to use.";
     private static final String EVENT_FILTER_CLASS_DISPLAY = "Event filter";
 
+    public static final String BATCH_SIZE_MAX_CONFIG = "batch.size.max";
+    private static final String BATCH_SIZE_MAX_DOC = "Controls maximum size of the batch for writing into topic.";
+    private static final String BATCH_SIZE_MAX_DISPLAY = "Batch size";
+    public static final int BATCH_SIZE_MAX_DEFAULT = 2000;
+
     static ConfigDef config = baseConfigDef();
 
     public CouchbaseSourceConnectorConfig(Map<String, String> props) {
@@ -196,6 +201,15 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTOR_GROUP, 4,
                         ConfigDef.Width.LONG,
                         EVENT_FILTER_CLASS_DISPLAY)
+
+                .define(BATCH_SIZE_MAX_CONFIG,
+                        ConfigDef.Type.INT,
+                        BATCH_SIZE_MAX_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        BATCH_SIZE_MAX_DOC,
+                        CONNECTOR_GROUP, 5,
+                        ConfigDef.Width.LONG,
+                        BATCH_SIZE_MAX_DISPLAY)
                 ;
     }
 
