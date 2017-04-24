@@ -75,4 +75,8 @@ public class Snapshot implements Event {
     public Iterator<ByteBuf> iterator() {
         return messages.iterator();
     }
+
+    @Override
+    public void ack() {
+    }
 }

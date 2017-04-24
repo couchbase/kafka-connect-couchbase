@@ -22,4 +22,6 @@ import java.util.Iterator;
 
 public interface Event extends Iterable<ByteBuf> {
     Iterator<ByteBuf> iterator();
+
+    void ack();
 }

@@ -166,7 +166,7 @@ public class CouchbaseSourceTask extends SourceTask {
                     }
                 }
 
-                couchbaseReader.acknowledge(event);
+                event.ack();
                 for (ByteBuf message : event) {
                     message.release();
                 }

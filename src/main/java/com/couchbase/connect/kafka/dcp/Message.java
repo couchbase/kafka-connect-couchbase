@@ -16,15 +16,18 @@
 
 package com.couchbase.connect.kafka.dcp;
 
+import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 
 import java.util.Iterator;
 
 public class Message implements Event {
     private final ByteBuf message;
+    private final ChannelFlowController flowController;
 
-    public Message(ByteBuf message) {
+    public Message(ByteBuf message, ChannelFlowController flowController) {
         this.message = message;
+        this.flowController = flowController;
     }
 
     public ByteBuf message() {
@@ -34,6 +37,11 @@ public class Message implements Event {
     @Override
     public Iterator<ByteBuf> iterator() {
         return new SingleMessageIterator(message);
+    }
+
+    @Override
+    public void ack() {
+        flowController.ack(message);
     }
 
     private class SingleMessageIterator implements Iterator<ByteBuf> {

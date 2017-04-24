@@ -25,6 +25,7 @@ import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.dcp.message.DcpSnapshotMarkerRequest;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
+import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.dcp.Message;
@@ -66,7 +67,7 @@ public class CouchbaseReader extends Thread {
                 .build();
         client.controlEventHandler(new ControlEventHandler() {
             @Override
-            public void onEvent(ByteBuf event) {
+            public void onEvent(ChannelFlowController flowController, ByteBuf event) {
                 if (useSnapshots) {
                     if (DcpSnapshotMarkerRequest.is(event)) {
                         Snapshot snapshot = new Snapshot(
@@ -80,13 +81,13 @@ public class CouchbaseReader extends Thread {
                         }
                     }
                 }
-                client.acknowledgeBuffer(event);
+                flowController.ack(event);
                 event.release();
             }
         });
         client.dataEventHandler(new DataEventHandler() {
             @Override
-            public void onEvent(ByteBuf event) {
+            public void onEvent(ChannelFlowController flowController, ByteBuf event) {
                 if (useSnapshots) {
                     short partition = DcpMutationMessage.partition(event);
                     long seqno = DcpMutationMessage.bySeqno(event);
@@ -108,23 +109,17 @@ public class CouchbaseReader extends Thread {
                             queue.add(snapshot);
                         }
                     }
-                    client.acknowledgeBuffer(event);
+                    flowController.ack(event);
                     event.release();
                 } else {
                     try {
-                        queue.put(new Message(event));
+                        queue.put(new Message(event, flowController));
                     } catch (InterruptedException e) {
                         LOGGER.error("Unable to put DCP request into the queue", e);
                     }
                 }
             }
         });
-    }
-
-    public void acknowledge(Event event) {
-        if (event instanceof Message) {
-            client.acknowledgeBuffer(((Message) event).message());
-        }
     }
 
     @Override
