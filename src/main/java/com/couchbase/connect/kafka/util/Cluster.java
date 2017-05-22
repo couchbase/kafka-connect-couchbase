@@ -56,17 +56,18 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Cluster {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
     static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
         @Override
         public MemcachedHashingStrategy memcachedHashingStrategy() {
             return DefaultMemcachedHashingStrategy.INSTANCE;
         }
     };
+    private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
 
     public static Config fetchBucketConfig(final CouchbaseSourceConnectorConfig config) {
         final List<String> nodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
         final String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        final String username = config.getUsername();
         final String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).value();
         final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
         final int port = sslEnabled ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
@@ -136,7 +137,7 @@ public class Cluster {
                     request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
 
                     ByteBuf raw = Unpooled.buffer(bucket.length() + password.length() + 1);
-                    raw.writeBytes((bucket + ":" + password).getBytes(CharsetUtil.UTF_8));
+                    raw.writeBytes((username + ":" + password).getBytes(CharsetUtil.UTF_8));
                     ByteBuf encoded = Base64.encode(raw, false);
                     request.headers().add(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded.toString(CharsetUtil.UTF_8));
                     encoded.release();

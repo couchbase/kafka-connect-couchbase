@@ -72,6 +72,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
         List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
         String bucketName = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        String username = config.getUsername();
         String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).value();
 
         boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
@@ -85,7 +86,8 @@ public class CouchbaseSinkTask extends SinkTask {
                 .connectTimeout(connectTimeout)
                 .build();
         cluster = CouchbaseCluster.create(env, clusterAddress);
-        bucket = cluster.openBucket(bucketName, password);
+        cluster.authenticate(username, password);
+        bucket = cluster.openBucket(bucketName);
         converter = new JsonConverter();
         converter.configure(Collections.singletonMap("schemas.enable", false), false);
     }

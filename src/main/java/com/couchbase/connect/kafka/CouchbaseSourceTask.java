@@ -84,6 +84,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
         topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
         bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        String username = config.getUsername();
         String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).value();
         List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
         boolean useSnapshots = config.getBoolean(CouchbaseSourceConnectorConfig.USE_SNAPSHOTS_CONFIG);
@@ -123,7 +124,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
         running = true;
         queue = new LinkedBlockingQueue<Event>();
-        couchbaseReader = new CouchbaseReader(clusterAddress, bucket, password, connectionTimeout,
+        couchbaseReader = new CouchbaseReader(clusterAddress, bucket, username, password, connectionTimeout,
                 queue, partitions, sessionState, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword);
         couchbaseReader.start();
     }

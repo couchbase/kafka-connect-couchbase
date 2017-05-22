@@ -42,6 +42,11 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     static final String CONNECTION_BUCKET_DOC = "Couchbase bucket name.";
     static final String CONNECTION_BUCKET_DISPLAY = "Couchbase Bucket";
 
+    public static final String CONNECTION_USERNAME_CONFIG = "connection.username";
+    static final String CONNECTION_USERNAME_DOC = "Couchbase user name (for Couchbase Server, it might be different from bucket name).";
+    static final String CONNECTION_USERNAME_DISPLAY = "Couchbase Username";
+    public static final String CONNECTION_USERNAME_DEFAULT = "";
+
     public static final String CONNECTION_PASSWORD_CONFIG = "connection.password";
     static final String CONNECTION_PASSWORD_DOC = "Couchbase password for the bucket.";
     static final String CONNECTION_PASSWORD_DISPLAY = "Couchbase Password";
@@ -119,12 +124,21 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         CONNECTION_BUCKET_DISPLAY)
 
+                .define(CONNECTION_USERNAME_CONFIG,
+                        ConfigDef.Type.STRING,
+                        CONNECTION_USERNAME_DEFAULT,
+                        ConfigDef.Importance.HIGH,
+                        CONNECTION_USERNAME_DOC,
+                        DATABASE_GROUP, 3,
+                        ConfigDef.Width.LONG,
+                        CONNECTION_USERNAME_DISPLAY)
+
                 .define(CONNECTION_PASSWORD_CONFIG,
                         ConfigDef.Type.PASSWORD,
                         CONNECTION_PASSWORD_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_PASSWORD_DOC,
-                        DATABASE_GROUP, 3,
+                        DATABASE_GROUP, 4,
                         ConfigDef.Width.LONG,
                         CONNECTION_PASSWORD_DISPLAY)
 
@@ -133,7 +147,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTION_TIMEOUT_MS_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_TIMEOUT_MS_DOC,
-                        DATABASE_GROUP, 4,
+                        DATABASE_GROUP, 5,
                         ConfigDef.Width.LONG,
                         CONNECTION_TIMEOUT_MS_DISPLAY)
 
@@ -142,7 +156,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTION_SSL_ENABLED_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_SSL_ENABLED_DOC,
-                        DATABASE_GROUP, 5,
+                        DATABASE_GROUP, 6,
                         ConfigDef.Width.SHORT,
                         CONNECTION_SSL_ENABLED_DISPLAY,
                         Arrays.asList(CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG, CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG))
@@ -152,7 +166,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_SSL_KEYSTORE_PASSWORD_DOC,
-                        DATABASE_GROUP, 6,
+                        DATABASE_GROUP, 7,
                         ConfigDef.Width.LONG,
                         CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY,
                         sslDependentsRecommender)
@@ -162,7 +176,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_SSL_KEYSTORE_LOCATION_DOC,
-                        DATABASE_GROUP, 7,
+                        DATABASE_GROUP, 8,
                         ConfigDef.Width.LONG,
                         CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY,
                         sslDependentsRecommender)
@@ -211,6 +225,14 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         BATCH_SIZE_MAX_DISPLAY)
                 ;
+    }
+
+    public String getUsername() {
+        String username = getString(CONNECTION_USERNAME_CONFIG);
+        if (username == null || username.isEmpty()) {
+            return getString(CONNECTION_BUCKET_CONFIG);
+        }
+        return username;
     }
 
     public static void main(String[] args) {

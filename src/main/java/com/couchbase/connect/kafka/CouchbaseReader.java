@@ -47,7 +47,7 @@ public class CouchbaseReader extends Thread {
     private final SessionState initialSessionState;
     private final Map<Short, Snapshot> snapshots;
 
-    public CouchbaseReader(List<String> clusterAddress, String bucket, String password, long connectionTimeout,
+    public CouchbaseReader(List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
                            final BlockingQueue<Event> queue, Short[] partitions, SessionState sessionState,
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
                            final String sslKeystorePassword) {
@@ -58,6 +58,7 @@ public class CouchbaseReader extends Thread {
                 .connectTimeout(connectionTimeout)
                 .hostnames(clusterAddress)
                 .bucket(bucket)
+                .username(username)
                 .password(password)
                 .controlParam(DcpControl.Names.CONNECTION_BUFFER_SIZE, 20480)
                 .bufferAckWatermark(60)

@@ -48,6 +48,10 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECT
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_DEFAULT;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_DISPLAY;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_DOC;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DEFAULT;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DISPLAY;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DOC;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.DATABASE_GROUP;
 
 public class CouchbaseSinkConnectorConfig extends AbstractConfig {
@@ -81,12 +85,21 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         CONNECTION_BUCKET_DISPLAY)
 
+                .define(CONNECTION_USERNAME_CONFIG,
+                        ConfigDef.Type.STRING,
+                        CONNECTION_USERNAME_DEFAULT,
+                        ConfigDef.Importance.HIGH,
+                        CONNECTION_USERNAME_DOC,
+                        DATABASE_GROUP, 3,
+                        ConfigDef.Width.LONG,
+                        CONNECTION_USERNAME_DISPLAY)
+
                 .define(CONNECTION_PASSWORD_CONFIG,
                         ConfigDef.Type.PASSWORD,
                         CONNECTION_PASSWORD_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_PASSWORD_DOC,
-                        DATABASE_GROUP, 3,
+                        DATABASE_GROUP, 4,
                         ConfigDef.Width.LONG,
                         CONNECTION_PASSWORD_DISPLAY)
 
@@ -95,7 +108,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         CONNECTION_TIMEOUT_MS_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_TIMEOUT_MS_DOC,
-                        DATABASE_GROUP, 4,
+                        DATABASE_GROUP, 5,
                         ConfigDef.Width.LONG,
                         CONNECTION_TIMEOUT_MS_DISPLAY)
 
@@ -104,7 +117,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         CONNECTION_SSL_ENABLED_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_SSL_ENABLED_DOC,
-                        DATABASE_GROUP, 5,
+                        DATABASE_GROUP, 6,
                         ConfigDef.Width.SHORT,
                         CONNECTION_SSL_ENABLED_DISPLAY,
                         Arrays.asList(CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG, CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG))
@@ -114,7 +127,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_SSL_KEYSTORE_PASSWORD_DOC,
-                        DATABASE_GROUP, 6,
+                        DATABASE_GROUP, 7,
                         ConfigDef.Width.LONG,
                         CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY,
                         sslDependentsRecommender)
@@ -124,9 +137,17 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT,
                         ConfigDef.Importance.LOW,
                         CONNECTION_SSL_KEYSTORE_LOCATION_DOC,
-                        DATABASE_GROUP, 7,
+                        DATABASE_GROUP, 8,
                         ConfigDef.Width.LONG,
                         CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY,
                         sslDependentsRecommender);
+    }
+
+    public String getUsername() {
+        String username = getString(CONNECTION_USERNAME_CONFIG);
+        if (username == null || username.isEmpty()) {
+            return getString(CONNECTION_BUCKET_CONFIG);
+        }
+        return username;
     }
 }
