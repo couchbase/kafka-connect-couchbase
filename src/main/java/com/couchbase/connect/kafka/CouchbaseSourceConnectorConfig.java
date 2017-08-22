@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnectorConfig.class);
@@ -94,14 +95,25 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String BATCH_SIZE_MAX_DISPLAY = "Batch size";
     public static final int BATCH_SIZE_MAX_DEFAULT = 2000;
 
+    public static final String COMPAT_NAMES_CONFIG = "compat.connector_name_in_offsets";
+    private static final String COMPAT_NAMES_DOC = "If true, the library will use name in the offsets to allow multiple connectors for the same bucket.";
+    private static final String COMPAT_NAMES_DISPLAY = "Use connector name in offsets";
+    public static final boolean COMPAT_NAMES_DEFAULT = false;
+
     static ConfigDef config = baseConfigDef();
+    private final String connectorName;
 
     public CouchbaseSourceConnectorConfig(Map<String, String> props) {
-        super(config, props);
+        this(config, props);
     }
 
     protected CouchbaseSourceConnectorConfig(ConfigDef config, Map<String, String> props) {
         super(config, props);
+        connectorName = props.containsKey("name") ? props.get("name") : UUID.randomUUID().toString();
+    }
+
+    public String getConnectorName() {
+        return connectorName;
     }
 
     public static ConfigDef baseConfigDef() {
@@ -224,6 +236,15 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTOR_GROUP, 5,
                         ConfigDef.Width.LONG,
                         BATCH_SIZE_MAX_DISPLAY)
+
+                .define(COMPAT_NAMES_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        COMPAT_NAMES_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        COMPAT_NAMES_DOC,
+                        CONNECTOR_GROUP, 6,
+                        ConfigDef.Width.LONG,
+                        COMPAT_NAMES_DISPLAY)
                 ;
     }
 

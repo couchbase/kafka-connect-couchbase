@@ -56,6 +56,7 @@ public class CouchbaseSourceTask extends SourceTask {
     private Filter filter;
     private Converter converter;
     private int batchSizeMax;
+    private boolean connectorNameInOffsets;
 
     @Override
     public String version() {
@@ -77,6 +78,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
         topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
         bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        connectorNameInOffsets = config.getBoolean(CouchbaseSourceConnectorConfig.COMPAT_NAMES_CONFIG);
         String username = config.getUsername();
         String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).value();
         List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
@@ -93,7 +95,10 @@ public class CouchbaseSourceTask extends SourceTask {
         List<Map<String, String>> kafkaPartitions = new ArrayList<Map<String, String>>(1);
         for (int i = 0; i < partitionsList.size(); i++) {
             partitions[i] = Short.parseShort(partitionsList.get(i));
-            Map<String, String> kafkaPartition = new HashMap<String, String>(2);
+            Map<String, String> kafkaPartition = new HashMap<String, String>(3);
+            if (connectorNameInOffsets) {
+                kafkaPartition.put("connector", config.getConnectorName());
+            }
             kafkaPartition.put("bucket", bucket);
             kafkaPartition.put("partition", partitions[i].toString());
             kafkaPartitions.add(kafkaPartition);
@@ -175,8 +180,15 @@ public class CouchbaseSourceTask extends SourceTask {
         return results;
     }
 
+    @SuppressWarnings("unchecked")
     public SourceRecord convert(ByteBuf event) {
-        return converter.convert(event, bucket, topic);
+        SourceRecord record = converter.convert(event, bucket, topic);
+        if (connectorNameInOffsets) {
+            // TODO: move into converter on next major update
+            ((Map<String, String>)record.sourcePartition())
+                    .put("connector", config.getConnectorName());
+        }
+        return record;
     }
 
     @Override
