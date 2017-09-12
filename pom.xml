@@ -68,7 +68,7 @@
         <kafka-connect-api.version>0.10.1.1</kafka-connect-api.version>
         <kafka-connect-json.version>0.10.1.1</kafka-connect-json.version>
         <kafka-streams.version>0.10.1.1</kafka-streams.version>
-        <dcp-client.version>0.10.0</dcp-client.version>
+        <dcp-client.version>0.12.0</dcp-client.version>
         <java-client.version>2.4.5</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
@@ -89,16 +89,19 @@
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-api</artifactId>
             <version>${kafka-connect-api.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-json</artifactId>
             <version>${kafka-connect-json.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-connect-avro-converter</artifactId>
             <version>${confluent.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.couchbase.client</groupId>
@@ -143,12 +146,28 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                </configuration>
+            </plugin>
+            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.5.3</version>
                 <configuration>
+                    <appendAssemblyId>false</appendAssemblyId>
                     <descriptors>
-                        <descriptor>src/assembly/development.xml</descriptor>
-                        <descriptor>src/assembly/package.xml</descriptor>
+                        <descriptor>src/assembly/dist.xml</descriptor>
                     </descriptors>
                 </configuration>
                 <executions>
@@ -208,34 +227,4 @@
             </resource>
         </resources>
     </build>
-
-    <profiles>
-        <profile>
-            <id>standalone</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>src/assembly/standalone.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>unit</id>
-            <activation>
-                <property>
-                    <name>unit</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <properties>
-                <test-source-directory>src/test/java</test-source-directory>
-            </properties>
-        </profile>
-    </profiles>
 </project>
