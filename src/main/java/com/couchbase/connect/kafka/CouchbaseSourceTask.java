@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,13 +56,6 @@ public class CouchbaseSourceTask extends SourceTask {
     private Filter filter;
     private Converter converter;
     private int batchSizeMax;
-
-    private static byte[] bufToBytes(ByteBuf buf) {
-        byte[] bytes;
-        bytes = new byte[buf.readableBytes()];
-        buf.readBytes(bytes);
-        return bytes;
-    }
 
     @Override
     public String version() {

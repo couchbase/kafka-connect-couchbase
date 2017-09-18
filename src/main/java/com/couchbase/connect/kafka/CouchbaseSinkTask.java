@@ -17,7 +17,6 @@
 package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.time.Delay;
-import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.document.Document;
@@ -25,12 +24,11 @@ import com.couchbase.client.java.document.RawJsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.util.retry.RetryBuilder;
+import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -38,9 +36,9 @@ import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
-import rx.functions.Action1;
 import rx.functions.Func1;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,13 +46,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_ID_POINTER_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
+
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
+
     private Map<String, String> configProperties;
     private CouchbaseSinkTaskConfig config;
     private Bucket bucket;
     private CouchbaseCluster cluster;
     private JsonConverter converter;
+    private DocumentIdExtractor documentIdExtractor;
 
     @Override
     public String version() {
@@ -90,6 +94,11 @@ public class CouchbaseSinkTask extends SinkTask {
         bucket = cluster.openBucket(bucketName);
         converter = new JsonConverter();
         converter.configure(Collections.singletonMap("schemas.enable", false), false);
+
+        String docIdPointer = config.getString(DOCUMENT_ID_POINTER_CONFIG);
+        if (docIdPointer != null && !docIdPointer.isEmpty()) {
+            documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
+        }
     }
 
     @Override
@@ -122,29 +131,56 @@ public class CouchbaseSinkTask extends SinkTask {
                 .last();
     }
 
-    private Document convert(SinkRecord record) {
-        String id;
+    private static String toString(ByteBuffer byteBuffer) {
+        final ByteBuffer sliced = byteBuffer.slice();
+        byte[] bytes = new byte[sliced.remaining()];
+        sliced.get(bytes);
+        return new String(bytes, UTF_8);
+    }
+
+    private static String documentIdFromKafkaMetadata(SinkRecord record) {
         Object key = record.key();
-        Schema keySchema = record.keySchema();
-        if (key != null && keySchema.type().isPrimitive()) {
-            if (record.keySchema().type() == Schema.Type.BYTES) {
-                final byte[] bytes;
-                if (key instanceof ByteBuffer) {
-                    final ByteBuffer buffer = ((ByteBuffer) key).slice();
-                    bytes = new byte[buffer.remaining()];
-                    buffer.get(bytes);
-                } else {
-                    bytes = (byte[]) key;
-                }
-                id = new String(bytes, CharsetUtil.UTF_8);
-            } else {
-                id = record.key().toString();
-            }
-        } else {
-            id = String.format("%s/%d/%d", record.topic(), record.kafkaPartition(), record.kafkaOffset());
+
+        if (key instanceof String
+                || key instanceof Number
+                || key instanceof Boolean) {
+            return key.toString();
         }
-        byte[] valueData = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
-        return RawJsonDocument.create(id, new String(valueData, CharsetUtil.UTF_8));
+
+        if (key instanceof byte[]) {
+            return new String((byte[]) key, UTF_8);
+        }
+
+        if (key instanceof ByteBuffer) {
+            return toString((ByteBuffer) key);
+        }
+
+        return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
+    }
+
+    private Document convert(SinkRecord record) {
+        byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
+        String defaultId = null;
+
+        try {
+            if (documentIdExtractor != null) {
+                DocumentIdExtractor.Result result = documentIdExtractor.extractDocumentId(valueAsJsonBytes);
+                return RawJsonDocument.create(result.documentId(), result.document().toString(UTF_8));
+            }
+
+        } catch (DocumentIdExtractor.DocumentIdNotFoundException e) {
+            defaultId = documentIdFromKafkaMetadata(record);
+            LOGGER.warn(e.getMessage() + "; using fallback ID '{}'", defaultId);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (defaultId == null) {
+            defaultId = documentIdFromKafkaMetadata(record);
+        }
+
+        return RawJsonDocument.create(defaultId, new String(valueAsJsonBytes, UTF_8));
     }
 
     @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import org.apache.kafka.connect.data.SchemaBuilder;
 public enum Schemas {
     ;
 
-    public static final Schema KEY_SCHEMA = SchemaBuilder.string().build();
+    public static final Schema KEY_SCHEMA = Schema.STRING_SCHEMA;
     public static final Schema VALUE_DEFAULT_SCHEMA =
             SchemaBuilder.struct().name("com.couchbase.DcpMessage")
                     .field("event", Schema.STRING_SCHEMA)

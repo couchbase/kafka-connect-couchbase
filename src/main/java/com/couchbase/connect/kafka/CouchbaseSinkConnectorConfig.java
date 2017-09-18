@@ -20,6 +20,8 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG;
@@ -55,6 +57,17 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECT
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.DATABASE_GROUP;
 
 public class CouchbaseSinkConnectorConfig extends AbstractConfig {
+
+    public static final String DOCUMENT_ID_POINTER_CONFIG = "couchbase.document.id";
+    static final String DOCUMENT_ID_POINTER_DOC = "JSON Pointer to the property to use for the Couchbase document ID (overriding the message key).";
+    static final String DOCUMENT_ID_POINTER_DISPLAY = "Document ID Pointer";
+    public static final String DOCUMENT_ID_POINTER_DEFAULT = "";
+
+    public static final String REMOVE_DOCUMENT_ID_CONFIG = "couchbase.remove.document.id";
+    static final String REMOVE_DOCUMENT_ID_DOC = "Whether to remove the ID identified by '" + DOCUMENT_ID_POINTER_CONFIG + "' from the document before storing in Couchbase.";
+    static final String REMOVE_DOCUMENT_ID_DISPLAY = "Remove Document ID";
+    public static final boolean REMOVE_DOCUMENT_ID_DEFAULT = false;
+
     static ConfigDef config = baseConfigDef();
 
     public CouchbaseSinkConnectorConfig(Map<String, String> props) {
@@ -140,7 +153,37 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         DATABASE_GROUP, 8,
                         ConfigDef.Width.LONG,
                         CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY,
-                        sslDependentsRecommender);
+                        sslDependentsRecommender)
+
+                .define(DOCUMENT_ID_POINTER_CONFIG,
+                        ConfigDef.Type.STRING,
+                        DOCUMENT_ID_POINTER_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        DOCUMENT_ID_POINTER_DOC,
+                        DATABASE_GROUP, 9,
+                        ConfigDef.Width.LONG,
+                        DOCUMENT_ID_POINTER_DISPLAY,
+                        Collections.singletonList(REMOVE_DOCUMENT_ID_CONFIG))
+
+                .define(REMOVE_DOCUMENT_ID_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        REMOVE_DOCUMENT_ID_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        REMOVE_DOCUMENT_ID_DOC,
+                        DATABASE_GROUP, 10,
+                        ConfigDef.Width.LONG,
+                        REMOVE_DOCUMENT_ID_DISPLAY,
+                        new ConfigDef.Recommender() {
+                            @Override
+                            public List<Object> validValues(String name, Map<String, Object> parsedConfig) {
+                                return Arrays.<Object>asList(true, false);
+                            }
+
+                            @Override
+                            public boolean visible(String name, Map<String, Object> parsedConfig) {
+                                return !((String) parsedConfig.get(DOCUMENT_ID_POINTER_CONFIG)).isEmpty();
+                            }
+                        });
     }
 
     public String getUsername() {
