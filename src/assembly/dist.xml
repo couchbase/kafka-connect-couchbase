@@ -17,6 +17,14 @@
             <directory>config</directory>
         </fileSet>
         <fileSet>
+            <directory>examples</directory>
+            <includes>
+                <include>**/README*</include>
+                <include>**/pom.xml</include>
+                <include>**/src/**</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.build.directory}</directory>
             <outputDirectory/>
             <includes>

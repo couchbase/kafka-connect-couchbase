@@ -25,7 +25,7 @@ and have loaded the sample bucket called `travel-sample`. (It's fine if you want
 a different bucket; neither the connector nor this guide depend on the contents of
 the documents in the bucket.)
 
-You'll also need an installation of Kafka or the Confluent Platform.
+You'll also need a local installation of Kafka or the Confluent Platform.
 
 
 ## Set Up Kafka
@@ -70,7 +70,7 @@ but the idea is the same. Start the servers by running these commands, **each in
     kafka-server-start.sh $KAFKA_HOME/config/server.properties
 
 
-## Configure the Connector
+## Configure the Source Connector
 
 The Couchbase connector distribution includes sample config files. Look inside
 `$KAFKA_CONNECT_COUCHBASE_HOME/config` and edit the
@@ -79,17 +79,20 @@ The Couchbase connector distribution includes sample config files. Look inside
     name=test-couchbase
     connector.class=com.couchbase.connect.kafka.CouchbaseSourceConnector
     tasks.max=2
+
     connection.cluster_address=127.0.0.1
-    connection.bucket=default
-    connection.username=default
-    connection.password=secret
     connection.timeout.ms=2000
+
     # connection.ssl.enabled=true
     # connection.ssl.keystore.location=/tmp/keystore
     # connection.ssl.keystore.password=secret
+
+    connection.bucket=default
+    connection.username=default
+    connection.password=secret
+
     topic.name=test-default
     use_snapshots=false
-
 
 For this exercise, change the value of `connection.bucket` to `travel-sample`
 (or whichever bucket you want to stream from). For `connection.username`
@@ -102,7 +105,7 @@ to the bucket password, or leave it blank if the bucket does not have a password
 do not have passwords.
 
 
-## Run the Connector
+## Run the Source Connector
 
 Kafka connectors can be run in [standalone or distributed](https://kafka.apache.org/documentation/#connect_running)
 mode. For now let's run the connector in standalone mode, using the CLASSPATH environment variable to include the
@@ -137,7 +140,7 @@ Run the connector using the same commands as above, but omitting the
 removing the possibility of dependency conflicts.
 
 
-## Observe Messages Published by Couchbase Connector
+## Observe Messages Published by Couchbase Source Connector
 
 For Confluent:
 
@@ -155,18 +158,6 @@ Or for Kafka:
 Since release 3.1.0, the library includes an experimental Sink Connector
 that reads messages from a Kafka topic and sends them to Couchbase Server.
 
-    name=test-sink-couchbase
-    connector.class=com.couchbase.connect.kafka.CouchbaseSinkConnector
-    tasks.max=1
-    topics=my_incoming_topic
-    connection.cluster_address=127.0.0.1
-    connection.bucket=travel-sample
-    # connection.password=
-    connection.timeout.ms=2000
-    # connection.ssl.enabled=true
-    # connection.ssl.keystore.location=/tmp/keystore
-    # connection.ssl.keystore.password=secret
-
 The sink connector will attempt to convert message values to JSON. If the conversion fails,
 the connector will fall back to treating the value as a String BLOB.
 
@@ -174,9 +165,51 @@ If the Kafka key is a primitive type, the connector will use it as the document 
 is absent or of complex type (array or struct), the document ID will be generated as
 `topic/partition/offset`.
 
+Alternatively, the document ID can come from the body of the Kafka message.
+Provide a `couchbase.document.id` property whose value is a JSON Pointer
+identifying the document ID node. If you want the connector to remove this node before
+persisting the document to Couchbase, provide a `couchbase.remove.document.id`
+property with value `true`. If the connector fails to locate the document ID node,
+it will fall back to using the Kafka key or `topic/partition/offset` as described above.
+
+
+## Configure and Run the Sink Connector
+
+In the `$KAFKA_CONNECT_COUCHBASE_HOME/config` directory there is a file called
+`quickstart-couchbase-sink.properties`. Customize this file as described in
+ **Configure the Source Connector**, only now the bucket will receive messages
+and the user must have *write* access to the bucket.
+
+NOTE: You may wish to
+[create a new bucket](https://developer.couchbase.com/documentation/server/current/clustersetup/create-bucket.html)
+to receive the messages.
+
+To run the sink connector, use the same command as described in **Run the Source Connector**,
+but pass `quickstart-couchbase-sink.properties` as the second argument to `connect-standalone`
+instead of `quickstart-couchbase-source.properties`.
+
+
+## Send Test Messages
+
+Now that the Couchbase Sink Connector is running, let's give it some messages to import:
+
+    cd $KAFKA_CONNECT_COUCHBASE_HOME/examples/json-producer
+    mvn compile exec:java
+
+The producer will send some messages and then terminate. If all goes well,
+the messages will appear in the Couchbase bucket.
+
+If you wish to see how the Couchbase Sink Connector behaves in the absence of message keys, modify the `publishMessage` method in the example source code to set
+the message keys to null, then rerun the producer.
+
+Alternatively, if you want the Couchbase document ID to be the airport code,
+edit `quickstart-couchbase-sink.properties` and set `couchbase.document.id=/airport`,
+restart the sink connector, and run the producer again.
+
 
 # Contribute
 
+- Questions? : https://forums.couchbase.com/c/Kafka-Connector
 - Documentation: http://developer.couchbase.com/documentation/server/current/connectors/kafka-3.1/kafka-intro.html
 - Source Code: https://github.com/couchbase/kafka-connect-couchbase
 - Issue Tracker: https://issues.couchbase.com/projects/KAFKAC
