@@ -3,13 +3,19 @@
 kafka-connect-couchbase is a [Kafka Connect](http://kafka.apache.org/documentation.html#connect)
 plugin for transferring data between Couchbase Server and Kafka.
 
+It includes a "source connector" for publishing document change notifications from Couchbase to
+a Kafka topic, as well as a "sink connector" that subscribes to one or more Kafka topics and writes the
+messages to Couchbase.
 
-### Grab the Connector
+This document describes how to configure and run the source and sink connectors.
 
-The latest release of the Couchbase connector is available from the
+
+### Grab the Connector Distribution
+
+The latest release of the Couchbase connector distribution is available from the
 [Couchbase download page](https://www.couchbase.com/downloads) (search the page for "Kafka").
 
-If you prefer to build the connector from source, clone the
+If you prefer to build the connectors from source, clone the
 [GitHub repository](https://github.com/couchbase/kafka-connect-couchbase)
 and run `mvn package` to generate the connector archive
 (look for `kafka-connect-couchbase-<version>.zip` in the `target` directory).
@@ -239,10 +245,10 @@ and contents. For reference, the Avro schema for this payload format is shown be
     }
 
 
-# Experimental Sink Connector
+# Couchbase Sink Connector
 
-Since release 3.1.0, the library includes an experimental Sink Connector
-that reads messages from a Kafka topic and sends them to Couchbase Server.
+Now let's talk about the sink connector, which reads messages from one or more Kafka topics
+and writes them to Couchbase Server.
 
 The sink connector will attempt to convert message values to JSON. If the conversion fails,
 the connector will fall back to treating the value as a String BLOB.
