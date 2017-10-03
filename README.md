@@ -1,7 +1,8 @@
 # Kafka Connect Couchbase Connector
 
-kafka-connect-couchbase is a [Kafka Connector](http://kafka.apache.org/documentation.html#connect)
-for loading data from Couchbase Server into Kafka.
+kafka-connect-couchbase is a [Kafka Connect](http://kafka.apache.org/documentation.html#connect)
+plugin for transferring data between Couchbase Server and Kafka.
+
 
 ### Grab the Connector
 
@@ -74,25 +75,11 @@ but the idea is the same. Start the servers by running these commands, **each in
 
 The Couchbase connector distribution includes sample config files. Look inside
 `$KAFKA_CONNECT_COUCHBASE_HOME/config` and edit the
-`quickstart-couchbase-source.properties` file:
+`quickstart-couchbase-source.properties` file.
 
-    name=test-couchbase
-    connector.class=com.couchbase.connect.kafka.CouchbaseSourceConnector
-    tasks.max=2
-
-    connection.cluster_address=127.0.0.1
-    connection.timeout.ms=2000
-
-    # connection.ssl.enabled=true
-    # connection.ssl.keystore.location=/tmp/keystore
-    # connection.ssl.keystore.password=secret
-
-    connection.bucket=default
-    connection.username=default
-    connection.password=secret
-
-    topic.name=test-default
-    use_snapshots=false
+Take a moment to peruse the configuration options specified here. Some are
+[standard options available to all connectors](https://kafka.apache.org/documentation/#connect_configuring).
+The rest are specific to the Couchbase connector.
 
 For this exercise, change the value of `connection.bucket` to `travel-sample`
 (or whichever bucket you want to stream from). For `connection.username`
@@ -103,6 +90,11 @@ to the bucket. If you have not yet created such a user, now is a good time to re
 NOTE: For Couchbase Server versions prior to 5.0, leave the username blank. Set the password property
 to the bucket password, or leave it blank if the bucket does not have a password. The sample buckets
 do not have passwords.
+
+You might also want to set `use_snapshots` to `true` to ensure the source connector
+never sends duplicate messages. This decision is up to you, and depends on the requirements
+of your project. It doesn't matter for this exercise; just be aware the option exists
+and defaults to `false`.
 
 
 ## Run the Source Connector
@@ -117,7 +109,6 @@ For Confluent:
     env CLASSPATH=./* \
         connect-standalone $CONFLUENT_HOME/etc/schema-registry/connect-avro-standalone.properties \
                            config/quickstart-couchbase-source.properties
-
 
 Or for Kafka:
 
@@ -142,6 +133,9 @@ removing the possibility of dependency conflicts.
 
 ## Observe Messages Published by Couchbase Source Connector
 
+The sample config file tells the source connector to publish to a topic called `test-default`.
+Let's use the Kafka command-line tools to spy on the contents of the topic.
+
 For Confluent:
 
     kafka-avro-console-consumer --bootstrap-server localhost:9092 \
@@ -151,6 +145,101 @@ Or for Kafka:
 
     kafka-console-consumer.sh --bootstrap-server localhost:9092 \
                               --topic test-default --from-beginning
+
+The expected output is a stream of Couchbase event notification messages,
+at least one for each document in the bucket. The messages include document metadata
+as well as content. The document content is transferred as a byte array
+(encoded as Base64 if the connector is configured to use JSON for message values).
+
+Each message has an `event` field whose value indicates the type of change
+represented by the message. The possible values are:
+
+* `mutation`: A change to document content, including creation
+              and changes made via subdocument commands.
+* `deletion`: Removal or expiration of the document.
+* `expiration`: Reserved for document expiration (Couchbase Server
+                does not currently send this event type, but may in future versions).
+
+Once the consumer catches up to the current state of the bucket, try
+[adding a new document to the bucket via the Couchbase Web Console](https://developer.couchbase.com/documentation/server/current/sdk/webui-cli-access.html).
+The consumer will print a notification of type `mutation`. Now delete the document
+and watch for an event of type `deletion`.
+
+Perhaps it goes without saying, but all of the offset management and fault tolerance
+features of Kafka Connect work with the Couchbase connector.
+You can kill and restart the processes and they will pick up where they left off,
+copying only new data (unless the `use_snapshots` config property is set to `false`,
+in which case a few duplicates might slip through).
+
+The shape of the message payload is controlled by the
+`dcp.message.converter.class` property of the connector config.
+By default it is set to `com.couchbase.connect.kafka.converter.SchemaConverter`,
+which formats each notification into a structure that holds document metadata
+and contents. For reference, the Avro schema for this payload format is shown below:
+
+    {
+      "type": "record",
+      "name": "DcpMessage",
+      "namespace": "com.couchbase",
+      "fields": [
+        {
+          "name": "event",
+          "type": "string"
+        },
+        {
+          "name": "partition",
+          "type": {
+            "type": "int",
+            "connect.type": "int16"
+          }
+        },
+        {
+          "name": "key",
+          "type": "string"
+        },
+        {
+          "name": "cas",
+          "type": "long"
+        },
+        {
+          "name": "bySeqno",
+          "type": "long"
+        },
+        {
+          "name": "revSeqno",
+          "type": "long"
+        },
+        {
+          "name": "expiration",
+          "type": [
+            "null",
+            "int"
+          ]
+        },
+        {
+          "name": "flags",
+          "type": [
+            "null",
+            "int"
+          ]
+        },
+        {
+          "name": "lockTime",
+          "type": [
+            "null",
+            "int"
+          ]
+        },
+        {
+          "name": "content",
+          "type": [
+            "null",
+            "bytes"
+          ]
+        }
+      ],
+      "connect.name": "com.couchbase.DcpMessage"
+    }
 
 
 # Experimental Sink Connector
