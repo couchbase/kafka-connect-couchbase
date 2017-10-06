@@ -91,10 +91,9 @@ NOTE: For Couchbase Server versions prior to 5.0, leave the username blank. Set 
 to the bucket password, or leave it blank if the bucket does not have a password. The sample buckets
 do not have passwords.
 
-You might also want to set `use_snapshots` to `true` to ensure the source connector
-never sends duplicate messages. This decision is up to you, and depends on the requirements
-of your project. It doesn't matter for this exercise; just be aware the option exists
-and defaults to `false`.
+You might also want to set `use_snapshots` to `true`, in which case the source connector
+will buffer events until it receives a complete snapshot before committing messages to the Kafka topic.
+It doesn't matter for this exercise; just be aware the option exists and defaults to `false`.
 
 
 ## Run the Source Connector
@@ -167,9 +166,7 @@ and watch for an event of type `deletion`.
 
 Perhaps it goes without saying, but all of the offset management and fault tolerance
 features of Kafka Connect work with the Couchbase connector.
-You can kill and restart the processes and they will pick up where they left off,
-copying only new data (unless the `use_snapshots` config property is set to `false`,
-in which case a few duplicates might slip through).
+You can kill and restart the processes and they will pick up where they left off.
 
 The shape of the message payload is controlled by the
 `dcp.message.converter.class` property of the connector config.
