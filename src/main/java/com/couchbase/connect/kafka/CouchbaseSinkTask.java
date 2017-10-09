@@ -20,11 +20,13 @@ import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.document.Document;
-import com.couchbase.client.java.document.RawJsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
+import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
+import com.couchbase.connect.kafka.util.JsonBinaryDocument;
+import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -91,7 +93,11 @@ public class CouchbaseSinkTask extends SinkTask {
                 .build();
         cluster = CouchbaseCluster.create(env, clusterAddress);
         cluster.authenticate(username, password);
-        bucket = cluster.openBucket(bucketName);
+
+        List<Transcoder<? extends Document, ?>> transcoders =
+                Collections.<Transcoder<? extends Document, ?>>singletonList(new JsonBinaryTranscoder());
+        bucket = cluster.openBucket(bucketName, transcoders);
+
         converter = new JsonConverter();
         converter.configure(Collections.singletonMap("schemas.enable", false), false);
 
@@ -164,8 +170,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
         try {
             if (documentIdExtractor != null) {
-                DocumentIdExtractor.Result result = documentIdExtractor.extractDocumentId(valueAsJsonBytes);
-                return RawJsonDocument.create(result.documentId(), result.document().toString(UTF_8));
+                return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
             }
 
         } catch (DocumentIdExtractor.DocumentIdNotFoundException e) {
@@ -180,7 +185,7 @@ public class CouchbaseSinkTask extends SinkTask {
             defaultId = documentIdFromKafkaMetadata(record);
         }
 
-        return RawJsonDocument.create(defaultId, new String(valueAsJsonBytes, UTF_8));
+        return JsonBinaryDocument.create(defaultId, valueAsJsonBytes);
     }
 
     @Override

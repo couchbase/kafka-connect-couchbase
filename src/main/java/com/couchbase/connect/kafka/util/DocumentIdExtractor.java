@@ -40,36 +40,6 @@ public class DocumentIdExtractor {
         }
     }
 
-    public static class Result {
-        private final String documentId;
-        private final ByteBuf document;
-
-        public Result(String documentId, ByteBuf document) {
-            this.documentId = documentId;
-            this.document = document;
-        }
-
-        public Result(String documentId, byte[] document) {
-            this(documentId, Unpooled.wrappedBuffer(document));
-        }
-
-        public String documentId() {
-            return documentId;
-        }
-
-        public ByteBuf document() {
-            return document;
-        }
-
-        @Override
-        public String toString() {
-            return "Result{" +
-                    "documentId='" + documentId + '\'' +
-                    ", document='" + document.toString(CharsetUtil.UTF_8) + '\'' +
-                    '}';
-        }
-    }
-
     private static class ByteRange {
         private final byte[] bytes;
         private int startOffset;
@@ -110,7 +80,7 @@ public class DocumentIdExtractor {
         this(JsonPointer.compile(documentIdPointer), removeDocumentId);
     }
 
-    public Result extractDocumentId(final byte[] json) throws IOException, DocumentIdNotFoundException {
+    public JsonBinaryDocument extractDocumentId(final byte[] json) throws IOException, DocumentIdNotFoundException {
         JsonParser parser = factory.createParser(json);
         parser = new FilteringParserDelegate(parser, new JsonPointerBasedFilter(documentIdPointer), false, false);
 
@@ -124,14 +94,14 @@ public class DocumentIdExtractor {
         }
 
         if (!removeDocumentId) {
-            return new Result(documentId, json);
+            return JsonBinaryDocument.create(documentId, json);
         }
 
         ByteRange removalRange = ByteRange.forCurrentToken(json, parser);
         swallowFieldName(removalRange);
         swallowOneComma(removalRange);
 
-        return new Result(documentId, Unpooled.wrappedBuffer(
+        return JsonBinaryDocument.create(documentId, Unpooled.wrappedBuffer(
                 Unpooled.wrappedBuffer(json, 0, removalRange.startOffset),
                 Unpooled.wrappedBuffer(json, removalRange.pastEndOffset, json.length - removalRange.pastEndOffset)));
     }

@@ -23,7 +23,7 @@ source code if you want to change any of these settings.
 
 From this directory, run the producer with the Maven command:
 
-    maven compile exec:java
+    mvn compile exec:java
 
 The producer will publish some random messages, then terminate.
 
