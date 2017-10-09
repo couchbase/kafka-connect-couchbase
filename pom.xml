@@ -69,7 +69,7 @@
         <kafka-connect-json.version>0.10.1.1</kafka-connect-json.version>
         <kafka-streams.version>0.10.1.1</kafka-streams.version>
         <dcp-client.version>0.12.0</dcp-client.version>
-        <java-client.version>2.4.5</java-client.version>
+        <java-client.version>2.5.1</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
         <junit.version>4.12</junit.version>
