@@ -30,6 +30,10 @@
             <includes>
                 <include>kafka*.jar</include>
             </includes>
+            <excludes>
+                <exclude>*-javadoc.jar</exclude>
+                <exclude>*-sources.jar</exclude>
+            </excludes>
         </fileSet>
     </fileSets>
 </assembly>

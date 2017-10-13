@@ -74,6 +74,13 @@
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
         <junit.version>4.12</junit.version>
         <mysql.version>5.1.6</mysql.version>
+
+        <!-- Don't sign artifacts unless the 'stage' or 'release' profile is active -->
+        <gpg.skip>true</gpg.skip>
+
+        <!-- When deploying, don't promote artifacts from staging repository unless 'release' profile is active -->
+        <autoReleaseAfterClose>false</autoReleaseAfterClose>
+
     </properties>
 
     <repositories>
@@ -162,9 +169,39 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.5.3</version>
                 <configuration>
+
+                    <!-- Don't deploy the ZIP archive to Maven Central -->
+                    <attach>false</attach>
+
                     <appendAssemblyId>false</appendAssemblyId>
                     <descriptors>
                         <descriptor>src/assembly/dist.xml</descriptor>
@@ -189,6 +226,31 @@
                     <forkMode>pertest</forkMode>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>${autoReleaseAfterClose}</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
         </plugins>
 
         <resources>
@@ -198,4 +260,20 @@
             </resource>
         </resources>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <properties>
+                <gpg.skip>false</gpg.skip>
+                <autoReleaseAfterClose>true</autoReleaseAfterClose>
+            </properties>
+        </profile>
+        <profile>
+            <id>stage</id>
+            <properties>
+                <gpg.skip>false</gpg.skip>
+            </properties>
+        </profile>
+    </profiles>
 </project>
