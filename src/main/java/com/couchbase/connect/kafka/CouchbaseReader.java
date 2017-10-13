@@ -144,6 +144,10 @@ public class CouchbaseReader extends Thread {
         client.startStreaming(partitions).await();
     }
 
+    long getVBucketUuid(int vBucketId) {
+        return client.sessionState().get(vBucketId).getLastUuid();
+    }
+
     public void shutdown() {
         client.disconnect().await();
     }

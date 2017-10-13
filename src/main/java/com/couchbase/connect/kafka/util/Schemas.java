@@ -26,7 +26,7 @@ public enum Schemas {
     public static final Schema VALUE_DEFAULT_SCHEMA =
             SchemaBuilder.struct().name("com.couchbase.DcpMessage")
                     .field("event", Schema.STRING_SCHEMA)
-                    .field("partition", Schema.INT16_SCHEMA)
+                    .field("partition", Schema.INT16_SCHEMA) // Couchbase "vBucket ID"
                     .field("key", Schema.STRING_SCHEMA)
                     .field("cas", Schema.INT64_SCHEMA)
                     .field("bySeqno", Schema.INT64_SCHEMA)
@@ -35,5 +35,10 @@ public enum Schemas {
                     .field("flags", Schema.OPTIONAL_INT32_SCHEMA)
                     .field("lockTime", Schema.OPTIONAL_INT32_SCHEMA)
                     .field("content", Schema.OPTIONAL_BYTES_SCHEMA)
+
+                    // Added in 3.2.0.  Marked as optional to support schema evolution.
+                    .field("bucket", SchemaBuilder.string().optional().build())
+                    .field("vBucketUuid", SchemaBuilder.int64().optional().build())
+
                     .build();
 }

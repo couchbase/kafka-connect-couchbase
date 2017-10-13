@@ -1,12 +1,12 @@
 /**
  * Copyright 2016 Couchbase, Inc.
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,16 +21,24 @@ import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.dcp.EventType;
+import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
 import com.couchbase.connect.kafka.util.Schemas;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.couchbase.connect.kafka.converter.ConverterUtils.*;
+import java.util.HashMap;
+import java.util.Map;
 
+import static com.couchbase.connect.kafka.converter.ConverterUtils.bufToBytes;
+import static com.couchbase.connect.kafka.converter.ConverterUtils.bufToString;
+
+/**
+ * @deprecated in favor of {@link DefaultSchemaSourceHandler}.
+ * Scheduled for removal in 4.0.0.
+ */
+@Deprecated
 public class SchemaConverter implements Converter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaConverter.class);

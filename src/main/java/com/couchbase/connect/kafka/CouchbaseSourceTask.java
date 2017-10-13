@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
@@ -23,6 +24,11 @@ import com.couchbase.connect.kafka.converter.Converter;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.dcp.Snapshot;
 import com.couchbase.connect.kafka.filter.Filter;
+import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
+import com.couchbase.connect.kafka.handler.source.DocumentEvent;
+import com.couchbase.connect.kafka.handler.source.LegacySourceHandlerAdapter;
+import com.couchbase.connect.kafka.handler.source.SourceHandler;
+import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
@@ -54,7 +60,7 @@ public class CouchbaseSourceTask extends SourceTask {
     private String bucket;
     private volatile boolean running;
     private Filter filter;
-    private Converter converter;
+    private SourceHandler sourceHandler;
     private int batchSizeMax;
     private boolean connectorNameInOffsets;
 
@@ -73,7 +79,7 @@ public class CouchbaseSourceTask extends SourceTask {
         }
 
         filter = createFilter(config.getString(CouchbaseSourceConnectorConfig.EVENT_FILTER_CLASS_CONFIG));
-        converter = createConverter(
+        sourceHandler = createHandler(
                 config.getString(CouchbaseSourceConnectorConfig.DCP_MESSAGE_CONVERTER_CLASS_CONFIG));
 
         topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
@@ -127,11 +133,19 @@ public class CouchbaseSourceTask extends SourceTask {
         couchbaseReader.start();
     }
 
-    private Converter createConverter(final String className) {
+    @SuppressWarnings("deprecation")
+    private SourceHandler createHandler(final String className) {
         try {
-            return Utils.newInstance(className, Converter.class);
+            try {
+                return Utils.newInstance(className, SourceHandler.class);
+            } catch (ClassCastException e) {
+                SourceHandler adapter = new LegacySourceHandlerAdapter(Utils.newInstance(className, Converter.class));
+                LOGGER.warn("Converter class {} implements deprecated {}. Please update the converter to extend {} instead.",
+                        className, Converter.class, SourceHandler.class);
+                return adapter;
+            }
         } catch (ClassNotFoundException e) {
-            throw new ConnectException("Couldn't create message converter", e);
+            throw new ConnectException("Couldn't create message handler", e);
         }
     }
 
@@ -182,13 +196,30 @@ public class CouchbaseSourceTask extends SourceTask {
 
     @SuppressWarnings("unchecked")
     public SourceRecord convert(ByteBuf event) {
-        SourceRecord record = converter.convert(event, bucket, topic);
-        if (connectorNameInOffsets) {
-            // TODO: move into converter on next major update
-            ((Map<String, String>)record.sourcePartition())
-                    .put("connector", config.getConnectorName());
+        final long vBucketUuid = couchbaseReader.getVBucketUuid(MessageUtil.getVbucket(event));
+        final DocumentEvent docEvent = DocumentEvent.create(event, bucket, vBucketUuid);
+
+        CouchbaseSourceRecord r = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
+        if (r == null) {
+            return null;
         }
-        return record;
+
+        final Map<String, Object> sourcePartition = new HashMap<String, Object>(2);
+        sourcePartition.put("bucket", docEvent.bucket());
+        sourcePartition.put("partition", String.valueOf(docEvent.vBucket())); // Stringify for backwards compatibility
+        if (connectorNameInOffsets) {
+            sourcePartition.put("connector", config.getConnectorName());
+        }
+
+        final Map<String, Object> sourceOffset = new HashMap<String, Object>(2);
+        sourceOffset.put("bySeqno", docEvent.bySeqno());
+
+        return new SourceRecord(sourcePartition, sourceOffset,
+                r.topic() == null ? topic : r.topic(),
+                r.kafkaPartition(),
+                r.keySchema(), r.key(),
+                r.valueSchema(), r.value(),
+                r.timestamp());
     }
 
     @Override

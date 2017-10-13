@@ -16,8 +16,8 @@
 
 package com.couchbase.connect.kafka;
 
-import com.couchbase.connect.kafka.converter.SchemaConverter;
 import com.couchbase.connect.kafka.filter.AllPassFilter;
+import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.slf4j.Logger;
@@ -212,7 +212,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
                 .define(DCP_MESSAGE_CONVERTER_CLASS_CONFIG,
                         ConfigDef.Type.STRING,
-                        SchemaConverter.class.getName(),
+                        DefaultSchemaSourceHandler.class.getName(),
                         ConfigDef.Importance.LOW,
                         DCP_MESSAGE_CONVERTER_CLASS_DOC,
                         CONNECTOR_GROUP, 3,

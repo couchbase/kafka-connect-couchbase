@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,16 @@
 package com.couchbase.connect.kafka.converter;
 
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import org.apache.kafka.connect.source.SourceRecord;
 
 /**
  * General interface to convert a couchbase DCP event to Kafka SourceRecord.
  *
  * @author mstadelmann@atex.com
+ * @deprecated In favor of {@link SourceHandler}. Scheduled for removal in 4.0.0.
  */
+@Deprecated
 public interface Converter {
 
     /**
