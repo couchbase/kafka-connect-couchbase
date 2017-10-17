@@ -302,10 +302,10 @@ restart the sink connector, and run the producer again.
 # Contribute
 
 - Questions? : https://forums.couchbase.com/c/Kafka-Connector
-- Documentation: http://developer.couchbase.com/documentation/server/current/connectors/kafka-3.1/kafka-intro.html
+- Documentation: http://developer.couchbase.com/documentation/server/current/connectors/kafka-3.2/kafka-intro.html
 - Source Code: https://github.com/couchbase/kafka-connect-couchbase
 - Issue Tracker: https://issues.couchbase.com/projects/KAFKAC
-- Downloads & Release Notes: http://developer.couchbase.com/documentation/server/current/connectors/kafka-3.1/release-notes.html
+- Downloads & Release Notes: http://developer.couchbase.com/documentation/server/current/connectors/kafka-3.2/release-notes.html
 
 # License
 
