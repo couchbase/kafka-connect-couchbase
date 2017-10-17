@@ -60,6 +60,11 @@
             <name>Sergey Avseyev</name>
             <email>sergey@couchbase.com</email>
         </developer>
+        <developer>
+            <id>dnault</id>
+            <name>David Nault</name>
+            <email>david.nault@couchbase.com</email>
+        </developer>
     </developers>
 
     <properties>
@@ -74,6 +79,7 @@
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
         <junit.version>4.12</junit.version>
         <mysql.version>5.1.6</mysql.version>
+        <dist-archive-name>${project.artifactId}-${project.version}.zip</dist-archive-name>
 
         <!-- Don't sign artifacts unless the 'stage' or 'release' profile is active -->
         <gpg.skip>true</gpg.skip>
@@ -249,6 +255,24 @@
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>${autoReleaseAfterClose}</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.bazaarvoice.maven.plugins</groupId>
+                <artifactId>s3-upload-maven-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>s3-upload</goal>
+                        </goals>
+                        <phase>deploy</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <bucketName>packages.couchbase.com</bucketName>
+                    <source>${project.build.directory}/${dist-archive-name}</source>
+                    <destination>clients/kafka/${project.version}/${dist-archive-name}</destination>
                 </configuration>
             </plugin>
         </plugins>
