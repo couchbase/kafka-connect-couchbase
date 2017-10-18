@@ -32,34 +32,34 @@ and have loaded the sample bucket called `travel-sample`. (It's fine if you want
 a different bucket; neither the connector nor this guide depend on the contents of
 the documents in the bucket.)
 
-You'll also need a local installation of Kafka or the Confluent Platform.
+You'll also need a local installation of Apache Kafka or Confluent Platform Kafka.
 
 
 ## Set Up Kafka
 
-If you already have an installation of Kafka (or the Confluent Platform) and know how to
+If you already have an installation of Kafka and know how to
 start the servers, feel free to skip this section.
 
 Still reading? Don't worry, setting up a basic installation is pretty easy.
-Download either [Kafka](https://kafka.apache.org/downloads)
-or [Confluent](https://www.confluent.io/download/).
+Download either [Apache Kafka](https://kafka.apache.org/downloads)
+or [Confluent Platform Kafka](https://www.confluent.io/download/).
 For simplicity, this guide assumes you're installing from a ZIP or TAR archive,
 so steer clear of the deb/rpm packages for now.
 
-Decompress the Kafka or Confluent archive and move the resulting directory under `~/opt`
+Decompress the Apache Kafka or Confluent Platform archive and move the resulting directory under `~/opt`
 (or wherever you like to keep this kind of software).
 The rest of this guide refers to the root of the installation directory as `$KAFKA_HOME`
 or `$CONFLUENT_HOME`. Be aware that some config files are in different relative locations
-depending on whether you're using Kafka or Confluent.
+depending on whether you're using Apache Kafka or Confluent Platform Kafka.
 
-Make sure the Kafka / Confluent command line tools are in your path:
+Make sure the Kafka command line tools are in your path:
 
-    export PATH=<path-to-kafka-or-confluent>/bin:$PATH
+    export PATH=<path-to-apache-kafka-or-confluent>/bin:$PATH
 
 
-### Start the Kafka / Confluent Servers
+### Start the Kafka Servers
 
-If you're using Confluent, start the servers by running these commands,
+If you're using Confluent Platform Kafka, start the servers by running these commands,
 **each in a separate terminal**:
 
     zookeeper-server-start $CONFLUENT_HOME/etc/kafka/zookeeper.properties
@@ -108,14 +108,14 @@ Kafka connectors can be run in [standalone or distributed](https://kafka.apache.
 mode. For now let's run the connector in standalone mode, using the CLASSPATH environment variable to include the
 Couchbase connector JAR in the class path.
 
-For Confluent:
+For Confluent Platform Kafka:
 
     cd $KAFKA_CONNECT_COUCHBASE_HOME
     env CLASSPATH=./* \
         connect-standalone $CONFLUENT_HOME/etc/schema-registry/connect-avro-standalone.properties \
                            config/quickstart-couchbase-source.properties
 
-Or for Kafka:
+Or for Apache Kafka:
 
     cd $KAFKA_CONNECT_COUCHBASE_HOME
     env CLASSPATH=./* \
@@ -125,7 +125,7 @@ Or for Kafka:
 
 ### Alternatively, Run the Connector with Class Loader Isolation
 
-Kafka version 0.11.0 (and Confluent 3.3.0) introduced a mechanism for plugin
+Apache Kafka version 0.11.0 (and Confluent Platform 3.3.0) introduced a mechanism for plugin
 class path isolation. To take advantage of this feature, edit the connect worker config file
 (the `connect-*.properties` file in the above commands).
 Modify the `plugin.path` property to include the parent directory of
@@ -141,12 +141,12 @@ removing the possibility of dependency conflicts.
 The sample config file tells the source connector to publish to a topic called `test-default`.
 Let's use the Kafka command-line tools to spy on the contents of the topic.
 
-For Confluent:
+For Confluent Platform Kafka:
 
     kafka-avro-console-consumer --bootstrap-server localhost:9092 \
                                 --topic test-default --from-beginning
 
-Or for Kafka:
+Or for Apache Kafka:
 
     kafka-console-consumer.sh --bootstrap-server localhost:9092 \
                               --topic test-default --from-beginning
@@ -272,7 +272,8 @@ In the `$KAFKA_CONNECT_COUCHBASE_HOME/config` directory there is a file called
  **Configure the Source Connector**, only now the bucket will receive messages
 and the user must have *write* access to the bucket.
 
-NOTE: You may wish to
+NOTE: Make sure to specify an existing bucket, otherwise the sink connector will fail.
+You may wish to
 [create a new bucket](https://developer.couchbase.com/documentation/server/current/clustersetup/create-bucket.html)
 to receive the messages.
 
@@ -289,7 +290,7 @@ Now that the Couchbase Sink Connector is running, let's give it some messages to
     mvn compile exec:java
 
 The producer will send some messages and then terminate. If all goes well,
-the messages will appear in the Couchbase bucket.
+the messages will appear in the Couchbase bucket you specified in the sink connector config.
 
 If you wish to see how the Couchbase Sink Connector behaves in the absence of message keys, modify the `publishMessage` method in the example source code to set
 the message keys to null, then rerun the producer.
