@@ -100,10 +100,30 @@ public class CouchbaseSourceRecord {
             return this;
         }
 
+        /**
+         * Convenience method for String keys. Shortcut for
+         * <pre>
+         * key(Schema.STRING_SCHEMA, key);
+         * </pre>
+         */
+        public Builder key(String key) {
+            return key(Schema.STRING_SCHEMA, key);
+        }
+
         public Builder value(Schema valueSchema, Object value) {
             this.valueSchema = valueSchema;
             this.value = value;
             return this;
+        }
+
+        /**
+         * Convenience method for String values. Shortcut for
+         * <pre>
+         * value(Schema.STRING_SCHEMA, value);
+         * </pre>
+         */
+        public Builder value(String value) {
+            return value(Schema.STRING_SCHEMA, value);
         }
 
         public Builder topic(String topic) {
