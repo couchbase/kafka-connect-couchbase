@@ -46,14 +46,16 @@ public class CouchbaseReader extends Thread {
     private final Short[] partitions;
     private final SessionState initialSessionState;
     private final Map<Short, Snapshot> snapshots;
+    private final BlockingQueue<Throwable> errorQueue;
 
     public CouchbaseReader(List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
-                           final BlockingQueue<Event> queue, Short[] partitions, SessionState sessionState,
+                           final BlockingQueue<Event> queue, BlockingQueue<Throwable> errorQueue, Short[] partitions, SessionState sessionState,
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
                            final String sslKeystorePassword) {
         this.snapshots = new ConcurrentHashMap<Short, Snapshot>(partitions.length);
         this.partitions = partitions;
         this.initialSessionState = sessionState;
+        this.errorQueue = errorQueue;
         client = Client.configure()
                 .connectTimeout(connectionTimeout)
                 .hostnames(clusterAddress)
@@ -125,23 +127,27 @@ public class CouchbaseReader extends Thread {
 
     @Override
     public void run() {
-        client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
-        client.failoverLogs(partitions).toBlocking().forEach(new Action1<ByteBuf>() {
-            @Override
-            public void call(ByteBuf event) {
-                short partition = DcpFailoverLogResponse.vbucket(event);
-                int numEntries = DcpFailoverLogResponse.numLogEntries(event);
-                PartitionState ps = initialSessionState.get(partition);
-                for (int i = 0; i < numEntries; i++) {
-                    ps.addToFailoverLog(
+        try {
+            client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
+            client.failoverLogs(partitions).toBlocking().forEach(new Action1<ByteBuf>() {
+                @Override
+                public void call(ByteBuf event) {
+                    short partition = DcpFailoverLogResponse.vbucket(event);
+                    int numEntries = DcpFailoverLogResponse.numLogEntries(event);
+                    PartitionState ps = initialSessionState.get(partition);
+                    for (int i = 0; i < numEntries; i++) {
+                        ps.addToFailoverLog(
                             DcpFailoverLogResponse.seqnoEntry(event, i),
                             DcpFailoverLogResponse.vbuuidEntry(event, i)
-                    );
+                        );
+                    }
+                    client.sessionState().set(partition, ps);
                 }
-                client.sessionState().set(partition, ps);
-            }
-        });
-        client.startStreaming(partitions).await();
+            });
+            client.startStreaming(partitions).await();
+        } catch (Throwable t) {
+            errorQueue.add(t);
+        }
     }
 
     long getVBucketUuid(int vBucketId) {
