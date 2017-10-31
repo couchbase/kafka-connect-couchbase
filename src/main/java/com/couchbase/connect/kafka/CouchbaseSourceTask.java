@@ -56,6 +56,7 @@ public class CouchbaseSourceTask extends SourceTask {
     private Map<String, String> configProperties;
     private CouchbaseReader couchbaseReader;
     private BlockingQueue<Event> queue;
+    private BlockingQueue<Throwable> errorQueue;
     private String topic;
     private String bucket;
     private volatile boolean running;
@@ -128,8 +129,9 @@ public class CouchbaseSourceTask extends SourceTask {
 
         running = true;
         queue = new LinkedBlockingQueue<Event>();
+        errorQueue = new LinkedBlockingQueue<Throwable>(1);
         couchbaseReader = new CouchbaseReader(clusterAddress, bucket, username, password, connectionTimeout,
-                queue, partitions, sessionState, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword);
+                queue,errorQueue, partitions, sessionState, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword);
         couchbaseReader.start();
     }
 
@@ -189,6 +191,9 @@ public class CouchbaseSourceTask extends SourceTask {
                     (batchSize == 0 || event == null || event instanceof Snapshot)) {
                 LOGGER.info("Poll returns {} result(s)", results.size());
                 return results;
+            }
+            if (!errorQueue.isEmpty()) {
+                throw new ConnectException(errorQueue.poll());
             }
         }
         return results;
