@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka.util;
 import com.couchbase.client.core.lang.Tuple;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
+import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.transcoder.AbstractTranscoder;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
@@ -37,7 +38,11 @@ public class JsonBinaryTranscoder extends AbstractTranscoder<JsonBinaryDocument,
     }
 
     public JsonBinaryDocument newDocument(String id, int expiry, ByteBuf content, long cas) {
-        throw new UnsupportedOperationException();
+        return new JsonBinaryDocument(id, expiry, content, cas, null);
+    }
+
+    public JsonBinaryDocument newDocument(String id, int expiry, ByteBuf content, long cas, MutationToken mutationToken) {
+        return new JsonBinaryDocument(id, expiry, content, cas, mutationToken);
     }
 
     public Class<JsonBinaryDocument> documentType() {
