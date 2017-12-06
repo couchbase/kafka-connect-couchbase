@@ -21,9 +21,7 @@ import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
 import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonPointer;
 import com.couchbase.client.deps.com.fasterxml.jackson.core.filter.FilteringParserDelegate;
 import com.couchbase.client.deps.com.fasterxml.jackson.core.filter.JsonPointerBasedFilter;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 

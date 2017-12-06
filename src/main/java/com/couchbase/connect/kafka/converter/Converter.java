@@ -31,6 +31,7 @@ public interface Converter {
 
     /**
      * Convert a DCP message to a SourceRecord.
+     *
      * @param byteBuf The DCP message as a ByteBuf.
      * @param bucket The bucket.
      * @param topic The topic.

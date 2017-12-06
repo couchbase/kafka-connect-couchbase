@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,11 +20,6 @@ import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public enum EventType {
     MUTATION("mutation"),
