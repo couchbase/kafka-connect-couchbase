@@ -20,8 +20,10 @@ import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.document.Document;
+import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
+import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
@@ -37,6 +39,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Completable;
 import rx.Observable;
 import rx.functions.Func1;
 
@@ -119,10 +122,14 @@ public class CouchbaseSinkTask extends SinkTask {
 
         //noinspection unchecked
         Observable.from(records)
-                .flatMap(new Func1<SinkRecord, Observable<Document>>() {
+                .flatMapCompletable(new Func1<SinkRecord, Completable>() {
                     @Override
-                    public Observable<Document> call(SinkRecord record) {
-                        return bucket.async().upsert(convert(record));
+                    public Completable call(SinkRecord record) {
+                        if (record.value() == null) {
+                            String documentId = documentIdFromKafkaMetadata(record);
+                            return removeIfExists(documentId);
+                        }
+                        return bucket.async().upsert(convert(record)).toCompletable();
                     }
                 })
                 .retryWhen(
@@ -133,8 +140,19 @@ public class CouchbaseSinkTask extends SinkTask {
                                 .max(5)
                                 .build())
 
-                .toBlocking()
-                .last();
+                .toCompletable().await();
+    }
+
+    private Completable removeIfExists(String documentId) {
+        return bucket.async().remove(documentId)
+                .onErrorResumeNext(new Func1<Throwable, Observable<JsonDocument>>() {
+                    @Override
+                    public Observable<JsonDocument> call(Throwable throwable) {
+                        return (throwable instanceof DocumentDoesNotExistException)
+                                ? Observable.<JsonDocument>empty()
+                                : Observable.<JsonDocument>error(throwable);
+                    }
+                }).toCompletable();
     }
 
     private static String toString(ByteBuffer byteBuffer) {

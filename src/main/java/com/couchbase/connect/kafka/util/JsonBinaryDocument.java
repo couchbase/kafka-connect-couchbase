@@ -31,7 +31,7 @@ public class JsonBinaryDocument extends AbstractDocument<ByteBuf> {
     }
 
     public static JsonBinaryDocument create(String id, byte[] content) {
-        return create(id, Unpooled.wrappedBuffer(content));
+        return create(id, content == null ? null : Unpooled.wrappedBuffer(content));
     }
 
     public JsonBinaryDocument(String id, int expiry, ByteBuf content, long cas, MutationToken mutationToken) {
