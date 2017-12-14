@@ -19,6 +19,8 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
@@ -53,7 +55,9 @@ import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_ID_POINTER_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.PERSIST_TO_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REPLICATE_TO_CONFIG;
 
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
@@ -64,6 +68,8 @@ public class CouchbaseSinkTask extends SinkTask {
     private CouchbaseCluster cluster;
     private JsonConverter converter;
     private DocumentIdExtractor documentIdExtractor;
+    private PersistTo persistTo;
+    private ReplicateTo replicateTo;
 
     @Override
     public String version() {
@@ -108,6 +114,9 @@ public class CouchbaseSinkTask extends SinkTask {
         if (docIdPointer != null && !docIdPointer.isEmpty()) {
             documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
         }
+
+        persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
+        replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
     }
 
     @Override
@@ -129,7 +138,7 @@ public class CouchbaseSinkTask extends SinkTask {
                             String documentId = documentIdFromKafkaMetadata(record);
                             return removeIfExists(documentId);
                         }
-                        return bucket.async().upsert(convert(record)).toCompletable();
+                        return bucket.async().upsert(convert(record), persistTo, replicateTo).toCompletable();
                     }
                 })
                 .retryWhen(
@@ -144,7 +153,7 @@ public class CouchbaseSinkTask extends SinkTask {
     }
 
     private Completable removeIfExists(String documentId) {
-        return bucket.async().remove(documentId)
+        return bucket.async().remove(documentId, persistTo, replicateTo)
                 .onErrorResumeNext(new Func1<Throwable, Observable<JsonDocument>>() {
                     @Override
                     public Observable<JsonDocument> call(Throwable throwable) {

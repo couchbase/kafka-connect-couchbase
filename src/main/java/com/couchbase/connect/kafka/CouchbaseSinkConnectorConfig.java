@@ -16,9 +16,13 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicateTo;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -67,6 +71,17 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String REMOVE_DOCUMENT_ID_DOC = "Whether to remove the ID identified by '" + DOCUMENT_ID_POINTER_CONFIG + "' from the document before storing in Couchbase.";
     static final String REMOVE_DOCUMENT_ID_DISPLAY = "Remove Document ID";
     public static final boolean REMOVE_DOCUMENT_ID_DEFAULT = false;
+
+
+    public static final String PERSIST_TO_CONFIG = "couchbase.durability.persist_to";
+    static final String PERSIST_TO_DOC = "Durability setting for Couchbase persistence.";
+    static final String PERSIST_TO_DISPLAY = "Persist to";
+    public static final String PERSIST_TO_DEFAULT = PersistTo.NONE.name();
+
+    public static final String REPLICATE_TO_CONFIG = "couchbase.durability.replicate_to";
+    static final String REPLICATE_TO_DOC = "Durability setting for Couchbase replication.";
+    static final String REPLICATE_TO_DISPLAY = "Replicate to";
+    public static final String REPLICATE_TO_DEFAULT = ReplicateTo.NONE.name();
 
     static ConfigDef config = baseConfigDef();
 
@@ -183,7 +198,31 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                             public boolean visible(String name, Map<String, Object> parsedConfig) {
                                 return !((String) parsedConfig.get(DOCUMENT_ID_POINTER_CONFIG)).isEmpty();
                             }
-                        });
+                        })
+
+                .define(PERSIST_TO_CONFIG,
+                        ConfigDef.Type.STRING,
+                        PERSIST_TO_DEFAULT,
+                        new EnumValidator(PersistTo.class),
+                        ConfigDef.Importance.LOW,
+                        PERSIST_TO_DOC,
+                        DATABASE_GROUP, 11,
+                        ConfigDef.Width.LONG,
+                        PERSIST_TO_DISPLAY,
+                        new EnumRecommender(PersistTo.class))
+
+                .define(REPLICATE_TO_CONFIG,
+                        ConfigDef.Type.STRING,
+                        REPLICATE_TO_DEFAULT,
+                        new EnumValidator(ReplicateTo.class),
+                        ConfigDef.Importance.LOW,
+                        REPLICATE_TO_DOC,
+                        DATABASE_GROUP, 12,
+                        ConfigDef.Width.LONG,
+                        REPLICATE_TO_DISPLAY,
+                        new EnumRecommender(ReplicateTo.class))
+
+                ;
     }
 
     public String getUsername() {
@@ -192,5 +231,56 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             return getString(CONNECTION_BUCKET_CONFIG);
         }
         return username;
+    }
+
+    public <E extends Enum<E>> E getEnum(Class<E> enumClass, String key) {
+        String configValue = getString(key);
+        try {
+            return Enum.valueOf(enumClass, configValue);
+        } catch (Exception e) {
+            throw new ConfigException("Bad value '" + configValue + "' for config key '" + key + "'" +
+                    "; must be one of " + Arrays.toString(enumClass.getEnumConstants()));
+        }
+    }
+
+    private static class EnumRecommender implements ConfigDef.Recommender {
+        private final List<Object> validValues;
+
+        public EnumRecommender(Class<? extends Enum> streamFromClass) {
+            List<String> names = new ArrayList<String>();
+            for (Enum value : streamFromClass.getEnumConstants()) {
+                names.add(value.name());
+            }
+            this.validValues = Collections.<Object>unmodifiableList(names);
+        }
+
+        @Override
+        public List<Object> validValues(String name, Map<String, Object> parsedConfig) {
+            return validValues;
+        }
+
+        @Override
+        public boolean visible(String name, Map<String, Object> parsedConfig) {
+            return true;
+        }
+    }
+
+    private static class EnumValidator implements ConfigDef.Validator {
+        private final Class<? extends Enum> enumClass;
+
+        public EnumValidator(Class<? extends Enum> enumClass) {
+            this.enumClass = enumClass;
+        }
+
+        @Override
+        public void ensureValid(String name, Object value) {
+            try {
+                //noinspection unchecked
+                Enum.valueOf(enumClass, (String) value);
+            } catch (IllegalArgumentException e) {
+                throw new ConfigException("Bad value '" + value + "' for config key '" + name + "'" +
+                        "; must be one of " + Arrays.toString(enumClass.getEnumConstants()));
+            }
+        }
     }
 }
