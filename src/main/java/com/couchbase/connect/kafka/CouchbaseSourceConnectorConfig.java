@@ -20,10 +20,13 @@ import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +102,11 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String COMPAT_NAMES_DOC = "If true, the library will use name in the offsets to allow multiple connectors for the same bucket.";
     private static final String COMPAT_NAMES_DISPLAY = "Use connector name in offsets";
     public static final boolean COMPAT_NAMES_DEFAULT = false;
+
+    public static final String STREAM_FROM_CONFIG = "couchbase.stream_from";
+    private static final String STREAM_FROM_DOC = "Controls when in history then connector starts streaming from.";
+    private static final String STREAM_FROM_DISPLAY = "Stream from";
+    public static final String STREAM_FROM_DEFAULT = StreamFrom.SAVED_OFFSET_OR_BEGINNING.name();
 
     static ConfigDef config = baseConfigDef();
     private final String connectorName;
@@ -245,6 +253,16 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTOR_GROUP, 6,
                         ConfigDef.Width.LONG,
                         COMPAT_NAMES_DISPLAY)
+
+                .define(STREAM_FROM_CONFIG,
+                        ConfigDef.Type.STRING,
+                        STREAM_FROM_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        STREAM_FROM_DOC,
+                        CONNECTOR_GROUP, 7,
+                        ConfigDef.Width.LONG,
+                        STREAM_FROM_DISPLAY,
+                        new EnumRecommender(StreamFrom.class))
                 ;
     }
 
@@ -254,6 +272,16 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             return getString(CONNECTION_BUCKET_CONFIG);
         }
         return username;
+    }
+
+    public <E extends Enum<E>> E getEnum(Class<E> enumClass, String key) {
+        String configValue = getString(key);
+        try {
+            return Enum.valueOf(enumClass, configValue);
+        } catch (Exception e) {
+            throw new ConfigException("Bad value '" + configValue + "' for config key '" + key + "'" +
+                    "; must be one of " + Arrays.toString(enumClass.getEnumConstants()));
+        }
     }
 
     public static void main(String[] args) {
@@ -275,6 +303,28 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
         @Override
         public boolean visible(String name, Map<String, Object> connectorConfigs) {
             return (Boolean) connectorConfigs.get(parentConfigName);
+        }
+    }
+
+    private static class EnumRecommender implements ConfigDef.Recommender {
+        private final List<Object> validValues;
+
+        public EnumRecommender(Class<? extends Enum> streamFromClass) {
+            List<String> names = new ArrayList<String>();
+            for (Enum value : streamFromClass.getEnumConstants()) {
+                names.add(value.name());
+            }
+            this.validValues = Collections.<Object>unmodifiableList(names);
+        }
+
+        @Override
+        public List<Object> validValues(String name, Map<String, Object> parsedConfig) {
+            return validValues;
+        }
+
+        @Override
+        public boolean visible(String name, Map<String, Object> parsedConfig) {
+            return true;
         }
     }
 }

@@ -19,12 +19,12 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
+import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.DcpControl;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.dcp.message.DcpSnapshotMarkerRequest;
 import com.couchbase.client.dcp.state.PartitionState;
-import com.couchbase.client.dcp.state.SessionState;
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.dcp.Event;
@@ -44,17 +44,20 @@ public class CouchbaseReader extends Thread {
 
     private final Client client;
     private final Short[] partitions;
-    private final SessionState initialSessionState;
+    private final Map<Short, Long> partitionToSavedSeqno;
+    private final StreamFrom streamFrom;
     private final Map<Short, Snapshot> snapshots;
     private final BlockingQueue<Throwable> errorQueue;
 
     public CouchbaseReader(List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
-                           final BlockingQueue<Event> queue, BlockingQueue<Throwable> errorQueue, Short[] partitions, SessionState sessionState,
+                           final BlockingQueue<Event> queue, BlockingQueue<Throwable> errorQueue, Short[] partitions,
+                           final Map<Short, Long> partitionToSavedSeqno, final StreamFrom streamFrom,
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
                            final String sslKeystorePassword) {
         this.snapshots = new ConcurrentHashMap<Short, Snapshot>(partitions.length);
         this.partitions = partitions;
-        this.initialSessionState = sessionState;
+        this.partitionToSavedSeqno = partitionToSavedSeqno;
+        this.streamFrom = streamFrom;
         this.errorQueue = errorQueue;
         client = Client.configure()
                 .connectTimeout(connectionTimeout)
@@ -129,25 +132,60 @@ public class CouchbaseReader extends Thread {
     public void run() {
         try {
             client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
-            client.failoverLogs(partitions).toBlocking().forEach(new Action1<ByteBuf>() {
-                @Override
-                public void call(ByteBuf event) {
-                    short partition = DcpFailoverLogResponse.vbucket(event);
-                    int numEntries = DcpFailoverLogResponse.numLogEntries(event);
-                    PartitionState ps = initialSessionState.get(partition);
-                    for (int i = 0; i < numEntries; i++) {
-                        ps.addToFailoverLog(
-                            DcpFailoverLogResponse.seqnoEntry(event, i),
-                            DcpFailoverLogResponse.vbuuidEntry(event, i)
-                        );
-                    }
-                    client.sessionState().set(partition, ps);
-                }
-            });
+
+            // Apply the fallback state to all partitions. As of DCP client version 0.12.0,
+            // this is the only way to set the sequence number to "now".
+            StreamFrom fallbackStreamFrom = streamFrom.withoutSavedOffset();
+            client.initializeState(fallbackStreamFrom.asDcpStreamFrom(), StreamTo.INFINITY).await();
+
+            // Overlay any saved offsets (might have saved offsets for only some partitions).
+            if (streamFrom.isSavedOffset()) {
+                restoreSavedOffsets();
+
+                // As of DCP client version 0.12.0, Client.initializeState(BEGINNING, INFINITY)
+                // doesn't fetch the failover logs. Do it ourselves to avoid a spurious rollback :-/
+                initFailoverLogs();
+            }
+
             client.startStreaming(partitions).await();
+
         } catch (Throwable t) {
             errorQueue.add(t);
         }
+    }
+
+    private void restoreSavedOffsets() {
+        LOGGER.info("Resuming from saved offsets for {} of {} partitions",
+                partitionToSavedSeqno.size(), partitions.length);
+
+        for (Map.Entry<Short, Long> entry : partitionToSavedSeqno.entrySet()) {
+            final short partition = entry.getKey();
+            final long savedSeqno = entry.getValue();
+            PartitionState ps = client.sessionState().get(partition);
+            ps.setStartSeqno(savedSeqno);
+            ps.setSnapshotStartSeqno(savedSeqno);
+            ps.setSnapshotEndSeqno(savedSeqno);
+            client.sessionState().set(partition, ps);
+        }
+    }
+
+    private void initFailoverLogs() {
+        client.failoverLogs(partitions).toBlocking().forEach(new Action1<ByteBuf>() {
+            @Override
+            public void call(ByteBuf event) {
+                short partition = DcpFailoverLogResponse.vbucket(event);
+                int numEntries = DcpFailoverLogResponse.numLogEntries(event);
+                PartitionState ps = client.sessionState().get(partition);
+                ps.getFailoverLog().clear();
+                for (int i = 0; i < numEntries; i++) {
+                    ps.addToFailoverLog(
+                            DcpFailoverLogResponse.seqnoEntry(event, i),
+                            DcpFailoverLogResponse.vbuuidEntry(event, i)
+                    );
+                }
+                client.sessionState().set(partition, ps);
+            }
+        });
     }
 
     long getVBucketUuid(int vBucketId) {
