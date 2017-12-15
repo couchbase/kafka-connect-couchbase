@@ -264,6 +264,8 @@ persisting the document to Couchbase, provide a `couchbase.remove.document.id`
 property with value `true`. If the connector fails to locate the document ID node,
 it will fall back to using the Kafka key or `topic/partition/offset` as described above.
 
+If the Kafka message body is null, the sink connector will delete the Couchbase document
+whose ID matches the Kafka message key.
 
 ## Configure and Run the Sink Connector
 
