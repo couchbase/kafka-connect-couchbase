@@ -55,6 +55,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.couchbase.client.core.logging.RedactableArgument.system;
+
 public class Cluster {
     static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
         @Override
@@ -151,7 +153,7 @@ public class Cluster {
                         return new Config(bucketConfig);
                     }
                 } catch (Exception e) {
-                    LOGGER.warn("Ignoring error for node {} when getting number of partitions", hostname, e);
+                    LOGGER.warn("Ignoring error for node {} when getting number of partitions", system(hostname), e);
                 }
             }
         } finally {

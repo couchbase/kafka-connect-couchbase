@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -107,6 +108,12 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     private static final String STREAM_FROM_DOC = "Controls when in history then connector starts streaming from.";
     private static final String STREAM_FROM_DISPLAY = "Stream from";
     public static final String STREAM_FROM_DEFAULT = StreamFrom.SAVED_OFFSET_OR_BEGINNING.name();
+
+    public static final String LOG_REDACTION_CONFIG = "couchbase.log_redaction";
+    static final String LOG_REDACTION_DOC = "Determines which kinds of sensitive log messages from the Couchbase connector will be tagged for later redaction by the Couchbase log redaction tool. " +
+            "NONE = no tagging; PARTIAL = user data is tagged; FULL = user, meta, and system data is tagged.";
+    static final String LOG_REDACTION_DISPLAY = "Log redaction";
+    public static final String LOG_REDACTION_DEFAULT = RedactionLevel.NONE.name();
 
     static ConfigDef config = baseConfigDef();
     private final String connectorName;
@@ -263,6 +270,16 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         STREAM_FROM_DISPLAY,
                         new EnumRecommender(StreamFrom.class))
+
+                .define(LOG_REDACTION_CONFIG,
+                        ConfigDef.Type.STRING,
+                        LOG_REDACTION_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        LOG_REDACTION_DOC,
+                        CONNECTOR_GROUP, 8,
+                        ConfigDef.Width.LONG,
+                        LOG_REDACTION_DISPLAY,
+                        new EnumRecommender(RedactionLevel.class))
                 ;
     }
 

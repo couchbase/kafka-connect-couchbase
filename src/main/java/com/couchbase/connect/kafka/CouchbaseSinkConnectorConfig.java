@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -58,7 +59,12 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECT
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DEFAULT;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DISPLAY;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DOC;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTOR_GROUP;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.DATABASE_GROUP;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_REDACTION_DEFAULT;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_REDACTION_DISPLAY;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_REDACTION_DOC;
 
 public class CouchbaseSinkConnectorConfig extends AbstractConfig {
 
@@ -222,6 +228,15 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         REPLICATE_TO_DISPLAY,
                         new EnumRecommender(ReplicateTo.class))
 
+                .define(LOG_REDACTION_CONFIG,
+                        ConfigDef.Type.STRING,
+                        LOG_REDACTION_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        LOG_REDACTION_DOC,
+                        CONNECTOR_GROUP, 13,
+                        ConfigDef.Width.LONG,
+                        LOG_REDACTION_DISPLAY,
+                        new EnumRecommender(RedactionLevel.class))
                 ;
     }
 

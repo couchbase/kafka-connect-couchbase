@@ -16,6 +16,8 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
+import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
@@ -84,6 +86,9 @@ public class CouchbaseSinkTask extends SinkTask {
         } catch (ConfigException e) {
             throw new ConnectException("Couldn't start CouchbaseSinkTask due to configuration error", e);
         }
+
+        RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
+        CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
 
         List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
         String bucketName = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);

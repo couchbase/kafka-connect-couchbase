@@ -16,6 +16,8 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
+import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.converter.Converter;
@@ -78,6 +80,9 @@ public class CouchbaseSourceTask extends SourceTask {
         } catch (ConfigException e) {
             throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
         }
+
+        RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
+        CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
 
         filter = createFilter(config.getString(CouchbaseSourceConnectorConfig.EVENT_FILTER_CLASS_CONFIG));
         sourceHandler = createHandler(
