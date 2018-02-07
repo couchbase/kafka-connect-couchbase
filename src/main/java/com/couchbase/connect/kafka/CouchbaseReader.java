@@ -66,6 +66,7 @@ public class CouchbaseReader extends Thread {
                 .username(username)
                 .password(password)
                 .controlParam(DcpControl.Names.CONNECTION_BUFFER_SIZE, 20480)
+                .controlParam(DcpControl.Names.ENABLE_NOOP, "true")
                 .bufferAckWatermark(60)
                 .sslEnabled(sslEnabled)
                 .sslKeystoreFile(sslKeystoreLocation)
