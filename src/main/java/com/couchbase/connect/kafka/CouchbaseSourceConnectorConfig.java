@@ -19,17 +19,16 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
+import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
+import com.couchbase.connect.kafka.util.config.EnumRecommender;
+import com.couchbase.connect.kafka.util.config.EnumValidator;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -264,6 +263,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                 .define(STREAM_FROM_CONFIG,
                         ConfigDef.Type.STRING,
                         STREAM_FROM_DEFAULT,
+                        new EnumValidator(StreamFrom.class),
                         ConfigDef.Importance.LOW,
                         STREAM_FROM_DOC,
                         CONNECTOR_GROUP, 7,
@@ -274,6 +274,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                 .define(LOG_REDACTION_CONFIG,
                         ConfigDef.Type.STRING,
                         LOG_REDACTION_DEFAULT,
+                        new EnumValidator(RedactionLevel.class),
                         ConfigDef.Importance.LOW,
                         LOG_REDACTION_DOC,
                         CONNECTOR_GROUP, 8,
@@ -305,43 +306,4 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
         System.out.println(config.toRst());
     }
 
-    static class BooleanParentRecommender implements ConfigDef.Recommender {
-        protected String parentConfigName;
-
-        public BooleanParentRecommender(String parentConfigName) {
-            this.parentConfigName = parentConfigName;
-        }
-
-        @Override
-        public List<Object> validValues(String name, Map<String, Object> connectorConfigs) {
-            return new LinkedList<Object>();
-        }
-
-        @Override
-        public boolean visible(String name, Map<String, Object> connectorConfigs) {
-            return (Boolean) connectorConfigs.get(parentConfigName);
-        }
-    }
-
-    private static class EnumRecommender implements ConfigDef.Recommender {
-        private final List<Object> validValues;
-
-        public EnumRecommender(Class<? extends Enum> streamFromClass) {
-            List<String> names = new ArrayList<String>();
-            for (Enum value : streamFromClass.getEnumConstants()) {
-                names.add(value.name());
-            }
-            this.validValues = Collections.<Object>unmodifiableList(names);
-        }
-
-        @Override
-        public List<Object> validValues(String name, Map<String, Object> parsedConfig) {
-            return validValues;
-        }
-
-        @Override
-        public boolean visible(String name, Map<String, Object> parsedConfig) {
-            return true;
-        }
-    }
 }

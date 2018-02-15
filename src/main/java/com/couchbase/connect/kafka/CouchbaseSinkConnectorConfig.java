@@ -19,11 +19,13 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
+import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
+import com.couchbase.connect.kafka.util.config.EnumRecommender;
+import com.couchbase.connect.kafka.util.config.EnumValidator;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -101,7 +103,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
 
     private static ConfigDef baseConfigDef() {
         ConfigDef.Recommender sslDependentsRecommender =
-                new CouchbaseSourceConnectorConfig.BooleanParentRecommender(CONNECTION_SSL_ENABLED_CONFIG);
+                new BooleanParentRecommender(CONNECTION_SSL_ENABLED_CONFIG);
         return new ConfigDef()
                 .define(CONNECTION_CLUSTER_ADDRESS_CONFIG,
                         ConfigDef.Type.LIST,
@@ -258,44 +260,4 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
         }
     }
 
-    private static class EnumRecommender implements ConfigDef.Recommender {
-        private final List<Object> validValues;
-
-        public EnumRecommender(Class<? extends Enum> streamFromClass) {
-            List<String> names = new ArrayList<String>();
-            for (Enum value : streamFromClass.getEnumConstants()) {
-                names.add(value.name());
-            }
-            this.validValues = Collections.<Object>unmodifiableList(names);
-        }
-
-        @Override
-        public List<Object> validValues(String name, Map<String, Object> parsedConfig) {
-            return validValues;
-        }
-
-        @Override
-        public boolean visible(String name, Map<String, Object> parsedConfig) {
-            return true;
-        }
-    }
-
-    private static class EnumValidator implements ConfigDef.Validator {
-        private final Class<? extends Enum> enumClass;
-
-        public EnumValidator(Class<? extends Enum> enumClass) {
-            this.enumClass = enumClass;
-        }
-
-        @Override
-        public void ensureValid(String name, Object value) {
-            try {
-                //noinspection unchecked
-                Enum.valueOf(enumClass, (String) value);
-            } catch (IllegalArgumentException e) {
-                throw new ConfigException("Bad value '" + value + "' for config key '" + name + "'" +
-                        "; must be one of " + Arrays.toString(enumClass.getEnumConstants()));
-            }
-        }
-    }
 }
