@@ -20,6 +20,7 @@ import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
 import com.couchbase.client.dcp.StreamTo;
+import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.client.dcp.config.DcpControl;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
@@ -53,7 +54,7 @@ public class CouchbaseReader extends Thread {
                            final BlockingQueue<Event> queue, BlockingQueue<Throwable> errorQueue, Short[] partitions,
                            final Map<Short, Long> partitionToSavedSeqno, final StreamFrom streamFrom,
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
-                           final String sslKeystorePassword) {
+                           final String sslKeystorePassword, final CompressionMode compressionMode) {
         this.snapshots = new ConcurrentHashMap<Short, Snapshot>(partitions.length);
         this.partitions = partitions;
         this.partitionToSavedSeqno = partitionToSavedSeqno;
@@ -67,6 +68,7 @@ public class CouchbaseReader extends Thread {
                 .password(password)
                 .controlParam(DcpControl.Names.CONNECTION_BUFFER_SIZE, 20480)
                 .controlParam(DcpControl.Names.ENABLE_NOOP, "true")
+                .compression(compressionMode)
                 .bufferAckWatermark(60)
                 .sslEnabled(sslEnabled)
                 .sslKeystoreFile(sslKeystoreLocation)

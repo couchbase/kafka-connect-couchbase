@@ -17,6 +17,7 @@
 package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.logging.RedactionLevel;
+import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
 import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
@@ -113,6 +114,12 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             "NONE = no tagging; PARTIAL = user data is tagged; FULL = user, meta, and system data is tagged.";
     static final String LOG_REDACTION_DISPLAY = "Log redaction";
     public static final String LOG_REDACTION_DEFAULT = RedactionLevel.NONE.name();
+
+    public static final String COMPRESSION_CONFIG = "couchbase.compression";
+    static final String COMPRESSION_DOC = "To reduce bandwidth usage, Couchbase Server 4.5 and later can send documents to the connector in compressed form. " +
+            "(Messages are always published to the Kafka topic in uncompressed form, regardless of this setting.)";
+    static final String COMPRESSION_DISPLAY = "Compression";
+    public static final String COMPRESSION_DEFAULT = CompressionMode.DISABLED.name();
 
     static ConfigDef config = baseConfigDef();
     private final String connectorName;
@@ -281,6 +288,17 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         LOG_REDACTION_DISPLAY,
                         new EnumRecommender(RedactionLevel.class))
+
+                .define(COMPRESSION_CONFIG,
+                        ConfigDef.Type.STRING,
+                        COMPRESSION_DEFAULT,
+                        new EnumValidator(CompressionMode.class),
+                        ConfigDef.Importance.LOW,
+                        COMPRESSION_DOC,
+                        CONNECTOR_GROUP, 9,
+                        ConfigDef.Width.LONG,
+                        COMPRESSION_DISPLAY,
+                        new EnumRecommender(CompressionMode.class))
                 ;
     }
 

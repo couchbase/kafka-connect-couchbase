@@ -18,6 +18,7 @@ package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
+import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.converter.Converter;
@@ -100,6 +101,7 @@ public class CouchbaseSourceTask extends SourceTask {
         String sslKeystorePassword = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG).value();
         batchSizeMax = config.getInt(CouchbaseSourceConnectorConfig.BATCH_SIZE_MAX_CONFIG);
         StreamFrom streamFrom = config.getEnum(StreamFrom.class, CouchbaseSourceConnectorConfig.STREAM_FROM_CONFIG);
+        CompressionMode compressionMode = config.getEnum(CompressionMode.class, CouchbaseSourceConnectorConfig.COMPRESSION_CONFIG);
 
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         Short[] partitions = toBoxedShortArray(config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG));
@@ -110,7 +112,8 @@ public class CouchbaseSourceTask extends SourceTask {
         queue = new LinkedBlockingQueue<Event>();
         errorQueue = new LinkedBlockingQueue<Throwable>(1);
         couchbaseReader = new CouchbaseReader(clusterAddress, bucket, username, password, connectionTimeout,
-                queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword);
+                queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
+                compressionMode);
         couchbaseReader.start();
     }
 
