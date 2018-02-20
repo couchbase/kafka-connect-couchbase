@@ -19,17 +19,26 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.core.time.Delay;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonFactory;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.TreeNode;
+import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
+import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
+import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
+import com.couchbase.connect.kafka.sink.*;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
@@ -39,12 +48,14 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
 import rx.Observable;
+import rx.functions.Action4;
 import rx.functions.Func1;
 
 import java.io.IOException;
@@ -56,10 +67,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_ID_POINTER_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.PERSIST_TO_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REPLICATE_TO_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.*;
 
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
@@ -70,6 +78,18 @@ public class CouchbaseSinkTask extends SinkTask {
     private CouchbaseCluster cluster;
     private JsonConverter converter;
     private DocumentIdExtractor documentIdExtractor;
+    private String path;
+    private DocumentMode documentMode;
+
+    private SubDocumentWriter subDocumentWriter;
+    private SubDocumentMode subDocumentMode;
+
+    private N1qlWriter n1qlWriter;
+    private N1qlMode n1qlMode;
+
+    private boolean createPaths;
+    private boolean createDocuments;
+
     private PersistTo persistTo;
     private ReplicateTo replicateTo;
 
@@ -120,8 +140,28 @@ public class CouchbaseSinkTask extends SinkTask {
             documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
         }
 
+        documentMode = config.getEnum(DocumentMode.class, DOCUMENT_MODE_CONFIG);
         persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
         replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
+
+
+        switch (documentMode) {
+            case SUBDOCUMENT: {
+                subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
+                path = config.getString(CouchbaseSinkConnectorConfig.SUBDOCUMENT_PATH_CONFIG);
+                createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
+                createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
+
+                subDocumentWriter = new SubDocumentWriter(subDocumentMode, path, createPaths, createDocuments);
+                break;
+            }
+            case N1QL: {
+                n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
+                createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
+                n1qlWriter = new N1qlWriter(n1qlMode, createDocuments);
+                break;
+            }
+        }
     }
 
     @Override
@@ -143,7 +183,22 @@ public class CouchbaseSinkTask extends SinkTask {
                             String documentId = documentIdFromKafkaMetadata(record);
                             return removeIfExists(documentId);
                         }
-                        return bucket.async().upsert(convert(record), persistTo, replicateTo).toCompletable();
+
+                        JsonBinaryDocument doc = convert(record);
+
+                        switch (documentMode) {
+                            case N1QL: {
+                                return n1qlWriter.write(bucket.async(), doc, persistTo, replicateTo);
+                            }
+                            case SUBDOCUMENT: {
+                                return subDocumentWriter.write(bucket.async(), doc, persistTo, replicateTo);
+                            }
+                            default: {
+                                return bucket.async()
+                                        .upsert(doc, persistTo, replicateTo)
+                                        .toCompletable();
+                            }
+                        }
                     }
                 })
                 .retryWhen(
@@ -196,7 +251,9 @@ public class CouchbaseSinkTask extends SinkTask {
         return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
     }
 
-    private Document convert(SinkRecord record) {
+
+    private JsonBinaryDocument convert(SinkRecord record) {
+
         byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
         String defaultId = null;
 
