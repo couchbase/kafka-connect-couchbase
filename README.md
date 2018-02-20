@@ -89,8 +89,8 @@ The rest are specific to the Couchbase connector.
 
 For this exercise, change the value of `connection.bucket` to `travel-sample`
 (or whichever bucket you want to stream from). For `connection.username`
-and `connection.password`, supply the credentials of a Couchbase user with read access
-to the bucket. If you have not yet created such a user, now is a good time to read about
+and `connection.password`, supply the credentials of a Couchbase user who has the "Data DCP Reader"
+role for the bucket. If you have not yet created such a user, now is a good time to read about
 [Creating and Managing Users with the UI](https://developer.couchbase.com/documentation/server/5.0/security/security-rbac-for-admins-and-apps.html).
 
 NOTE: For Couchbase Server versions prior to 5.0, leave the username blank. Set the password property
