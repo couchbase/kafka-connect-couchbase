@@ -1,0 +1,170 @@
+Reference of the source connector options.
+
+[[database]]
+Database
+~~~~~~~~
+
+`connection.cluster_address`
+
+Couchbase Cluster addresses to listen (use comma to specify several).
+
+* Type: list
+* Importance: high
+
+`connection.bucket`
+
+Couchbase bucket name.
+
+* Type: string
+* Importance: high
+
+`connection.username`
+
+Couchbase username for Couchbase Server 5.0 and later.
+
+* Type: string
+* Importance: high
+* Default: the bucket name specified by `connection.bucket`
+
+`connection.password`
+
+Couchbase password. For Couchbase Server versions prior to 5.0 this is
+the bucket password. For versions 5.0 and later, this is the password
+associated with `connection.username`.
+
+* Type: password
+* Importance: low
+* Default: `""`
+
+`connection.timeout.ms`
+
+Connection timeout in milliseconds.
+
+* Type: long
+* Importance: low
+
+`connection.ssl.enabled`
+
+Use SSL to connect to Couchbase. This feature only available in
+Couchbase Enterprise.
+
+* Type: boolean
+* Importance: low
+* Default: `false`
+* Dependents: `connection.ssl.keystore.location`,
+`connection.ssl.keystore.password`
+
+`connection.ssl.keystore.location`
+
+The location of the key store file.
+
+* Type: string
+* Importance: low
+
+`connection.ssl.keystore.password`
+
+The password of the private key in the key store file.
+
+* Type: password
+* Importance: low
+* Default: `""`
+
+[[connector]]
+Connector
+~~~~~~~~~
+
+`topic.name`
+
+Name of the Kafka topic to publish data to.
+
+* Type: string
+* Importance: high
+
+`use_snapshots`
+
+If true, it will only commit into Kafka when full snapshot from
+Couchbase received.
+
+* Type: boolean
+* Importance: low
+* Default: `false`
+
+`dcp.message.converter.class`
+
+The class name of the message converter to use.
+
+* Type: string
+* Importance: low
+* Default:
+`"com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler"`
+
+`event.filter.class`
+
+The class name of the event filter to use.
+
+* Type: string
+* Importance: low
+* Default: `"com.couchbase.connect.kafka.filter.AllPassFilter"`
+
+`couchbase.stream_from`
+
+The point in Couchbase history to start streaming from. Possible values:
+
+* SAVED_OFFSET_OR_BEGINNING - Restart from saved state, or if none,
+restart from oldest available mutation in Couchbase
+* SAVED_OFFSET_OR_NOW - Restart from saved state, or if none, restart
+from current Couchbase state
+* BEGINNING - Restart from oldest available mutation in Couchbase
+(ignore any potential saved state)
+* NOW - Restart from current Couchbase state (ignore any potential saved
+state)
+
+* Since: 3.2.2
+* Type: string
+* Importance: low
+* Default: `"SAVED_OFFSET_OR_BEGINNING"`
+
+`couchbase.log_redaction`
+
+Optionally tag sensitive values in the log output for later redaction.
+Possible values:
+
+* NONE - No redaction is performed.
+* PARTIAL - Only user data is redacted, system and metadata are not.
+* FULL - User, System and Metadata are all redacted.
+
+* Since: 3.2.3
+* Type: string
+* Importance: low
+* Default: `"NONE"`
+
+`couchbase.compression`
+
+To reduce bandwidth usage, Couchbase Server 4.5 and later can send
+documents to the connector in compressed form. (Messages are always
+published to the Kafka topic in uncompressed form, regardless of this
+setting.) Possible values:
+
+* DISABLED - No compression.
+* ENABLED - Couchbase Server decides whether to use compression on a
+per-document basis. For Couchbase 5.5 and later, the document will be
+sent compressed if the server already has easy access to the compressed
+form. For older server versions, this mode is equivalent to FORCED, and
+may increase server CPU load.
+* FORCED - Compression is used for every document, unless compressed
+size is greater than uncompressed size.
+
+* Since: 3.2.3
+* Type: string
+* Importance: low
+* Default: `"DISABLED"`
+
+*Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
+Connector 3.2]
+
+*Previous topic:*
+link:../../connectors/kafka-3.2/quickstart.html[Quickstart]
+
+*Next topic:*
+link:../../connectors/kafka-3.2/sink-configuration-options.html[Sink
+Configuration Options]

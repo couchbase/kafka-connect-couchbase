@@ -1,0 +1,152 @@
+Reference of the source connector options.
+
+[[database]]
+Database
+~~~~~~~~
+
+`connection.cluster_address`
+
+Couchbase Cluster addresses to listen (use comma to specify several).
+
+* Type: list
+* Importance: high
+
+`connection.bucket`
+
+Couchbase bucket name.
+
+* Type: string
+* Importance: high
+
+`connection.username`
+
+Couchbase username for Couchbase Server 5.0 and later.
+
+* Type: string
+* Importance: high
+* Default: the bucket name specified by `connection.bucket`
+
+`connection.password`
+
+Couchbase password. For Couchbase Server versions prior to 5.0 this is
+the bucket password. For versions 5.0 and later, this is the password
+associated with `connection.username`.
+
+* Type: password
+* Importance: low
+* Default: `""`
+
+`connection.timeout.ms`
+
+Connection timeout in milliseconds.
+
+* Type: long
+* Importance: low
+
+`connection.ssl.enabled`
+
+Use SSL to connect to Couchbase. This feature only available in
+Couchbase Enterprise.
+
+* Type: boolean
+* Importance: low
+* Default: `false`
+* Dependents: `connection.ssl.keystore.location`,
+`connection.ssl.keystore.password`
+
+`connection.ssl.keystore.location`
+
+The location of the key store file.
+
+* Type: string
+* Importance: low
+
+`connection.ssl.keystore.password`
+
+The password of the private key in the key store file.
+
+* Type: password
+* Importance: low
+* Default: `""`
+
+`couchbase.document.id`
+
+An optional JSON Pointer specifying a document field to use as the
+Couchbase document ID.
+
+* Type: string
+* Importance: low
+* Default: `""`
+* Dependents: `couchbase.remove.document.id`
+
+`couchbase.remove.document.id`
+
+Controls whether the ID field is removed from the document when
+`couchbase.document.id` is specified.
+
+* Type: boolean
+* Importance: low
+* Default: `false`
+
+`couchbase.durability.persist_to`
+
+Optionally specify Couchbase persistence requirements for a write to be
+considered successful. If the requested requirements cannot be met (due
+to Couchbase rebalance or failover, for instance) the connector will
+terminate. Possible values:
+
+* NONE - Do not require any disk persistence.
+* MASTER - Require disk persistence to the master node of the document
+only.
+* ONE - Require disk persistence of one node (master or replica).
+* TWO - Require disk persistence of two nodes (master or replica).
+* THREE - Require disk persistence of three nodes (master or replica).
+* FOUR - Require disk persistence of four nodes (master + three
+replicas).
+
+* Since: 3.2.2
+* Type: boolean
+* Importance: low
+* Default: `"NONE"`
+
+`couchbase.durability.replicate_to`
+
+Optionally specify Couchbase replication requirements for a write to be
+considered successful. If the requested requirements cannot be met (due
+to Couchbase rebalance or failover, for instance) the connector will
+terminate. Possible values:
+
+* NONE - Do not require any replication.
+* ONE - Require replication to one replica.
+* TWO - Require replication to two replicas.
+* THREE - Require replication to three replicas.
+
+* Since: 3.2.2
+* Type: boolean
+* Importance: low
+* Default: `"NONE"`
+
+`couchbase.log_redaction`
+
+Optionally tag sensitive values in the log output for later redaction.
+Possible values:
+
+* NONE - No redaction is performed.
+* PARTIAL - Only user data is redacted, system and metadata are not.
+* FULL - User, System and Metadata are all redacted.
+
+* Since: 3.2.3
+* Type: string
+* Importance: low
+* Default: `"NONE"`
+
+*Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
+Connector 3.2]
+
+*Previous topic:*
+link:../../connectors/kafka-3.2/source-configuration-options.html[Source
+Configuration Options]
+
+*Next topic:*
+link:../../connectors/kafka-3.2/streams-sample.html[Couchbase Sample
+with Kafka Streams]
