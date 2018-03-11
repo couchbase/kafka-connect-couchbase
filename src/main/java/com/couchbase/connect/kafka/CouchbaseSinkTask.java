@@ -28,6 +28,7 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
+import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
@@ -70,6 +71,7 @@ public class CouchbaseSinkTask extends SinkTask {
     private CouchbaseCluster cluster;
     private JsonConverter converter;
     private DocumentIdExtractor documentIdExtractor;
+    private String path;
     private PersistTo persistTo;
     private ReplicateTo replicateTo;
 
@@ -120,6 +122,7 @@ public class CouchbaseSinkTask extends SinkTask {
             documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
         }
 
+        path = config.getString(CouchbaseSinkConnectorConfig.DOCUMENT_PATH_CONFIG);
         persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
         replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
     }
@@ -143,7 +146,21 @@ public class CouchbaseSinkTask extends SinkTask {
                             String documentId = documentIdFromKafkaMetadata(record);
                             return removeIfExists(documentId);
                         }
-                        return bucket.async().upsert(convert(record), persistTo, replicateTo).toCompletable();
+
+
+
+                        if(path == null || path.isEmpty()) {
+                            return bucket.async()
+                                    .upsert(convert(record), persistTo, replicateTo)
+                                    .toCompletable();
+                        } else {
+                            return bucket.async()
+                                    .mutateIn(documentIdFromKafkaMetadata(record))
+                                    .upsert(path,convert(record))
+                                    .execute(persistTo,replicateTo)
+                                    .toCompletable();
+                        }
+
                     }
                 })
                 .retryWhen(

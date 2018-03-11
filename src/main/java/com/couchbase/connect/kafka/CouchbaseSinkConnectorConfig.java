@@ -75,6 +75,11 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String DOCUMENT_ID_POINTER_DISPLAY = "Document ID Pointer";
     public static final String DOCUMENT_ID_POINTER_DEFAULT = "";
 
+    public static final String DOCUMENT_PATH_CONFIG = "couchbase.document.path";
+    static final String DOCUMENT_PATH_DOC = "JSON Pointer to the property to use as the root for the Couchbase sub-document operation.";
+    static final String DOCUMENT_PATH_DISPLAY = "Document Path";
+    public static final String DOCUMENT_PATH_DEFAULT = "";
+
     public static final String REMOVE_DOCUMENT_ID_CONFIG = "couchbase.remove.document.id";
     static final String REMOVE_DOCUMENT_ID_DOC = "Whether to remove the ID identified by '" + DOCUMENT_ID_POINTER_CONFIG + "' from the document before storing in Couchbase.";
     static final String REMOVE_DOCUMENT_ID_DISPLAY = "Remove Document ID";
@@ -239,6 +244,17 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         LOG_REDACTION_DISPLAY,
                         new EnumRecommender(RedactionLevel.class))
+
+                .define(DOCUMENT_PATH_CONFIG,
+                        ConfigDef.Type.STRING,
+                        DOCUMENT_PATH_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        DOCUMENT_PATH_DOC,
+                        DATABASE_GROUP, 14,
+                        ConfigDef.Width.LONG,
+                        DOCUMENT_PATH_DISPLAY,
+                        Collections.singletonList(DOCUMENT_PATH_CONFIG))
+
                 ;
     }
 
