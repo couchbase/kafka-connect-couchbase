@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.core.time.Delay;
+import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.PersistTo;
@@ -28,7 +29,6 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
-import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
@@ -40,6 +40,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
@@ -70,6 +71,7 @@ public class CouchbaseSinkTask extends SinkTask {
     private Bucket bucket;
     private CouchbaseCluster cluster;
     private JsonConverter converter;
+    private JsonDeserializer deserializer;
     private DocumentIdExtractor documentIdExtractor;
     private String path;
     private PersistTo persistTo;
@@ -117,6 +119,9 @@ public class CouchbaseSinkTask extends SinkTask {
         converter = new JsonConverter();
         converter.configure(Collections.singletonMap("schemas.enable", false), false);
 
+        deserializer = new JsonDeserializer();
+        deserializer.configure(Collections.singletonMap("schemas.enable", false), false);
+
         String docIdPointer = config.getString(DOCUMENT_ID_POINTER_CONFIG);
         if (docIdPointer != null && !docIdPointer.isEmpty()) {
             documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
@@ -148,15 +153,19 @@ public class CouchbaseSinkTask extends SinkTask {
                         }
 
 
+                        Document doc = convert(record);
 
                         if(path == null || path.isEmpty()) {
                             return bucket.async()
-                                    .upsert(convert(record), persistTo, replicateTo)
+                                    .upsert(doc, persistTo, replicateTo)
                                     .toCompletable();
                         } else {
+
+                            ByteBuf rawBytes = (ByteBuf)doc.content();
+
                             return bucket.async()
-                                    .mutateIn(documentIdFromKafkaMetadata(record))
-                                    .upsert(path,convert(record))
+                                    .mutateIn(doc.id())
+                                    .upsert(path, record.value())
                                     .execute(persistTo,replicateTo)
                                     .toCompletable();
                         }
@@ -213,7 +222,36 @@ public class CouchbaseSinkTask extends SinkTask {
         return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
     }
 
+    private String getDocumentId(SinkRecord record, byte[] valueAsJsonBytes){
+        String defaultId = null;
+
+        try {
+            if (documentIdExtractor != null) {
+                return documentIdExtractor.extractDocumentId(valueAsJsonBytes).id();
+            }
+
+        } catch (DocumentIdExtractor.DocumentIdNotFoundException e) {
+            defaultId = documentIdFromKafkaMetadata(record);
+            LOGGER.warn(e.getMessage() + "; using fallback ID '{}'", defaultId);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (defaultId == null) {
+            defaultId = documentIdFromKafkaMetadata(record);
+        }
+
+        return defaultId;
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode toFragment(String topic, byte[] rawBytes){
+
+        return deserializer.deserialize(topic, rawBytes);
+    }
+
     private Document convert(SinkRecord record) {
+
         byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
         String defaultId = null;
 
