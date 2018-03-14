@@ -19,6 +19,11 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.core.time.Delay;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonFactory;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonToken;
+import com.couchbase.client.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
@@ -26,15 +31,19 @@ import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
+import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
+import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
 import com.couchbase.connect.kafka.util.Version;
+import org.apache.avro.data.Json;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
@@ -51,6 +60,7 @@ import rx.functions.Func1;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -162,12 +172,39 @@ public class CouchbaseSinkTask extends SinkTask {
                         } else {
 
                             ByteBuf rawBytes = (ByteBuf)doc.content();
+                            final JsonFactory factory = new JsonFactory();
 
-                            return bucket.async()
-                                    .mutateIn(doc.id())
-                                    .upsert(path, record.value())
-                                    .execute(persistTo,replicateTo)
-                                    .toCompletable();
+                            Exception error = null;
+                            try {
+                                JsonParser parser = factory.setCodec(new ObjectMapper()).createParser(rawBytes.toString(UTF_8));
+
+                                String token = parser.getCurrentName();
+                                AsyncMutateInBuilder mutation = bucket.async()
+                                        .mutateIn(doc.id());
+
+                                while(token != null) {
+
+                                    mutation = mutation.upsert(token,parser.getCurrentValue());
+
+                                    token = parser.nextFieldName();
+                                }
+
+                                return mutation
+                                        .execute(persistTo, replicateTo)
+                                        .toCompletable();
+
+                                /*return bucket.async()
+                                        .mutateIn(doc.id())
+                                        .upsert(path, parser.readValueAsTree())
+                                        .execute(persistTo, replicateTo)
+                                        .toCompletable();*/
+                            }
+                            catch (IOException ex)
+                            {
+                                error = ex;
+                            }
+
+                            return Completable.error(error);
                         }
 
                     }
