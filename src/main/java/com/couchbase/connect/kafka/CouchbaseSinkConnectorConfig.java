@@ -19,6 +19,8 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
+import com.couchbase.connect.kafka.sink.DocumentMode;
+import com.couchbase.connect.kafka.sink.SubDocumentMode;
 import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
 import com.couchbase.connect.kafka.util.config.EnumRecommender;
 import com.couchbase.connect.kafka.util.config.EnumValidator;
@@ -79,6 +81,21 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String DOCUMENT_PATH_DOC = "JSON Pointer to the property to use as the root for the Couchbase sub-document operation.";
     static final String DOCUMENT_PATH_DISPLAY = "Document Path";
     public static final String DOCUMENT_PATH_DEFAULT = "";
+
+    public static final String DOCUMENT_MODE_CONFIG = "couchbase.document.mode";
+    static final String DOCUMENT_MODE_DOC = "Setting to indicate an update to the entire document or a sub-document";
+    static final String DOCUMENT_MODE_DISPLAY = "Document Mode";
+    public static final String DOCUMENT_MODE_DEFAULT = DocumentMode.DOCUMENT.name();
+
+    public static final String SUBDOCUMENT_MODE_CONFIG = "couchbase.subdocument.mode";
+    static final String SUBDOCUMENT_MODE_DOC = "Setting to indicate the type of update to a sub-document";
+    static final String SUBDOCUMENT_MODE_DISPLAY = "Sub-Document Mode";
+    public static final String SUBDOCUMENT_MODE_DEFAULT = SubDocumentMode.UPSERT.name();
+
+    public static final String SUBDOCUMENT_CREATEPATH_CONFIG = "couchbase.subdocument.createpath";
+    static final String SUBDOCUMENT_CREATEPATH_DOC = "Whether to add the parent paths if they are missing in the document";
+    static final String SUBDOCUMENT_CREATEPATH_DISPLAY = "Create parent paths";
+    public static final boolean SUBDOCUMENT_CREATEPATH_DEFAULT = true;
 
     public static final String REMOVE_DOCUMENT_ID_CONFIG = "couchbase.remove.document.id";
     static final String REMOVE_DOCUMENT_ID_DOC = "Whether to remove the ID identified by '" + DOCUMENT_ID_POINTER_CONFIG + "' from the document before storing in Couchbase.";
@@ -254,6 +271,37 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         DOCUMENT_PATH_DISPLAY,
                         Collections.singletonList(DOCUMENT_PATH_CONFIG))
+
+                .define(DOCUMENT_MODE_CONFIG,
+                        ConfigDef.Type.STRING,
+                        DOCUMENT_MODE_DEFAULT,
+                        new EnumValidator(DocumentMode.class),
+                        ConfigDef.Importance.LOW,
+                        DOCUMENT_MODE_DOC,
+                        DATABASE_GROUP, 15,
+                        ConfigDef.Width.LONG,
+                        DOCUMENT_MODE_DISPLAY,
+                        new EnumRecommender(DocumentMode.class))
+
+                .define(SUBDOCUMENT_MODE_CONFIG,
+                        ConfigDef.Type.STRING,
+                        SUBDOCUMENT_MODE_DEFAULT,
+                        new EnumValidator(SubDocumentMode.class),
+                        ConfigDef.Importance.LOW,
+                        SUBDOCUMENT_MODE_DOC,
+                        DATABASE_GROUP, 16,
+                        ConfigDef.Width.LONG,
+                        SUBDOCUMENT_MODE_DISPLAY,
+                        new EnumRecommender(SubDocumentMode.class))
+
+                .define(SUBDOCUMENT_CREATEPATH_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        SUBDOCUMENT_CREATEPATH_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        SUBDOCUMENT_CREATEPATH_DOC,
+                        DATABASE_GROUP, 17,
+                        ConfigDef.Width.LONG,
+                        SUBDOCUMENT_CREATEPATH_DISPLAY)
 
                 ;
     }

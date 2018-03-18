@@ -21,8 +21,7 @@ import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonFactory;
 import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonToken;
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.TreeNode;
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.Bucket;
@@ -31,7 +30,6 @@ import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
@@ -39,11 +37,12 @@ import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
+import com.couchbase.connect.kafka.sink.DocumentMode;
+import com.couchbase.connect.kafka.sink.SubDocumentMode;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
 import com.couchbase.connect.kafka.util.Version;
-import org.apache.avro.data.Json;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
@@ -60,18 +59,11 @@ import rx.functions.Func1;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_ID_POINTER_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.PERSIST_TO_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REPLICATE_TO_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.*;
 
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
@@ -84,6 +76,9 @@ public class CouchbaseSinkTask extends SinkTask {
     private JsonDeserializer deserializer;
     private DocumentIdExtractor documentIdExtractor;
     private String path;
+    private DocumentMode documentMode;
+    private SubDocumentMode subDocumentMode;
+    private boolean createPaths;
     private PersistTo persistTo;
     private ReplicateTo replicateTo;
 
@@ -138,6 +133,9 @@ public class CouchbaseSinkTask extends SinkTask {
         }
 
         path = config.getString(CouchbaseSinkConnectorConfig.DOCUMENT_PATH_CONFIG);
+        documentMode = config.getEnum(DocumentMode.class, DOCUMENT_MODE_CONFIG);
+        subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
+        createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
         persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
         replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
     }
@@ -162,50 +160,78 @@ public class CouchbaseSinkTask extends SinkTask {
                             return removeIfExists(documentId);
                         }
 
-
                         Document doc = convert(record);
+                        if(documentMode == DocumentMode.SUBDOCUMENT) {
 
-                        if(path == null || path.isEmpty()) {
-                            return bucket.async()
-                                    .upsert(doc, persistTo, replicateTo)
-                                    .toCompletable();
-                        } else {
+                            SubdocOptionsBuilder options = new SubdocOptionsBuilder().createPath(createPaths);
 
-                            ByteBuf rawBytes = (ByteBuf)doc.content();
-                            final JsonFactory factory = new JsonFactory();
+                            AsyncMutateInBuilder mutation = bucket.async()
+                                    .mutateIn(doc.id());
 
-                            Exception error = null;
-                            try {
-                                JsonParser parser = factory.setCodec(new ObjectMapper()).createParser(rawBytes.toString(UTF_8));
+                            TreeNode node = convertContent(doc);
 
-                                String token = parser.getCurrentName();
-                                AsyncMutateInBuilder mutation = bucket.async()
-                                        .mutateIn(doc.id());
+                            switch (subDocumentMode) {
+                                case UPSERT: {
+                                    mutation = mutation.upsert(path, node, options);
+                                    break;
+                                }
+                                case MERGE: {
+                                    Iterator<String> fields = node.fieldNames();
+                                    while (fields.hasNext()) {
+                                        String field = fields.next();
+                                        if (path != null && !path.isEmpty()) {
+                                            mutation = mutation.upsert(String.format("%s%s%s", path, ".", field), node.get(field), options);
+                                        } else {
+                                            mutation = mutation.upsert(field, node.get(field), options);
+                                        }
+                                    }
 
-                                while(token != null) {
+                                    break;
+                                }
+                                case ARRAYINSERT: {
+                                    mutation = mutation.arrayInsert(path, node, options);
+                                    break;
+                                }
+                                case ARRAYAPPEND: {
+                                    mutation = mutation.arrayPrepend(path, node, options);
 
-                                    mutation = mutation.upsert(token,parser.getCurrentValue());
+                                    break;
+                                }
+                                case ARRAYPREPEND: {
+                                    mutation = mutation.arrayAppend(path, node, options);
 
-                                    token = parser.nextFieldName();
+                                    break;
+                                }
+                                case ARRAYINSERTALL: {
+                                    mutation = mutation.arrayInsertAll(path, node, options);
+
+                                    break;
+                                }
+                                case ARRAYAPPENDALL: {
+                                    mutation = mutation.arrayAppendAll(path, node, options);
+
+                                    break;
+                                }
+                                case ARRAYPREPENDALL: {
+                                    mutation = mutation.arrayPrependAll(path, node, options);
+                                    break;
+                                }
+                                case ARRAYADDUNIQUE: {
+                                    mutation = mutation.arrayAddUnique(path, node, options);
+                                    break;
                                 }
 
-                                return mutation
-                                        .execute(persistTo, replicateTo)
-                                        .toCompletable();
-
-                                /*return bucket.async()
-                                        .mutateIn(doc.id())
-                                        .upsert(path, parser.readValueAsTree())
-                                        .execute(persistTo, replicateTo)
-                                        .toCompletable();*/
-                            }
-                            catch (IOException ex)
-                            {
-                                error = ex;
                             }
 
-                            return Completable.error(error);
+                            return mutation
+                                    .execute(persistTo, replicateTo)
+                                    .toCompletable();
+
                         }
+
+                        return bucket.async()
+                                .upsert(doc, persistTo, replicateTo)
+                                .toCompletable();
 
                     }
                 })
@@ -282,9 +308,25 @@ public class CouchbaseSinkTask extends SinkTask {
         return defaultId;
     }
 
-    private com.fasterxml.jackson.databind.JsonNode toFragment(String topic, byte[] rawBytes){
+    private TreeNode convertContent(Document document){
 
-        return deserializer.deserialize(topic, rawBytes);
+        ByteBuf rawBytes = (ByteBuf)document.content();
+        final JsonFactory factory = new JsonFactory();
+        TreeNode node = null;
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonParser parser = factory.setCodec(mapper).createParser(rawBytes.toString(UTF_8));
+
+            node = parser.readValueAsTree();
+        }
+        catch (IOException ex)
+        {
+            LOGGER.error("Could not convert content to TreeNode", ex);
+
+        }
+
+        return node;
     }
 
     private Document convert(SinkRecord record) {
