@@ -30,6 +30,7 @@ import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
@@ -163,69 +164,79 @@ public class CouchbaseSinkTask extends SinkTask {
                         Document doc = convert(record);
                         if(documentMode == DocumentMode.SUBDOCUMENT) {
 
-                            SubdocOptionsBuilder options = new SubdocOptionsBuilder().createPath(createPaths);
+                            Exception error = null;
+                            try {
 
-                            AsyncMutateInBuilder mutation = bucket.async()
-                                    .mutateIn(doc.id());
+                                SubdocOptionsBuilder options = new SubdocOptionsBuilder().createPath(createPaths);
 
-                            TreeNode node = convertContent(doc);
+                                AsyncMutateInBuilder mutation = bucket.async()
+                                        .mutateIn(doc.id());
 
-                            switch (subDocumentMode) {
-                                case UPSERT: {
-                                    mutation = mutation.upsert(path, node, options);
-                                    break;
-                                }
-                                case MERGE: {
-                                    Iterator<String> fields = node.fieldNames();
-                                    while (fields.hasNext()) {
-                                        String field = fields.next();
-                                        if (path != null && !path.isEmpty()) {
-                                            mutation = mutation.upsert(String.format("%s%s%s", path, ".", field), node.get(field), options);
-                                        } else {
-                                            mutation = mutation.upsert(field, node.get(field), options);
+                                TreeNode node = convertContent(doc);
+
+                                switch (subDocumentMode) {
+                                    case UPSERT: {
+                                        // path can't be empty
+                                        mutation = mutation.upsert(path, node, options);
+                                        break;
+                                    }
+                                    case MERGE: {
+                                        Iterator<String> fields = node.fieldNames();
+                                        while (fields.hasNext()) {
+                                            String field = fields.next();
+                                            if (path != null && !path.isEmpty()) {
+                                                mutation = mutation.upsert(String.format("%s%s%s", path, ".", field), node.get(field), options);
+                                            } else {
+                                                mutation = mutation.upsert(field, node.get(field), options);
+                                            }
                                         }
+
+                                        break;
+                                    }
+                                    case ARRAYINSERT: {
+                                        mutation = mutation.arrayInsert(path, node, options);
+                                        break;
+                                    }
+                                    case ARRAYAPPEND: {
+                                        mutation = mutation.arrayPrepend(path, node, options);
+
+                                        break;
+                                    }
+                                    case ARRAYPREPEND: {
+                                        mutation = mutation.arrayAppend(path, node, options);
+
+                                        break;
+                                    }
+                                    case ARRAYINSERTALL: {
+                                        mutation = mutation.arrayInsertAll(path, node, options);
+
+                                        break;
+                                    }
+                                    case ARRAYAPPENDALL: {
+                                        mutation = mutation.arrayAppendAll(path, node, options);
+
+                                        break;
+                                    }
+                                    case ARRAYPREPENDALL: {
+                                        mutation = mutation.arrayPrependAll(path, node, options);
+                                        break;
+                                    }
+                                    case ARRAYADDUNIQUE: {
+                                        mutation = mutation.arrayAddUnique(path, node, options);
+                                        break;
                                     }
 
-                                    break;
-                                }
-                                case ARRAYINSERT: {
-                                    mutation = mutation.arrayInsert(path, node, options);
-                                    break;
-                                }
-                                case ARRAYAPPEND: {
-                                    mutation = mutation.arrayPrepend(path, node, options);
-
-                                    break;
-                                }
-                                case ARRAYPREPEND: {
-                                    mutation = mutation.arrayAppend(path, node, options);
-
-                                    break;
-                                }
-                                case ARRAYINSERTALL: {
-                                    mutation = mutation.arrayInsertAll(path, node, options);
-
-                                    break;
-                                }
-                                case ARRAYAPPENDALL: {
-                                    mutation = mutation.arrayAppendAll(path, node, options);
-
-                                    break;
-                                }
-                                case ARRAYPREPENDALL: {
-                                    mutation = mutation.arrayPrependAll(path, node, options);
-                                    break;
-                                }
-                                case ARRAYADDUNIQUE: {
-                                    mutation = mutation.arrayAddUnique(path, node, options);
-                                    break;
                                 }
 
+                                return mutation
+                                        .execute(persistTo, replicateTo)
+                                        .toCompletable();
+                            } catch (DocumentDoesNotExistException ex) {
+                                bucket.insert(JsonDocument.create(doc.id(), JsonObject.empty()));
+                                error = ex;
                             }
 
-                            return mutation
-                                    .execute(persistTo, replicateTo)
-                                    .toCompletable();
+                            return Completable.error(error);
 
                         }
 
