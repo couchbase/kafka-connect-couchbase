@@ -1,0 +1,179 @@
+package com.couchbase.connect.kafka.sink;
+
+
+import com.couchbase.client.java.AsyncBucket;
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicateTo;
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.query.*;
+import com.couchbase.connect.kafka.util.JsonBinaryDocument;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.runners.MockitoJUnitRunner;
+import rx.Completable;
+import rx.Observable;
+
+
+import java.util.ArrayList;
+
+import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
+import static junit.framework.TestCase.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+
+@RunWith(MockitoJUnitRunner.class)
+public class N1qlWriterTest {
+
+    private final N1qlWriter writer = new N1qlWriter(N1qlMode.UPDATE,true);
+
+    Observable<AsyncN1qlQueryResult> emptyResult = Observable.empty();
+
+    @Mock
+    private AsyncBucket bucket;
+
+    @Captor
+    private ArgumentCaptor<N1qlQuery> argument;
+
+    @Before
+    public void before() {
+
+        Mockito.when(bucket.name()).thenReturn("default");
+    }
+
+    private Completable write(JsonObject object) {
+        return write(object, emptyResult);
+    }
+
+
+    private Completable write(JsonObject object, Observable<AsyncN1qlQueryResult> result) {
+        Mockito.when(bucket.query(Mockito.any(ParameterizedN1qlQuery.class))).thenReturn(result);
+
+        JsonBinaryDocument document = null;
+        if (object != null) {
+            document = JsonBinaryDocument.create("id", object.toString().getBytes(UTF_8));
+        }
+
+        return writer.write(bucket, document, PersistTo.NONE, ReplicateTo.NONE);
+    }
+
+    @Test
+    public void doesNotGenerateStatementOnNull() {
+        write(null);
+
+        verify(bucket, never()).query(argument.capture());
+    }
+
+    @Test
+    public void doesNotGenerateStatementOnEmpty() {
+        write(JsonObject.empty());
+        verify(bucket, never()).query(argument.capture());
+    }
+
+    @Test
+    public void doesNotGenerateStatementOnNoFields() {
+        write(JsonObject.create());
+        verify(bucket, never()).query(argument.capture());
+    }
+
+    @Test
+    public void generateStatementOnJsonPrimitives() {
+        JsonObject object = JsonObject.empty()
+                .put("string", "string")
+                .put("int", 10)
+                .put("boolean", true)
+                .put("double", 10.1)
+                .put("long", 10L);
+
+        write(object);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+        assertEquals("UPDATE `default` USE KEYS \"id\" SET boolean = $boolean, string = $string, double = $double, int = $int, long = $long RETURNING meta().id;",
+                query.statement().toString());
+
+        assertEquals(object.toString(), query.statementParameters().toString());
+    }
+
+    @Test
+    public void generateStatement() {
+        JsonObject object = JsonObject.empty().put("test", "string");
+
+        write(object);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+
+        assertNotNull(query);
+        assertEquals("UPDATE `default` USE KEYS \"id\" SET test = $test RETURNING meta().id;", query.statement().toString());
+        assertEquals(object, query.statementParameters());
+    }
+
+    @Test
+    public void doesNotCreateDocumentWhenUpdateReturns1Row() {
+
+        DefaultAsyncN1qlQueryRow row = new DefaultAsyncN1qlQueryRow(new byte[0]);
+        ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<AsyncN1qlQueryRow>();
+        rows.add(row);
+
+        AsyncN1qlQueryResult result = new DefaultAsyncN1qlQueryResult(Observable.from(rows),
+                Observable.empty(),
+                Observable.<N1qlMetrics>empty(),
+                Observable.<JsonObject>empty(),
+                Observable.<JsonObject>empty(),
+                Observable.<String>empty(),
+                true,
+                "",
+                "");
+
+        ArrayList<AsyncN1qlQueryResult> results = new ArrayList<AsyncN1qlQueryResult>();
+        results.add(result);
+        Observable<AsyncN1qlQueryResult> asyncResult = Observable.from(results);
+
+        JsonObject object = JsonObject.create().put("test","test");
+
+        Completable r = write(object, asyncResult);
+
+        r.await();
+
+        verify(bucket).query(argument.capture());
+    }
+
+    @Test
+    public void createDocumentWhenUpdateReturns0Row() {
+
+        ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<AsyncN1qlQueryRow>();
+
+        AsyncN1qlQueryResult result = new DefaultAsyncN1qlQueryResult(Observable.from(rows),
+                Observable.empty(),
+                Observable.<N1qlMetrics>empty(),
+                Observable.<JsonObject>empty(),
+                Observable.<JsonObject>empty(),
+                Observable.<String>empty(),
+                true,
+                "",
+                "");
+
+        ArrayList<AsyncN1qlQueryResult> results = new ArrayList<AsyncN1qlQueryResult>();
+        results.add(result);
+
+        Observable<AsyncN1qlQueryResult> asyncResult = Observable.from(results);
+
+        JsonObject object = JsonObject.create().put("test","test");
+
+        Completable r = write(object, asyncResult);
+
+        r.await();
+
+        verify(bucket, Mockito.times(2)).query(argument.capture());
+    }
+}

@@ -38,8 +38,7 @@ import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
-import com.couchbase.connect.kafka.sink.DocumentMode;
-import com.couchbase.connect.kafka.sink.SubDocumentMode;
+import com.couchbase.connect.kafka.sink.*;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
@@ -56,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
 import rx.Observable;
+import rx.functions.Action4;
 import rx.functions.Func1;
 
 import java.io.IOException;
@@ -79,7 +79,11 @@ public class CouchbaseSinkTask extends SinkTask {
     private String path;
     private DocumentMode documentMode;
     private SubDocumentMode subDocumentMode;
+    private N1qlMode n1qlMode;
+
     private boolean createPaths;
+    private boolean createDocuments;
+
     private PersistTo persistTo;
     private ReplicateTo replicateTo;
 
@@ -133,12 +137,22 @@ public class CouchbaseSinkTask extends SinkTask {
             documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
         }
 
-        path = config.getString(CouchbaseSinkConnectorConfig.DOCUMENT_PATH_CONFIG);
         documentMode = config.getEnum(DocumentMode.class, DOCUMENT_MODE_CONFIG);
-        subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
-        createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
         persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
         replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
+
+        if(documentMode == DocumentMode.SUBDOCUMENT) {
+            subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
+            path = config.getString(CouchbaseSinkConnectorConfig.SUBDOCUMENT_PATH_CONFIG);
+            createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
+            createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
+
+        }
+
+        if(documentMode == DocumentMode.N1QL){
+            n1qlMode = config.getEnum(N1qlMode.class, SUBDOCUMENT_MODE_CONFIG);
+            createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
+        }
     }
 
     @Override
@@ -162,82 +176,15 @@ public class CouchbaseSinkTask extends SinkTask {
                         }
 
                         Document doc = convert(record);
-                        if(documentMode == DocumentMode.SUBDOCUMENT) {
 
-                            Exception error = null;
-                            try {
+                        if (documentMode == DocumentMode.N1QL){
+                            N1qlWriter writer = new N1qlWriter(n1qlMode, createDocuments);
+                            return writer.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
+                        }
 
-                                SubdocOptionsBuilder options = new SubdocOptionsBuilder().createPath(createPaths);
-
-                                AsyncMutateInBuilder mutation = bucket.async()
-                                        .mutateIn(doc.id());
-
-                                TreeNode node = convertContent(doc);
-
-                                switch (subDocumentMode) {
-                                    case UPSERT: {
-                                        // path can't be empty
-                                        mutation = mutation.upsert(path, node, options);
-                                        break;
-                                    }
-                                    case MERGE: {
-                                        Iterator<String> fields = node.fieldNames();
-                                        while (fields.hasNext()) {
-                                            String field = fields.next();
-                                            if (path != null && !path.isEmpty()) {
-                                                mutation = mutation.upsert(String.format("%s%s%s", path, ".", field), node.get(field), options);
-                                            } else {
-                                                mutation = mutation.upsert(field, node.get(field), options);
-                                            }
-                                        }
-
-                                        break;
-                                    }
-                                    case ARRAYINSERT: {
-                                        mutation = mutation.arrayInsert(path, node, options);
-                                        break;
-                                    }
-                                    case ARRAYAPPEND: {
-                                        mutation = mutation.arrayPrepend(path, node, options);
-
-                                        break;
-                                    }
-                                    case ARRAYPREPEND: {
-                                        mutation = mutation.arrayAppend(path, node, options);
-
-                                        break;
-                                    }
-                                    case ARRAYINSERTALL: {
-                                        mutation = mutation.arrayInsertAll(path, node, options);
-
-                                        break;
-                                    }
-                                    case ARRAYAPPENDALL: {
-                                        mutation = mutation.arrayAppendAll(path, node, options);
-
-                                        break;
-                                    }
-                                    case ARRAYPREPENDALL: {
-                                        mutation = mutation.arrayPrependAll(path, node, options);
-                                        break;
-                                    }
-                                    case ARRAYADDUNIQUE: {
-                                        mutation = mutation.arrayAddUnique(path, node, options);
-                                        break;
-                                    }
-
-                                }
-
-                                return mutation
-                                        .execute(persistTo, replicateTo)
-                                        .toCompletable();
-                            } catch (DocumentDoesNotExistException ex) {
-                                bucket.insert(JsonDocument.create(doc.id(), JsonObject.empty()));
-                                error = ex;
-                            }
-
-                            return Completable.error(error);
-
+                        if (documentMode == DocumentMode.SUBDOCUMENT) {
+                            SubDocumentWriter writer = new SubDocumentWriter(subDocumentMode, path, createPaths, createDocuments);
+                            return writer.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
                         }
 
                         return bucket.async()
@@ -296,49 +243,6 @@ public class CouchbaseSinkTask extends SinkTask {
         return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
     }
 
-    private String getDocumentId(SinkRecord record, byte[] valueAsJsonBytes){
-        String defaultId = null;
-
-        try {
-            if (documentIdExtractor != null) {
-                return documentIdExtractor.extractDocumentId(valueAsJsonBytes).id();
-            }
-
-        } catch (DocumentIdExtractor.DocumentIdNotFoundException e) {
-            defaultId = documentIdFromKafkaMetadata(record);
-            LOGGER.warn(e.getMessage() + "; using fallback ID '{}'", defaultId);
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (defaultId == null) {
-            defaultId = documentIdFromKafkaMetadata(record);
-        }
-
-        return defaultId;
-    }
-
-    private TreeNode convertContent(Document document){
-
-        ByteBuf rawBytes = (ByteBuf)document.content();
-        final JsonFactory factory = new JsonFactory();
-        TreeNode node = null;
-
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonParser parser = factory.setCodec(mapper).createParser(rawBytes.toString(UTF_8));
-
-            node = parser.readValueAsTree();
-        }
-        catch (IOException ex)
-        {
-            LOGGER.error("Could not convert content to TreeNode", ex);
-
-        }
-
-        return node;
-    }
 
     private Document convert(SinkRecord record) {
 

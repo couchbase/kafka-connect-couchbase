@@ -79,6 +79,7 @@
         <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
         <junit.version>4.12</junit.version>
         <mysql.version>5.1.6</mysql.version>
+        <mockito.version>1.10.19</mockito.version>
         <dist-archive-name>${project.artifactId}-${project.version}.zip</dist-archive-name>
 
         <!-- Don't sign artifacts unless the 'stage' or 'release' profile is active -->
@@ -139,11 +140,18 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
 
     <build>
@@ -285,7 +293,7 @@
         </resources>
     </build>
 
-    <profiles>
+    <!--<profiles>
         <profile>
             <id>release</id>
             <properties>
@@ -299,5 +307,5 @@
                 <gpg.skip>false</gpg.skip>
             </properties>
         </profile>
-    </profiles>
+    </profiles>-->
 </project>

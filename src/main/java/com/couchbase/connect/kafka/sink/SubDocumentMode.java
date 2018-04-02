@@ -2,7 +2,6 @@ package com.couchbase.connect.kafka.sink;
 
 public enum SubDocumentMode {
     UPSERT("upsert"),
-    MERGE("merge"),
     ARRAYINSERT("arrayInsert"),
     ARRAYPREPEND("arrayPrepend"),
     ARRAYAPPEND("arrayAppend"),

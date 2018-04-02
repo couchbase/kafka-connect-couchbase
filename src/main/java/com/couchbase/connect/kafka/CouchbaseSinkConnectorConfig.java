@@ -77,10 +77,10 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String DOCUMENT_ID_POINTER_DISPLAY = "Document ID Pointer";
     public static final String DOCUMENT_ID_POINTER_DEFAULT = "";
 
-    public static final String DOCUMENT_PATH_CONFIG = "couchbase.document.path";
-    static final String DOCUMENT_PATH_DOC = "JSON Pointer to the property to use as the root for the Couchbase sub-document operation.";
-    static final String DOCUMENT_PATH_DISPLAY = "Document Path";
-    public static final String DOCUMENT_PATH_DEFAULT = "";
+    public static final String SUBDOCUMENT_PATH_CONFIG = "couchbase.subdocument.path";
+    static final String SUBDOCUMENT_PATH_DOC = "JSON Pointer to the property to use as the root for the Couchbase sub-document operation.";
+    static final String SUBDOCUMENT_PATH_DISPLAY = "Document Path";
+    public static final String SUBDOCUMENT_PATH_DEFAULT = "";
 
     public static final String DOCUMENT_MODE_CONFIG = "couchbase.document.mode";
     static final String DOCUMENT_MODE_DOC = "Setting to indicate an update to the entire document or a sub-document";
@@ -96,6 +96,12 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String SUBDOCUMENT_CREATEPATH_DOC = "Whether to add the parent paths if they are missing in the document";
     static final String SUBDOCUMENT_CREATEPATH_DISPLAY = "Create parent paths";
     public static final boolean SUBDOCUMENT_CREATEPATH_DEFAULT = true;
+
+    public static final String SUBDOCUMENT_CREATEDOCUMENT_CONFIG = "couchbase.subdocument.createdocument";
+    static final String SUBDOCUMENT_CREATEDOCUMENT_DOC = "Whether to create the document if it does not exist";
+    static final String SUBDOCUMENT_CREATEDOCUMENT_DISPLAY = "Create parent document";
+    public static final boolean SUBDOCUMENT_CREATEDOCUMENT_DEFAULT = true;
+
 
     public static final String REMOVE_DOCUMENT_ID_CONFIG = "couchbase.remove.document.id";
     static final String REMOVE_DOCUMENT_ID_DOC = "Whether to remove the ID identified by '" + DOCUMENT_ID_POINTER_CONFIG + "' from the document before storing in Couchbase.";
@@ -262,15 +268,15 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         LOG_REDACTION_DISPLAY,
                         new EnumRecommender(RedactionLevel.class))
 
-                .define(DOCUMENT_PATH_CONFIG,
+                .define(SUBDOCUMENT_PATH_CONFIG,
                         ConfigDef.Type.STRING,
-                        DOCUMENT_PATH_DEFAULT,
+                        SUBDOCUMENT_PATH_DEFAULT,
                         ConfigDef.Importance.LOW,
-                        DOCUMENT_PATH_DOC,
+                        SUBDOCUMENT_PATH_DOC,
                         DATABASE_GROUP, 14,
                         ConfigDef.Width.LONG,
-                        DOCUMENT_PATH_DISPLAY,
-                        Collections.singletonList(DOCUMENT_PATH_CONFIG))
+                        SUBDOCUMENT_PATH_DISPLAY,
+                        Collections.singletonList(SUBDOCUMENT_PATH_CONFIG))
 
                 .define(DOCUMENT_MODE_CONFIG,
                         ConfigDef.Type.STRING,
@@ -302,6 +308,15 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         DATABASE_GROUP, 17,
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEPATH_DISPLAY)
+
+                .define(SUBDOCUMENT_CREATEDOCUMENT_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        SUBDOCUMENT_CREATEDOCUMENT_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        SUBDOCUMENT_CREATEDOCUMENT_DOC,
+                        DATABASE_GROUP, 17,
+                        ConfigDef.Width.LONG,
+                        SUBDOCUMENT_CREATEDOCUMENT_DISPLAY)
 
                 ;
     }

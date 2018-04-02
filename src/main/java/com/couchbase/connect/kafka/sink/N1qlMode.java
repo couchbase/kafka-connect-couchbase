@@ -1,13 +1,13 @@
 package com.couchbase.connect.kafka.sink;
 
-public enum DocumentMode {
-    DOCUMENT("document"),
-    SUBDOCUMENT("subdocument"),
-    N1QL("n1ql");
+public enum N1qlMode {
+    UPDATE("update"),
+    UPSERT("upsert");
+
 
     private final String schemaName;
 
-    DocumentMode(String schemaName) {
+    N1qlMode(String schemaName) {
         this.schemaName = schemaName;
     }
 
