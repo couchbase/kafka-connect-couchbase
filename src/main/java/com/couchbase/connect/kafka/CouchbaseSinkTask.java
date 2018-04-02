@@ -78,7 +78,11 @@ public class CouchbaseSinkTask extends SinkTask {
     private DocumentIdExtractor documentIdExtractor;
     private String path;
     private DocumentMode documentMode;
+
+    private SubDocumentWriter subDocumentWriter;
     private SubDocumentMode subDocumentMode;
+
+    private N1qlWriter n1qlWriter;
     private N1qlMode n1qlMode;
 
     private boolean createPaths;
@@ -147,11 +151,13 @@ public class CouchbaseSinkTask extends SinkTask {
             createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
             createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
 
+            subDocumentWriter = new SubDocumentWriter(subDocumentMode,path,createPaths,createDocuments);
         }
 
         if(documentMode == DocumentMode.N1QL){
-            n1qlMode = config.getEnum(N1qlMode.class, SUBDOCUMENT_MODE_CONFIG);
+            n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
             createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
+            n1qlWriter = new N1qlWriter(n1qlMode,createDocuments);
         }
     }
 
@@ -178,13 +184,11 @@ public class CouchbaseSinkTask extends SinkTask {
                         Document doc = convert(record);
 
                         if (documentMode == DocumentMode.N1QL){
-                            N1qlWriter writer = new N1qlWriter(n1qlMode, createDocuments);
-                            return writer.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
+                            return n1qlWriter.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
                         }
 
                         if (documentMode == DocumentMode.SUBDOCUMENT) {
-                            SubDocumentWriter writer = new SubDocumentWriter(subDocumentMode, path, createPaths, createDocuments);
-                            return writer.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
+                            return subDocumentWriter.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
                         }
 
                         return bucket.async()
