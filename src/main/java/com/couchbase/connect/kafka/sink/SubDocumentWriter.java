@@ -1,42 +1,21 @@
 package com.couchbase.connect.kafka.sink;
 
-import com.couchbase.client.core.message.kv.subdoc.multi.Mutation;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonFactory;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.TreeNode;
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.AsyncBucket;
-import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
-import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
-import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
-import com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig;
-import com.couchbase.connect.kafka.CouchbaseSinkTaskConfig;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
-import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.Map;
-
-import com.couchbase.connect.kafka.sink.SubDocumentMode;
-import rx.Observable;
 import rx.functions.Action1;
-import rx.functions.Func1;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.SUBDOCUMENT_MODE_CONFIG;
 
 public class SubDocumentWriter {
 
