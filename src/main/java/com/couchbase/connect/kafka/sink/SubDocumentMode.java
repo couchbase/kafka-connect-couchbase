@@ -1,23 +1,12 @@
 package com.couchbase.connect.kafka.sink;
 
 public enum SubDocumentMode {
-    UPSERT("upsert"),
-    ARRAYINSERT("arrayInsert"),
-    ARRAYPREPEND("arrayPrepend"),
-    ARRAYAPPEND("arrayAppend"),
-    ARRAYINSERTALL("arrayInsertAll"),
-    ARRAYPREPENDALL("arrayPrependAll"),
-    ARRAYAPPENDALL("arrayAppendAll"),
-    ARRAYADDUNIQUE("arrayAddUnique");
-
-
-    private final String schemaName;
-
-    SubDocumentMode(String schemaName) {
-        this.schemaName = schemaName;
-    }
-
-    public String schemaName() {
-        return schemaName;
-    }
+    UPSERT,
+    ARRAY_INSERT,
+    ARRAY_PREPEND,
+    ARRAY_APPEND,
+    ARRAY_INSERT_ALL,
+    ARRAY_PREPEND_ALL,
+    ARRAY_APPEND_ALL,
+    ARRAY_ADD_UNIQUE;
 }

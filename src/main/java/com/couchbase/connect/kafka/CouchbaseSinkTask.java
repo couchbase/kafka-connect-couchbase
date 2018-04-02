@@ -60,7 +60,10 @@ import rx.functions.Func1;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
@@ -74,7 +77,6 @@ public class CouchbaseSinkTask extends SinkTask {
     private Bucket bucket;
     private CouchbaseCluster cluster;
     private JsonConverter converter;
-    private JsonDeserializer deserializer;
     private DocumentIdExtractor documentIdExtractor;
     private String path;
     private DocumentMode documentMode;
@@ -133,9 +135,6 @@ public class CouchbaseSinkTask extends SinkTask {
         converter = new JsonConverter();
         converter.configure(Collections.singletonMap("schemas.enable", false), false);
 
-        deserializer = new JsonDeserializer();
-        deserializer.configure(Collections.singletonMap("schemas.enable", false), false);
-
         String docIdPointer = config.getString(DOCUMENT_ID_POINTER_CONFIG);
         if (docIdPointer != null && !docIdPointer.isEmpty()) {
             documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
@@ -145,19 +144,23 @@ public class CouchbaseSinkTask extends SinkTask {
         persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
         replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
 
-        if(documentMode == DocumentMode.SUBDOCUMENT) {
-            subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
-            path = config.getString(CouchbaseSinkConnectorConfig.SUBDOCUMENT_PATH_CONFIG);
-            createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
-            createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
 
-            subDocumentWriter = new SubDocumentWriter(subDocumentMode,path,createPaths,createDocuments);
-        }
+        switch (documentMode) {
+            case SUBDOCUMENT: {
+                subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
+                path = config.getString(CouchbaseSinkConnectorConfig.SUBDOCUMENT_PATH_CONFIG);
+                createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
+                createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
 
-        if(documentMode == DocumentMode.N1QL){
-            n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
-            createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
-            n1qlWriter = new N1qlWriter(n1qlMode,createDocuments);
+                subDocumentWriter = new SubDocumentWriter(subDocumentMode, path, createPaths, createDocuments);
+                break;
+            }
+            case N1QL: {
+                n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
+                createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
+                n1qlWriter = new N1qlWriter(n1qlMode, createDocuments);
+                break;
+            }
         }
     }
 
@@ -181,20 +184,21 @@ public class CouchbaseSinkTask extends SinkTask {
                             return removeIfExists(documentId);
                         }
 
-                        Document doc = convert(record);
+                        JsonBinaryDocument doc = convert(record);
 
-                        if (documentMode == DocumentMode.N1QL){
-                            return n1qlWriter.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
+                        switch (documentMode) {
+                            case N1QL: {
+                                return n1qlWriter.write(bucket.async(), doc, persistTo, replicateTo);
+                            }
+                            case SUBDOCUMENT: {
+                                return subDocumentWriter.write(bucket.async(), doc, persistTo, replicateTo);
+                            }
+                            default: {
+                                return bucket.async()
+                                        .upsert(doc, persistTo, replicateTo)
+                                        .toCompletable();
+                            }
                         }
-
-                        if (documentMode == DocumentMode.SUBDOCUMENT) {
-                            return subDocumentWriter.write(bucket.async(), (JsonBinaryDocument) doc, persistTo, replicateTo);
-                        }
-
-                        return bucket.async()
-                                .upsert(doc, persistTo, replicateTo)
-                                .toCompletable();
-
                     }
                 })
                 .retryWhen(
@@ -248,7 +252,7 @@ public class CouchbaseSinkTask extends SinkTask {
     }
 
 
-    private Document convert(SinkRecord record) {
+    private JsonBinaryDocument convert(SinkRecord record) {
 
         byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
         String defaultId = null;

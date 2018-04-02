@@ -121,7 +121,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayInsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYINSERT);
+        Completable r = write(object, SubDocumentMode.ARRAY_INSERT);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayInsert(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -136,7 +136,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayAppend(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYAPPEND);
+        Completable r = write(object, SubDocumentMode.ARRAY_APPEND);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayAppend(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -151,7 +151,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayPrepend(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYPREPEND);
+        Completable r = write(object, SubDocumentMode.ARRAY_PREPEND);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayPrepend(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -166,7 +166,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayInsertAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYINSERTALL);
+        Completable r = write(object, SubDocumentMode.ARRAY_INSERT_ALL);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayInsertAll(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -181,7 +181,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayAppendAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYAPPENDALL);
+        Completable r = write(object, SubDocumentMode.ARRAY_APPEND_ALL);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayAppendAll(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -196,7 +196,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayPrependAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYPREPENDALL);
+        Completable r = write(object, SubDocumentMode.ARRAY_PREPEND_ALL);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayPrependAll(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -211,7 +211,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYADDUNIQUE);
+        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -229,7 +229,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYADDUNIQUE, error);
+        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
@@ -248,7 +248,7 @@ public class SubDocumentWriterTest {
         Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.ARRAYADDUNIQUE, error);
+        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));

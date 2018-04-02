@@ -293,7 +293,7 @@
         </resources>
     </build>
 
-    <!--<profiles>
+    <profiles>
         <profile>
             <id>release</id>
             <properties>
@@ -307,5 +307,5 @@
                 <gpg.skip>false</gpg.skip>
             </properties>
         </profile>
-    </profiles>-->
+    </profiles>
 </project>

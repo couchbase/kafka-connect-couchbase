@@ -61,35 +61,35 @@ public class SubDocumentWriter {
                     mutation = mutation.upsert(path, node, options);
                     break;
                 }
-                case ARRAYINSERT: {
+                case ARRAY_INSERT: {
                     mutation = mutation.arrayInsert(path, node, options);
                     break;
                 }
-                case ARRAYAPPEND: {
+                case ARRAY_APPEND: {
                     mutation = mutation.arrayAppend(path, node, options);
 
                     break;
                 }
-                case ARRAYPREPEND: {
+                case ARRAY_PREPEND: {
                     mutation = mutation.arrayPrepend(path, node, options);
 
                     break;
                 }
-                case ARRAYINSERTALL: {
+                case ARRAY_INSERT_ALL: {
                     mutation = mutation.arrayInsertAll(path, node, options);
 
                     break;
                 }
-                case ARRAYAPPENDALL: {
+                case ARRAY_APPEND_ALL: {
                     mutation = mutation.arrayAppendAll(path, node, options);
 
                     break;
                 }
-                case ARRAYPREPENDALL: {
+                case ARRAY_PREPEND_ALL: {
                     mutation = mutation.arrayPrependAll(path, node, options);
                     break;
                 }
-                case ARRAYADDUNIQUE: {
+                case ARRAY_ADD_UNIQUE: {
                     mutation = mutation.arrayAddUnique(path, node, options);
                     break;
                 }
@@ -101,7 +101,7 @@ public class SubDocumentWriter {
                 .doOnError(new Action1<Throwable>() {
                     @Override
                     public void call(Throwable throwable) {
-                        if(createDocuments && DocumentDoesNotExistException.class.isInstance(throwable)) {
+                        if(createDocuments && throwable instanceof DocumentDoesNotExistException) {
                             bucket.insert(JsonDocument.create(document.id())).toBlocking().single();
                         }
                     }

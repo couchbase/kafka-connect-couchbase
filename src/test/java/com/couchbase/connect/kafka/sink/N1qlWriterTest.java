@@ -97,10 +97,10 @@ public class N1qlWriterTest {
         verify(bucket).query(argument.capture());
 
         ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
-        assertEquals("UPDATE `default` USE KEYS \"id\" SET boolean = $boolean, string = $string, double = $double, int = $int, long = $long RETURNING meta().id;",
+        assertEquals("UPDATE `default` USE KEYS $__id__ SET boolean = $boolean, string = $string, double = $double, int = $int, long = $long RETURNING meta().id;",
                 query.statement().toString());
 
-        assertEquals(object.toString(), query.statementParameters().toString());
+        assertEquals(object.put("__id__","id").toString(), query.statementParameters().toString());
     }
 
     @Test
@@ -114,8 +114,8 @@ public class N1qlWriterTest {
         ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
 
         assertNotNull(query);
-        assertEquals("UPDATE `default` USE KEYS \"id\" SET test = $test RETURNING meta().id;", query.statement().toString());
-        assertEquals(object, query.statementParameters());
+        assertEquals("UPDATE `default` USE KEYS $__id__ SET test = $test RETURNING meta().id;", query.statement().toString());
+        assertEquals(object.put("__id__","id"), query.statementParameters());
     }
 
     @Test

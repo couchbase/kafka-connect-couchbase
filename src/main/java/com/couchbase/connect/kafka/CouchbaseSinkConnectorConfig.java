@@ -20,6 +20,7 @@ import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.connect.kafka.sink.DocumentMode;
+import com.couchbase.connect.kafka.sink.N1qlMode;
 import com.couchbase.connect.kafka.sink.SubDocumentMode;
 import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
 import com.couchbase.connect.kafka.util.config.EnumRecommender;
@@ -91,6 +92,11 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String SUBDOCUMENT_MODE_DOC = "Setting to indicate the type of update to a sub-document";
     static final String SUBDOCUMENT_MODE_DISPLAY = "Sub-Document Mode";
     public static final String SUBDOCUMENT_MODE_DEFAULT = SubDocumentMode.UPSERT.name();
+
+    public static final String N1QL_MODE_CONFIG = "couchbase.n1ql.mode";
+    static final String N1QL_MODE_DOC = "Setting to indicate the type of update ";
+    static final String N1QL_MODE_DISPLAY = "N1QL Mode";
+    public static final String N1QL_MODE_DEFAULT = N1qlMode.UPSERT.name();
 
     public static final String SUBDOCUMENT_CREATEPATH_CONFIG = "couchbase.subdocument.createpath";
     static final String SUBDOCUMENT_CREATEPATH_DOC = "Whether to add the parent paths if they are missing in the document";
@@ -300,12 +306,23 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         SUBDOCUMENT_MODE_DISPLAY,
                         new EnumRecommender(SubDocumentMode.class))
 
+                .define(N1QL_MODE_CONFIG,
+                        ConfigDef.Type.STRING,
+                        N1QL_MODE_DEFAULT,
+                        new EnumValidator(N1qlMode.class),
+                        ConfigDef.Importance.LOW,
+                        N1QL_MODE_DOC,
+                        DATABASE_GROUP, 17,
+                        ConfigDef.Width.LONG,
+                        N1QL_MODE_DISPLAY,
+                        new EnumRecommender(N1qlMode.class))
+
                 .define(SUBDOCUMENT_CREATEPATH_CONFIG,
                         ConfigDef.Type.BOOLEAN,
                         SUBDOCUMENT_CREATEPATH_DEFAULT,
                         ConfigDef.Importance.LOW,
                         SUBDOCUMENT_CREATEPATH_DOC,
-                        DATABASE_GROUP, 17,
+                        DATABASE_GROUP, 18,
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEPATH_DISPLAY)
 
@@ -314,7 +331,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         SUBDOCUMENT_CREATEDOCUMENT_DEFAULT,
                         ConfigDef.Importance.LOW,
                         SUBDOCUMENT_CREATEDOCUMENT_DOC,
-                        DATABASE_GROUP, 17,
+                        DATABASE_GROUP, 19,
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEDOCUMENT_DISPLAY)
 
