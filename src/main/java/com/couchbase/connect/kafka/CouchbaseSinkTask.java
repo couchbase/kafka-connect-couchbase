@@ -43,6 +43,7 @@ import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
 import com.couchbase.connect.kafka.util.Version;
+import com.couchbase.connect.kafka.util.config.Password;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
@@ -113,11 +114,11 @@ public class CouchbaseSinkTask extends SinkTask {
         List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
         String bucketName = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
         String username = config.getUsername();
-        String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).value();
+        String password = Password.CONNECTION.get(config);
 
         boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
         String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
-        String sslKeystorePassword = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG).value();
+        String sslKeystorePassword = Password.SSL_KEYSTORE.get(config);
         Long connectTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
                 .sslEnabled(sslEnabled)

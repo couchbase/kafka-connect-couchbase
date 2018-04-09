@@ -23,6 +23,7 @@ import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
 import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
 import com.couchbase.connect.kafka.util.config.EnumRecommender;
 import com.couchbase.connect.kafka.util.config.EnumValidator;
+import com.couchbase.connect.kafka.util.config.Password;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -53,7 +54,8 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     public static final String CONNECTION_USERNAME_DEFAULT = "";
 
     public static final String CONNECTION_PASSWORD_CONFIG = "connection.password";
-    static final String CONNECTION_PASSWORD_DOC = "Couchbase password for the bucket.";
+    static final String CONNECTION_PASSWORD_DOC = "Couchbase password for the bucket. May be overridden with the "
+            + Password.CONNECTION.getEnvironmentVariableName() + " environment variable.";
     static final String CONNECTION_PASSWORD_DISPLAY = "Couchbase Password";
     public static final String CONNECTION_PASSWORD_DEFAULT = "";
 
@@ -68,7 +70,8 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     public static final String CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT = "";
 
     public static final String CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG = "connection.ssl.keystore.password";
-    static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DOC = "The password of the private key in the key store file.";
+    static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DOC = "The password of the private key in the key store file. May be overridden with the "
+            + Password.SSL_KEYSTORE.getEnvironmentVariableName() + " environment variable.";
     static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY = "Keystore Password";
     public static final String CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT = "";
 
