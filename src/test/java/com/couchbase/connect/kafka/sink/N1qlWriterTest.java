@@ -26,6 +26,7 @@ import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 import static junit.framework.TestCase.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -97,8 +98,13 @@ public class N1qlWriterTest {
         verify(bucket).query(argument.capture());
 
         ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
-        assertEquals("UPDATE `default` USE KEYS $__id__ SET boolean = $boolean, string = $string, double = $double, int = $int, long = $long RETURNING meta().id;",
-                query.statement().toString());
+        String statement =  query.statement().toString();
+
+        assertTrue(statement.contains("`boolean` = $boolean"));
+        assertTrue(statement.contains("`string` = $string"));
+        assertTrue(statement.contains("`double` = $double"));
+        assertTrue(statement.contains("`int` = $int"));
+        assertTrue(statement.contains("`long` = $long"));
 
         assertEquals(object.put("__id__","id").toString(), query.statementParameters().toString());
     }
@@ -114,7 +120,7 @@ public class N1qlWriterTest {
         ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
 
         assertNotNull(query);
-        assertEquals("UPDATE `default` USE KEYS $__id__ SET test = $test RETURNING meta().id;", query.statement().toString());
+        assertEquals("UPDATE `default` USE KEYS $__id__ SET `test` = $test RETURNING meta().id;", query.statement().toString());
         assertEquals(object.put("__id__","id"), query.statementParameters());
     }
 

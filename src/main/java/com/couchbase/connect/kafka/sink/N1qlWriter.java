@@ -1,5 +1,6 @@
 package com.couchbase.connect.kafka.sink;
 
+import com.couchbase.client.core.logging.RedactableArgument;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
@@ -46,7 +47,7 @@ public class N1qlWriter {
             String statement = parseUpdate(bucket.name(), node);
 
             if (statement == null || statement.isEmpty()) {
-                LOGGER.warn("could not generate statement from node " + node.toString());
+                LOGGER.warn("could not generate statement from node " + RedactableArgument.user(node));
                 return Completable.complete();
             }
 
@@ -56,7 +57,7 @@ public class N1qlWriter {
         if (this.mode == N1qlMode.UPSERT) {
             String statement = parseUpsert(bucket.name(), node);
             if (statement == null || statement.isEmpty()) {
-                LOGGER.warn("could not generate statement from node " + node.toString());
+                LOGGER.warn("could not generate statement from node "  + RedactableArgument.user(node));
                 return Completable.complete();
             }
 
@@ -73,10 +74,11 @@ public class N1qlWriter {
                             if (result != null && result.rows().count().toBlocking().single() == 0) {
                                 String statement = parseUpsert(bucket.name(), node);
                                 if (statement == null || statement.isEmpty()) {
-                                    LOGGER.warn("could not generate statement from node " + node.toString());
+                                    LOGGER.warn("could not generate statement from node " + RedactableArgument.user(node));
                                 }
 
-                                bucket.query(N1qlQuery.simple(statement)).toBlocking().single();
+                                JsonObject idObject = JsonObject.empty().put(idField, document.id());
+                                bucket.query(N1qlQuery.parameterized(statement, idObject)).toBlocking().single();
                             }
                         }
                     }
@@ -93,7 +95,7 @@ public class N1qlWriter {
         statement.append(String.format("UPDATE `%s` USE KEYS $%s SET ", keySpace, idField));
 
         for (String name : values.getNames()) {
-            statement.append(String.format("%s = $%s, ", name, name));
+            statement.append(String.format("`%s` = $%s, ", name, name));
         }
 
         String result = statement.toString();
