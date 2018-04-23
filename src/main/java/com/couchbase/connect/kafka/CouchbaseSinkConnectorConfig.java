@@ -88,22 +88,22 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String DOCUMENT_MODE_DISPLAY = "Document Mode";
     public static final String DOCUMENT_MODE_DEFAULT = DocumentMode.DOCUMENT.name();
 
-    public static final String SUBDOCUMENT_MODE_CONFIG = "couchbase.subdocument.mode";
+    public static final String SUBDOCUMENT_MODE_CONFIG = "couchbase.subdocument.operation";
     static final String SUBDOCUMENT_MODE_DOC = "Setting to indicate the type of update to a sub-document";
     static final String SUBDOCUMENT_MODE_DISPLAY = "Sub-Document Mode";
     public static final String SUBDOCUMENT_MODE_DEFAULT = SubDocumentMode.UPSERT.name();
 
-    public static final String N1QL_MODE_CONFIG = "couchbase.n1ql.mode";
-    static final String N1QL_MODE_DOC = "Setting to indicate the type of update ";
+    public static final String N1QL_MODE_CONFIG = "couchbase.n1ql.operation";
+    static final String N1QL_MODE_DOC = "Setting to indicate the type of update";
     static final String N1QL_MODE_DISPLAY = "N1QL Mode";
     public static final String N1QL_MODE_DEFAULT = N1qlMode.UPSERT.name();
 
-    public static final String SUBDOCUMENT_CREATEPATH_CONFIG = "couchbase.subdocument.createpath";
+    public static final String SUBDOCUMENT_CREATEPATH_CONFIG = "couchbase.subdocument.create_path";
     static final String SUBDOCUMENT_CREATEPATH_DOC = "Whether to add the parent paths if they are missing in the document";
     static final String SUBDOCUMENT_CREATEPATH_DISPLAY = "Create parent paths";
     public static final boolean SUBDOCUMENT_CREATEPATH_DEFAULT = true;
 
-    public static final String SUBDOCUMENT_CREATEDOCUMENT_CONFIG = "couchbase.subdocument.createdocument";
+    public static final String SUBDOCUMENT_CREATEDOCUMENT_CONFIG = "couchbase.subdocument.create_document";
     static final String SUBDOCUMENT_CREATEDOCUMENT_DOC = "Whether to create the document if it does not exist";
     static final String SUBDOCUMENT_CREATEDOCUMENT_DISPLAY = "Create parent document";
     public static final boolean SUBDOCUMENT_CREATEDOCUMENT_DEFAULT = true;
