@@ -31,6 +31,7 @@ import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SubDocumentWriterTest {
@@ -220,6 +221,35 @@ public class SubDocumentWriterTest {
 
     }
 
+    @Test
+    public void multiMutationWithEmptyJsonObject() {
+        Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        	.thenReturn(mutateInBuilder);
+
+        Completable r = write(JsonObject.empty(), SubDocumentMode.MULTI_MUTATION);
+        verify(bucket).mutateIn(mutateInArg.capture());
+
+        r.await();
+    }
+
+    @Test
+    public void multiMutationWithJsonObject() {
+        JsonObject object = JsonObject.create();
+        object.put("foo", "foo1");
+        object.put("bar", "bar1");
+
+        Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+                .thenReturn(mutateInBuilder);
+
+        Completable r = write(object, SubDocumentMode.MULTI_MUTATION);
+
+        verify(bucket).mutateIn(mutateInArg.capture());
+        verify(mutateInBuilder).upsert(Mockito.eq("foo"), Mockito.eq("foo1"), Mockito.any(SubdocOptionsBuilder.class));
+        verify(mutateInBuilder).upsert(Mockito.eq("bar"), Mockito.eq("bar1"), Mockito.any(SubdocOptionsBuilder.class));
+
+        r.await();
+    }
+    
     @Test(expected = DocumentDoesNotExistException.class)
     public void createsDocumentOnDocumentDoesNotExistException() {
         Observable<DocumentFragment<Mutation>> error = Observable.error(new DocumentDoesNotExistException());
