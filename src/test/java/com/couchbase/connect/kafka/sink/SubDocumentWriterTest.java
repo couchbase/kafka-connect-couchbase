@@ -1,5 +1,18 @@
 package com.couchbase.connect.kafka.sink;
 
+import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.runners.MockitoJUnitRunner;
 import com.couchbase.client.core.message.kv.subdoc.multi.Mutation;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
@@ -12,280 +25,294 @@ import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
 import rx.Completable;
 import rx.Observable;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-
-
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SubDocumentWriterTest {
 
-    private SubDocumentWriter writer;
+  private SubDocumentWriter writer;
 
-    private final String path = "leaf";
+  private final String path = "leaf";
 
-    @Mock
-    private AsyncBucket bucket;
+  @Mock
+  private AsyncBucket bucket;
 
-    @Mock
-    private AsyncMutateInBuilder mutateInBuilder;
+  @Mock
+  private AsyncMutateInBuilder mutateInBuilder;
 
-    @Captor
-    private ArgumentCaptor<String> mutateInArg;
+  @Captor
+  private ArgumentCaptor<String> mutateInArg;
 
-    Observable<DocumentFragment<Mutation>> emptyResult = Observable.empty();
+  Observable<DocumentFragment<Mutation>> emptyResult = Observable.empty();
 
-    @Before
-    public void before(){
-        Observable<DocumentFragment<Mutation>> result = Observable.empty();
-        List<JsonDocument> documents = new ArrayList();
-        documents.add(JsonDocument.create("id"));
+  @Before
+  public void before() {
+    Observable<DocumentFragment<Mutation>> result = Observable.empty();
+    List<JsonDocument> documents = new ArrayList();
+    documents.add(JsonDocument.create("id"));
 
-        Observable<JsonDocument> insert = Observable.from(documents);
+    Observable<JsonDocument> insert = Observable.from(documents);
 
-        Mockito.when(bucket.name()).thenReturn("default");
-        Mockito.when(bucket.mutateIn(Mockito.any(String.class))).thenReturn(mutateInBuilder);
-        Mockito.when(bucket.insert(Mockito.any(JsonDocument.class))).thenReturn(insert);
+    Mockito.when(bucket.name()).thenReturn("default");
+    Mockito.when(bucket.mutateIn(Mockito.any(String.class))).thenReturn(mutateInBuilder);
+    Mockito.when(bucket.insert(Mockito.any(JsonDocument.class))).thenReturn(insert);
+  }
+
+  private Completable write(JsonObject object, SubDocumentMode mode) {
+    return write(object, mode, emptyResult);
+  }
+
+  private Completable write(JsonObject object, SubDocumentMode mode,
+      Observable<DocumentFragment<Mutation>> result) {
+    Mockito
+        .when(mutateInBuilder.execute(Mockito.any(PersistTo.class), Mockito.any(ReplicateTo.class)))
+        .thenReturn(result);
+
+    writer = new SubDocumentWriter(mode, path, true, true);
+
+    JsonBinaryDocument document = null;
+    if (object != null) {
+      document = JsonBinaryDocument.create("id", object.toString().getBytes(UTF_8));
     }
 
-    private Completable write(JsonObject object, SubDocumentMode mode){
-        return write(object,mode, emptyResult);
-    }
+    return writer.write(bucket, document, PersistTo.NONE, ReplicateTo.NONE);
+  }
 
-    private Completable write(JsonObject object, SubDocumentMode mode, Observable<DocumentFragment<Mutation>> result){
-        Mockito.when(mutateInBuilder.execute(Mockito.any(PersistTo.class),Mockito.any(ReplicateTo.class))).thenReturn(result);
+  @Test
+  public void doesNotGenerateStatementOnNull() {
+    write(null, SubDocumentMode.UPSERT);
 
-        writer = new SubDocumentWriter(mode,path,true,true);
+    verify(bucket, never()).mutateIn(mutateInArg.capture());
+  }
 
-        JsonBinaryDocument document = null;
-        if(object != null){
-            document = JsonBinaryDocument.create("id", object.toString().getBytes(UTF_8));
-        }
+  @Test
+  public void upsertsPathWithEmptyJsonObject() {
 
-        return  writer.write(bucket, document, PersistTo.NONE, ReplicateTo.NONE);
-    }
+    Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class),
+        Mockito.any(SubdocOptionsBuilder.class))).thenReturn(mutateInBuilder);
 
-    @Test
-    public void doesNotGenerateStatementOnNull()  {
-        write(null, SubDocumentMode.UPSERT);
+    Completable r = write(JsonObject.empty(), SubDocumentMode.UPSERT);
+    verify(bucket).mutateIn(mutateInArg.capture());
 
-        verify(bucket, never()).mutateIn(mutateInArg.capture());
-    }
+    r.await();
+  }
 
-    @Test
-    public void upsertsPathWithEmptyJsonObject() {
+  @Test
+  public void upsertsPathWithJsonObject() {
+    JsonObject object = JsonObject.create();
 
-        Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+    Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class),
+        Mockito.any(SubdocOptionsBuilder.class))).thenReturn(mutateInBuilder);
 
-        Completable r = write(JsonObject.empty(), SubDocumentMode.UPSERT);
-        verify(bucket).mutateIn(mutateInArg.capture());
+    Completable r = write(object, SubDocumentMode.UPSERT);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).upsert(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void upsertsPathWithJsonObject() {
-        JsonObject object = JsonObject.create();
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test
+  public void insertsToArray() {
+    JsonObject object = JsonObject.create();
 
-        Completable r = write(object, SubDocumentMode.UPSERT);
+    Mockito.when(mutateInBuilder.arrayInsert(Mockito.any(String.class),
+        Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).upsert(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(object, SubDocumentMode.ARRAY_INSERT);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayInsert(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void insertsToArray() {
-        JsonObject object = JsonObject.create();
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.arrayInsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test
+  public void appendsToArray() {
+    JsonObject object = JsonObject.create();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_INSERT);
+    Mockito.when(mutateInBuilder.arrayAppend(Mockito.any(String.class),
+        Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayInsert(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(object, SubDocumentMode.ARRAY_APPEND);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayAppend(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void appendsToArray() {
-        JsonObject object = JsonObject.create();
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.arrayAppend(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test
+  public void prependsToArray() {
+    JsonObject object = JsonObject.create();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_APPEND);
+    Mockito.when(mutateInBuilder.arrayPrepend(Mockito.any(String.class),
+        Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayAppend(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(object, SubDocumentMode.ARRAY_PREPEND);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayPrepend(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void prependsToArray() {
-        JsonObject object = JsonObject.create();
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.arrayPrepend(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test
+  public void insertsAllToArray() {
+    JsonObject object = JsonObject.create();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_PREPEND);
+    Mockito
+        .when(mutateInBuilder.arrayInsertAll(Mockito.any(String.class),
+            Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayPrepend(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(object, SubDocumentMode.ARRAY_INSERT_ALL);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayInsertAll(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void insertsAllToArray() {
-        JsonObject object = JsonObject.create();
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.arrayInsertAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test
+  public void appendsAllToArray() {
+    JsonObject object = JsonObject.create();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_INSERT_ALL);
+    Mockito
+        .when(mutateInBuilder.arrayAppendAll(Mockito.any(String.class),
+            Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayInsertAll(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(object, SubDocumentMode.ARRAY_APPEND_ALL);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayAppendAll(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void appendsAllToArray() {
-        JsonObject object = JsonObject.create();
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.arrayAppendAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test
+  public void prependsAllToArray() {
+    JsonObject object = JsonObject.create();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_APPEND_ALL);
+    Mockito
+        .when(mutateInBuilder.arrayPrependAll(Mockito.any(String.class),
+            Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayAppendAll(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(object, SubDocumentMode.ARRAY_PREPEND_ALL);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayPrependAll(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void prependsAllToArray() {
-        JsonObject object = JsonObject.create();
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.arrayPrependAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test
+  public void addsToArrayUnique() {
+    JsonObject object = JsonObject.create();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_PREPEND_ALL);
+    Mockito
+        .when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class),
+            Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayPrependAll(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void addsToArrayUnique() {
-        JsonObject object = JsonObject.create();
+    r.await();
 
-        Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  }
 
-        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE);
+  @Test
+  public void multiMutationWithEmptyJsonObject() {
+    Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class),
+        Mockito.any(SubdocOptionsBuilder.class))).thenReturn(mutateInBuilder);
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+    Completable r = write(JsonObject.empty(), SubDocumentMode.MULTI_MUTATION);
+    verify(bucket).mutateIn(mutateInArg.capture());
 
-        r.await();
+    r.await();
+  }
 
-    }
+  @Test
+  public void multiMutationWithJsonObject() {
+    JsonObject object = JsonObject.create();
+    object.put("foo", "foo1");
+    object.put("bar", "bar1");
 
-    @Test
-    public void multiMutationWithEmptyJsonObject() {
-        Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-        	.thenReturn(mutateInBuilder);
+    Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class),
+        Mockito.any(SubdocOptionsBuilder.class))).thenReturn(mutateInBuilder);
 
-        Completable r = write(JsonObject.empty(), SubDocumentMode.MULTI_MUTATION);
-        verify(bucket).mutateIn(mutateInArg.capture());
+    Completable r = write(object, SubDocumentMode.MULTI_MUTATION);
 
-        r.await();
-    }
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).upsert(Mockito.eq("foo"), Mockito.eq("foo1"),
+        Mockito.any(SubdocOptionsBuilder.class));
+    verify(mutateInBuilder).upsert(Mockito.eq("bar"), Mockito.eq("bar1"),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-    @Test
-    public void multiMutationWithJsonObject() {
-        JsonObject object = JsonObject.create();
-        object.put("foo", "foo1");
-        object.put("bar", "bar1");
+    r.await();
+  }
 
-        Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+  @Test(expected = DocumentDoesNotExistException.class)
+  public void createsDocumentOnDocumentDoesNotExistException() {
+    Observable<DocumentFragment<Mutation>> error =
+        Observable.error(new DocumentDoesNotExistException());
 
-        Completable r = write(object, SubDocumentMode.MULTI_MUTATION);
+    JsonObject object = JsonObject.create();
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).upsert(Mockito.eq("foo"), Mockito.eq("foo1"), Mockito.any(SubdocOptionsBuilder.class));
-        verify(mutateInBuilder).upsert(Mockito.eq("bar"), Mockito.eq("bar1"), Mockito.any(SubdocOptionsBuilder.class));
+    Mockito
+        .when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class),
+            Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-        r.await();
-    }
-    
-    @Test(expected = DocumentDoesNotExistException.class)
-    public void createsDocumentOnDocumentDoesNotExistException() {
-        Observable<DocumentFragment<Mutation>> error = Observable.error(new DocumentDoesNotExistException());
+    Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
 
-        JsonObject object = JsonObject.create();
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-        Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+    r.await();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
+    verify(bucket).insert(Mockito.any(JsonDocument.class));
+  }
 
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
+  @Test(expected = CannotInsertValueException.class)
+  public void ignoresOtherThrowables() {
+    Observable<DocumentFragment<Mutation>> error =
+        Observable.error(new CannotInsertValueException(path));
 
-        r.await();
+    JsonObject object = JsonObject.create();
 
-        verify(bucket).insert(Mockito.any(JsonDocument.class));
-    }
+    Mockito
+        .when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class),
+            Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+        .thenReturn(mutateInBuilder);
 
-    @Test(expected = CannotInsertValueException.class)
-    public void ignoresOtherThrowables() {
-        Observable<DocumentFragment<Mutation>> error = Observable.error(new CannotInsertValueException(path));
+    Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
 
-        JsonObject object = JsonObject.create();
+    verify(bucket).mutateIn(mutateInArg.capture());
+    verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object),
+        Mockito.any(SubdocOptionsBuilder.class));
 
-        Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
+    r.await();
 
-        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
-
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
-
-        r.await();
-
-        verify(bucket, never()).insert(Mockito.any(JsonDocument.class));
-    }
+    verify(bucket, never()).insert(Mockito.any(JsonDocument.class));
+  }
 
 }
