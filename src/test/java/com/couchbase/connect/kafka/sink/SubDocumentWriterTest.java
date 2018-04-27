@@ -60,10 +60,19 @@ public class SubDocumentWriterTest {
     }
 
     private Completable write(JsonObject object, SubDocumentMode mode) {
-        return write(object, mode, emptyResult);
+        return write(path, object, mode, emptyResult);
+    }
+
+    private Completable write(String path, JsonObject object, SubDocumentMode mode) {
+        return write(path, object, mode, emptyResult);
     }
 
     private Completable write(JsonObject object, SubDocumentMode mode,
+            Observable<DocumentFragment<Mutation>> result) {
+        return write(path, object, mode, result);
+    }
+
+    private Completable write(String path, JsonObject object, SubDocumentMode mode,
             Observable<DocumentFragment<Mutation>> result) {
         Mockito.when(mutateInBuilder.execute(Mockito.any(PersistTo.class),
                 Mockito.any(ReplicateTo.class))).thenReturn(result);
@@ -260,9 +269,27 @@ public class SubDocumentWriterTest {
         Completable r = write(object, SubDocumentMode.UPSERT_FIELDS);
 
         verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).upsert(Mockito.eq("foo"), Mockito.eq("foo1"),
+        verify(mutateInBuilder).upsert(Mockito.eq("leaf.foo"), Mockito.eq("foo1"),
                 Mockito.any(SubdocOptionsBuilder.class));
-        verify(mutateInBuilder).upsert(Mockito.eq("bar"), Mockito.eq("bar1"),
+        verify(mutateInBuilder).upsert(Mockito.eq("leaf.bar"), Mockito.eq("bar1"),
+                Mockito.any(SubdocOptionsBuilder.class));
+
+        r.await();
+    }
+
+    @Test
+    public void upsertFieldsEmptyPathWithJsonObject() {
+        JsonObject object = JsonObject.create();
+        object.put("foo", "bar");
+
+        Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class),
+                Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
+                .thenReturn(mutateInBuilder);
+
+        Completable r = write("", object, SubDocumentMode.UPSERT_FIELDS);
+
+        verify(bucket).mutateIn(mutateInArg.capture());
+        verify(mutateInBuilder).upsert(Mockito.eq("foo"), Mockito.eq("bar"),
                 Mockito.any(SubdocOptionsBuilder.class));
 
         r.await();
