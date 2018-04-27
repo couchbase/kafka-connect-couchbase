@@ -18,99 +18,99 @@ import java.util.Set;
 
 public class SubDocumentWriter {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SubDocumentWriter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SubDocumentWriter.class);
 
-  private SubDocumentMode mode;
+    private SubDocumentMode mode;
 
-  private String path;
+    private String path;
 
-  private boolean createPaths;
+    private boolean createPaths;
 
-  private boolean createDocuments;
+    private boolean createDocuments;
 
-  public SubDocumentWriter(SubDocumentMode mode, String path, boolean createPaths,
-      boolean createDocuments) {
+    public SubDocumentWriter(SubDocumentMode mode, String path, boolean createPaths,
+            boolean createDocuments) {
 
-    this.mode = mode;
-    this.path = path;
-    this.createPaths = createPaths;
-    this.createDocuments = createDocuments;
-  }
-
-  public Completable write(final AsyncBucket bucket, final JsonBinaryDocument document,
-      PersistTo persistTo, ReplicateTo replicateTo) {
-    if (document == null
-        || (document.content() == null && (document.id() == null || document.id().isEmpty()))) {
-
-      LOGGER.warn("document or document content is null");
-      // skip it
-      return Completable.complete();
+        this.mode = mode;
+        this.path = path;
+        this.createPaths = createPaths;
+        this.createDocuments = createDocuments;
     }
 
-    JsonObject node = JsonObject.fromJson(document.content().toString(UTF_8));
+    public Completable write(final AsyncBucket bucket, final JsonBinaryDocument document,
+            PersistTo persistTo, ReplicateTo replicateTo) {
+        if (document == null || (document.content() == null
+                && (document.id() == null || document.id().isEmpty()))) {
 
-    SubdocOptionsBuilder options = new SubdocOptionsBuilder().createPath(createPaths);
+            LOGGER.warn("document or document content is null");
+            // skip it
+            return Completable.complete();
+        }
 
-    AsyncMutateInBuilder mutation = bucket.mutateIn(document.id());
+        JsonObject node = JsonObject.fromJson(document.content().toString(UTF_8));
 
-    if (document.content() == null && !document.id().isEmpty()) {
-      mutation = mutation.remove(path, options);
-    } else {
-      switch (mode) {
-        case UPSERT: {
-          mutation = mutation.upsert(path, node, options);
-          break;
-        }
-        case ARRAY_INSERT: {
-          mutation = mutation.arrayInsert(path, node, options);
-          break;
-        }
-        case ARRAY_APPEND: {
-          mutation = mutation.arrayAppend(path, node, options);
+        SubdocOptionsBuilder options = new SubdocOptionsBuilder().createPath(createPaths);
 
-          break;
-        }
-        case ARRAY_PREPEND: {
-          mutation = mutation.arrayPrepend(path, node, options);
+        AsyncMutateInBuilder mutation = bucket.mutateIn(document.id());
 
-          break;
-        }
-        case ARRAY_INSERT_ALL: {
-          mutation = mutation.arrayInsertAll(path, node, options);
+        if (document.content() == null && !document.id().isEmpty()) {
+            mutation = mutation.remove(path, options);
+        } else {
+            switch (mode) {
+                case UPSERT: {
+                    mutation = mutation.upsert(path, node, options);
+                    break;
+                }
+                case ARRAY_INSERT: {
+                    mutation = mutation.arrayInsert(path, node, options);
+                    break;
+                }
+                case ARRAY_APPEND: {
+                    mutation = mutation.arrayAppend(path, node, options);
 
-          break;
-        }
-        case ARRAY_APPEND_ALL: {
-          mutation = mutation.arrayAppendAll(path, node, options);
+                    break;
+                }
+                case ARRAY_PREPEND: {
+                    mutation = mutation.arrayPrepend(path, node, options);
 
-          break;
+                    break;
+                }
+                case ARRAY_INSERT_ALL: {
+                    mutation = mutation.arrayInsertAll(path, node, options);
+
+                    break;
+                }
+                case ARRAY_APPEND_ALL: {
+                    mutation = mutation.arrayAppendAll(path, node, options);
+
+                    break;
+                }
+                case ARRAY_PREPEND_ALL: {
+                    mutation = mutation.arrayPrependAll(path, node, options);
+                    break;
+                }
+                case ARRAY_ADD_UNIQUE: {
+                    mutation = mutation.arrayAddUnique(path, node, options);
+                    break;
+                }
+                case MULTI_MUTATION: {
+                    // ignore path configuration and take paths from JSON objects
+                    Set<String> paths = node.getNames();
+                    for (String p : paths) {
+                        Object value = node.get(p);
+                        mutation = mutation.upsert(p, value, options);
+                    }
+                }
+            }
         }
-        case ARRAY_PREPEND_ALL: {
-          mutation = mutation.arrayPrependAll(path, node, options);
-          break;
-        }
-        case ARRAY_ADD_UNIQUE: {
-          mutation = mutation.arrayAddUnique(path, node, options);
-          break;
-        }
-        case MULTI_MUTATION: {
-          // ignore path configuration and take paths from JSON objects
-          Set<String> paths = node.getNames();
-          for (String p : paths) {
-            Object value = node.get(p);
-            mutation = mutation.upsert(p, value, options);
-          }
-        }
-      }
+
+        return mutation.execute(persistTo, replicateTo).doOnError(new Action1<Throwable>() {
+            @Override
+            public void call(Throwable throwable) {
+                if (createDocuments && throwable instanceof DocumentDoesNotExistException) {
+                    bucket.insert(JsonDocument.create(document.id())).toBlocking().single();
+                }
+            }
+        }).toCompletable();
     }
-
-    return mutation.execute(persistTo, replicateTo).doOnError(new Action1<Throwable>() {
-      @Override
-      public void call(Throwable throwable) {
-        if (createDocuments && throwable instanceof DocumentDoesNotExistException) {
-          bucket.insert(JsonDocument.create(document.id())).toBlocking().single();
-        }
-      }
-    }).toCompletable();
-  }
 }
