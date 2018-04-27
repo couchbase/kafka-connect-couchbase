@@ -47,6 +47,7 @@ import com.couchbase.client.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.deps.io.netty.handler.ssl.SslHandler;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig;
+import com.couchbase.connect.kafka.util.config.Password;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +71,7 @@ public class Cluster {
         final List<String> nodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
         final String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
         final String username = config.getUsername();
-        final String password = config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG).value();
+        final String password = Password.CONNECTION.get(config);
         final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
         final int port = sslEnabled ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
         final SSLEngineFactory sslEngineFactory =
@@ -87,7 +88,7 @@ public class Cluster {
 
                     @Override
                     public String sslKeystorePassword() {
-                        return config.getPassword(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG).value();
+                        return Password.SSL_KEYSTORE.get(config);
                     }
 
                     @Override

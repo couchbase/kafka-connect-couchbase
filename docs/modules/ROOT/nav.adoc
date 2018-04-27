@@ -1,0 +1,7 @@
+* Kafka
+** xref:quickstart.adoc[Quickstart]
+** xref:source-configuration-options.adoc[Source Configuration Options]
+** xref:sink-configuration-options.adoc[Sink Configuration Options]
+** xref:streams-sample.adoc[Couchbase Sample with Kafka Streams]
+** xref:release-notes.adoc[Release Notes]
+
