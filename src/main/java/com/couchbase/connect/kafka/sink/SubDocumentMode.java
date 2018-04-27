@@ -9,5 +9,5 @@ public enum SubDocumentMode {
     ARRAY_PREPEND_ALL,
     ARRAY_APPEND_ALL,
     ARRAY_ADD_UNIQUE,
-    MULTI_MUTATION;
+    UPSERT_FIELDS;
 }

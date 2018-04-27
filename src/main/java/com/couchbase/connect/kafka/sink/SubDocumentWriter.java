@@ -9,6 +9,7 @@ import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
+import com.couchbase.connect.kafka.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
@@ -93,12 +94,13 @@ public class SubDocumentWriter {
                     mutation = mutation.arrayAddUnique(path, node, options);
                     break;
                 }
-                case MULTI_MUTATION: {
-                    // ignore path configuration and take paths from JSON objects
+                case UPSERT_FIELDS: {
+                    // path configuration as a prefix
+                    String prefix = path.equals("") ? "" : path + ".";
                     Set<String> paths = node.getNames();
                     for (String p : paths) {
                         Object value = node.get(p);
-                        mutation = mutation.upsert(p, value, options);
+                        mutation = mutation.upsert(prefix + p, value, options);
                     }
                 }
             }

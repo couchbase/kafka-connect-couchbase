@@ -236,19 +236,19 @@ public class SubDocumentWriterTest {
     }
 
     @Test
-    public void multiMutationWithEmptyJsonObject() {
+    public void upsertFieldsWithEmptyJsonObject() {
         Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class),
                 Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(JsonObject.empty(), SubDocumentMode.MULTI_MUTATION);
+        Completable r = write(JsonObject.empty(), SubDocumentMode.UPSERT_FIELDS);
         verify(bucket).mutateIn(mutateInArg.capture());
 
         r.await();
     }
 
     @Test
-    public void multiMutationWithJsonObject() {
+    public void upsertFieldsWithJsonObject() {
         JsonObject object = JsonObject.create();
         object.put("foo", "foo1");
         object.put("bar", "bar1");
@@ -257,7 +257,7 @@ public class SubDocumentWriterTest {
                 Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
-        Completable r = write(object, SubDocumentMode.MULTI_MUTATION);
+        Completable r = write(object, SubDocumentMode.UPSERT_FIELDS);
 
         verify(bucket).mutateIn(mutateInArg.capture());
         verify(mutateInBuilder).upsert(Mockito.eq("foo"), Mockito.eq("foo1"),
