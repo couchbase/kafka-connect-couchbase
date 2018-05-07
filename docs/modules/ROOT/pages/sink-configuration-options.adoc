@@ -93,15 +93,16 @@ Controls whether the ID field is removed from the document when
 Optionally specify Couchbase persistence requirements for a write to be
 considered successful. If the requested requirements cannot be met (due
 to Couchbase rebalance or failover, for instance) the connector will
-terminate. Possible values:
+terminate.
 
-* NONE - Do not require any disk persistence.
-* MASTER - Require disk persistence to the master node of the document
+* Possible values:
+** NONE - Do not require any disk persistence.
+** MASTER - Require disk persistence to the master node of the document
 only.
-* ONE - Require disk persistence of one node (master or replica).
-* TWO - Require disk persistence of two nodes (master or replica).
-* THREE - Require disk persistence of three nodes (master or replica).
-* FOUR - Require disk persistence of four nodes (master + three
+** ONE - Require disk persistence of one node (master or replica).
+** TWO - Require disk persistence of two nodes (master or replica).
+** THREE - Require disk persistence of three nodes (master or replica).
+** FOUR - Require disk persistence of four nodes (master + three
 replicas).
 
 * Since: 3.2.2
@@ -114,12 +115,13 @@ replicas).
 Optionally specify Couchbase replication requirements for a write to be
 considered successful. If the requested requirements cannot be met (due
 to Couchbase rebalance or failover, for instance) the connector will
-terminate. Possible values:
+terminate.
 
-* NONE - Do not require any replication.
-* ONE - Require replication to one replica.
-* TWO - Require replication to two replicas.
-* THREE - Require replication to three replicas.
+* Possible values:
+** NONE - Do not require any replication.
+** ONE - Require replication to one replica.
+** TWO - Require replication to two replicas.
+** THREE - Require replication to three replicas.
 
 * Since: 3.2.2
 * Type: boolean
@@ -129,16 +131,27 @@ terminate. Possible values:
 `couchbase.log_redaction`
 
 Optionally tag sensitive values in the log output for later redaction.
-Possible values:
 
-* NONE - No redaction is performed.
-* PARTIAL - Only user data is redacted, system and metadata are not.
-* FULL - User, System and Metadata are all redacted.
+* Possible values:
+** NONE - No redaction is performed.
+** PARTIAL - Only user data is redacted, system and metadata are not.
+** FULL - User, System and Metadata are all redacted.
 
 * Since: 3.2.3
 * Type: string
 * Importance: low
 * Default: `"NONE"`
+
+`couchbase.forceIPv4`
+
+In a network environment that supports both IPv4 and IPv6, setting this property
+to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
+
+* Since: 3.3.0
+* Type: boolean
+* Importance: low
+* Default: `false`
+
 
 *Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
 Connector 3.2]

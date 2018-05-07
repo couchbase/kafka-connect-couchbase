@@ -19,26 +19,22 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.core.time.Delay;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonFactory;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.TreeNode;
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
-import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
-import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
-import com.couchbase.connect.kafka.sink.*;
+import com.couchbase.connect.kafka.sink.DocumentMode;
+import com.couchbase.connect.kafka.sink.N1qlMode;
+import com.couchbase.connect.kafka.sink.N1qlWriter;
+import com.couchbase.connect.kafka.sink.SubDocumentMode;
+import com.couchbase.connect.kafka.sink.SubDocumentWriter;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
@@ -49,14 +45,12 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
-import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
 import rx.Observable;
-import rx.functions.Action4;
 import rx.functions.Func1;
 
 import java.io.IOException;
@@ -68,7 +62,15 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.*;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_ID_POINTER_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_MODE_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.N1QL_MODE_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.PERSIST_TO_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REPLICATE_TO_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.SUBDOCUMENT_MODE_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnector.setForceIpv4;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
 
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
@@ -107,6 +109,8 @@ public class CouchbaseSinkTask extends SinkTask {
         } catch (ConfigException e) {
             throw new ConnectException("Couldn't start CouchbaseSinkTask due to configuration error", e);
         }
+
+        setForceIpv4(config.getBoolean(FORCE_IPV4_CONFIG));
 
         RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
         CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);

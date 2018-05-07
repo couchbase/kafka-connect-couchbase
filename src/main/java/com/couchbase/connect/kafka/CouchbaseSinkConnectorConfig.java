@@ -66,6 +66,10 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECT
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DOC;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTOR_GROUP;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.DATABASE_GROUP;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_DEFAULT;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_DISPLAY;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_DOC;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_REDACTION_DEFAULT;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_REDACTION_DISPLAY;
@@ -335,6 +339,14 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEDOCUMENT_DISPLAY)
 
+                .define(FORCE_IPV4_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        FORCE_IPV4_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        FORCE_IPV4_DOC,
+                        CONNECTOR_GROUP, 20,
+                        ConfigDef.Width.LONG,
+                        FORCE_IPV4_DISPLAY)
                 ;
     }
 

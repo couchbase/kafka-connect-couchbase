@@ -16,6 +16,7 @@
 package com.couchbase.connect.kafka;
 
 
+import com.couchbase.client.core.utils.NetworkAddress;
 import com.couchbase.connect.kafka.util.Cluster;
 import com.couchbase.connect.kafka.util.Config;
 import com.couchbase.connect.kafka.util.StringUtils;
@@ -33,6 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
+
 public class CouchbaseSourceConnector extends SourceConnector {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
     private Map<String, String> configProperties;
@@ -49,6 +52,9 @@ public class CouchbaseSourceConnector extends SourceConnector {
         try {
             configProperties = properties;
             config = new CouchbaseSourceConnectorConfig(configProperties);
+
+            setForceIpv4(config.getBoolean(FORCE_IPV4_CONFIG));
+
             bucketConfig = Cluster.fetchBucketConfig(config);
             if (bucketConfig == null) {
                 String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
@@ -56,6 +62,14 @@ public class CouchbaseSourceConnector extends SourceConnector {
             }
         } catch (ConfigException e) {
             throw new ConnectException("Cannot start CouchbaseSourceConnector due to configuration error", e);
+        }
+    }
+
+    static void setForceIpv4(boolean forceIpv4) {
+        // Can't use constant NetworkAddress.FORCE_IPV4_PROPERTY because that would trigger static init
+        System.setProperty("com.couchbase.forceIPv4", String.valueOf(forceIpv4));
+        if (NetworkAddress.FORCE_IPV4 != forceIpv4) {
+            throw new IllegalStateException("Too late to set 'com.couchbase.forceIPv4' system property; static init for NetworkAddress already done.");
         }
     }
 

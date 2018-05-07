@@ -124,6 +124,12 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     static final String COMPRESSION_DISPLAY = "Compression";
     public static final String COMPRESSION_DEFAULT = CompressionMode.DISABLED.name();
 
+    public static final String FORCE_IPV4_CONFIG = "couchbase.forceIPv4";
+    static final String FORCE_IPV4_DOC = "In a network environment that supports both IPv4 and IPv6, setting this property" +
+            " to 'true' will force the use of IPv4 when resolving Couchbase Server hostnames.";
+    static final String FORCE_IPV4_DISPLAY = "Force hostname resolution to use IPv4";
+    public static final boolean FORCE_IPV4_DEFAULT = false;
+
     static ConfigDef config = baseConfigDef();
     private final String connectorName;
 
@@ -302,6 +308,15 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         ConfigDef.Width.LONG,
                         COMPRESSION_DISPLAY,
                         new EnumRecommender(CompressionMode.class))
+
+                .define(FORCE_IPV4_CONFIG,
+                        ConfigDef.Type.BOOLEAN,
+                        FORCE_IPV4_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        FORCE_IPV4_DOC,
+                        CONNECTOR_GROUP, 10,
+                        ConfigDef.Width.LONG,
+                        FORCE_IPV4_DISPLAY)
                 ;
     }
 
