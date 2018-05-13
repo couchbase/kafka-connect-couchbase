@@ -6,8 +6,6 @@ import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.DocumentDoesNotExistException;
-import com.couchbase.client.java.error.subdoc.CannotInsertValueException;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
@@ -52,15 +50,15 @@ public class SubDocumentWriterTest {
 
     @Before
     public void before(){
-        Observable<DocumentFragment<Mutation>> result = Observable.empty();
         List<JsonDocument> documents = new ArrayList();
         documents.add(JsonDocument.create("id"));
 
-        Observable<JsonDocument> insert = Observable.from(documents);
-
         Mockito.when(bucket.name()).thenReturn("default");
         Mockito.when(bucket.mutateIn(Mockito.any(String.class))).thenReturn(mutateInBuilder);
-        Mockito.when(bucket.insert(Mockito.any(JsonDocument.class))).thenReturn(insert);
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
+
     }
 
     private Completable write(JsonObject object, SubDocumentMode mode){
@@ -217,45 +215,5 @@ public class SubDocumentWriterTest {
         verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
 
         r.await();
-
     }
-
-    @Test(expected = DocumentDoesNotExistException.class)
-    public void createsDocumentOnDocumentDoesNotExistException() {
-        Observable<DocumentFragment<Mutation>> error = Observable.error(new DocumentDoesNotExistException());
-
-        JsonObject object = JsonObject.create();
-
-        Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
-
-        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
-
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
-
-        r.await();
-
-        verify(bucket).insert(Mockito.any(JsonDocument.class));
-    }
-
-    @Test(expected = CannotInsertValueException.class)
-    public void ignoresOtherThrowables() {
-        Observable<DocumentFragment<Mutation>> error = Observable.error(new CannotInsertValueException(path));
-
-        JsonObject object = JsonObject.create();
-
-        Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
-                .thenReturn(mutateInBuilder);
-
-        Completable r = write(object, SubDocumentMode.ARRAY_ADD_UNIQUE, error);
-
-        verify(bucket).mutateIn(mutateInArg.capture());
-        verify(mutateInBuilder).arrayAddUnique(Mockito.eq(path), Mockito.eq(object), Mockito.any(SubdocOptionsBuilder.class));
-
-        r.await();
-
-        verify(bucket, never()).insert(Mockito.any(JsonDocument.class));
-    }
-
 }

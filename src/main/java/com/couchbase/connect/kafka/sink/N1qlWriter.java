@@ -6,6 +6,7 @@ import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
+import com.couchbase.client.java.query.N1qlMetrics;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 
@@ -13,8 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import rx.Completable;
-import rx.Notification;
-import rx.functions.Action1;
+import rx.Observable;
+import rx.functions.Func1;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 
@@ -65,25 +66,35 @@ public class N1qlWriter {
             query = N1qlQuery.parameterized(statement, idObject);
         }
 
-        return bucket.query(query)
-                .doOnEach(new Action1<Notification<? super AsyncN1qlQueryResult>>() {
-                    @Override
-                    public void call(Notification<? super AsyncN1qlQueryResult> notification) {
-                        if (mode == N1qlMode.UPDATE && createDocuments) {
-                            AsyncN1qlQueryResult result = (AsyncN1qlQueryResult) notification.getValue();
-                            if (result != null && result.rows().count().toBlocking().single() == 0) {
+        if (mode == N1qlMode.UPDATE && createDocuments) {
+            return bucket.query(query)
+                    .flatMap(new Func1<AsyncN1qlQueryResult, Observable<N1qlMetrics>>() {
+                        @Override
+                        public Observable<N1qlMetrics> call(AsyncN1qlQueryResult asyncN1qlQueryResult) {
+                            return asyncN1qlQueryResult.info();
+                        }
+                    })
+                    .flatMap(new Func1<N1qlMetrics, Observable<?>>() {
+                        @Override
+                        public Observable<?> call(N1qlMetrics n1qlMetrics) {
+                            if (n1qlMetrics != null && n1qlMetrics.mutationCount() == 0) {
                                 String statement = parseUpsert(bucket.name(), node);
                                 if (statement == null || statement.isEmpty()) {
                                     LOGGER.warn("could not generate statement from node " + RedactableArgument.user(node));
                                 }
 
                                 JsonObject idObject = JsonObject.empty().put(idField, document.id());
-                                bucket.query(N1qlQuery.parameterized(statement, idObject)).toBlocking().single();
+                                return bucket.query(N1qlQuery.parameterized(statement, idObject));
+                            } else {
+                                return Observable.just(n1qlMetrics);
                             }
                         }
-                    }
-                })
-                .toCompletable();
+                    })
+                    .toCompletable();
+        }
+        else {
+            return bucket.query(query).toCompletable();
+        }
     }
 
     private String parseUpdate(String keySpace, JsonObject values) {
