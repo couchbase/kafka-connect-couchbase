@@ -6,6 +6,7 @@ import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.error.CannotRetryException;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.subdoc.CannotInsertValueException;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
@@ -220,7 +221,7 @@ public class SubDocumentWriterTest {
 
     }
 
-    @Test(expected = DocumentDoesNotExistException.class)
+    @Test(expected = CannotRetryException.class)
     public void createsDocumentOnDocumentDoesNotExistException() {
         Observable<DocumentFragment<Mutation>> error = Observable.error(new DocumentDoesNotExistException());
 

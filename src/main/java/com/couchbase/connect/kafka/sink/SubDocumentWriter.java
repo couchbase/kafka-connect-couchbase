@@ -8,12 +8,14 @@ import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
+import com.couchbase.client.java.util.retry.RetryBuilder;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
 
 import rx.functions.Action1;
+import rx.functions.Func1;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 
@@ -96,17 +98,29 @@ public class SubDocumentWriter {
             }
         }
 
-        return mutation
-                .execute(persistTo, replicateTo)
-                .doOnError(new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        if(createDocuments && throwable instanceof DocumentDoesNotExistException) {
-                            bucket.insert(JsonDocument.create(document.id())).toBlocking().single();
-                        }
-                    }
-                })
-                .toCompletable();
+         if(createDocuments) {
+             return mutation.execute(persistTo, replicateTo)
+                     .toCompletable()
+                     .retryWhen(
+                             RetryBuilder.anyOf(DocumentDoesNotExistException.class)
+                                     .once()
+                                     .build()
+                     )
+                     .onErrorResumeNext(new Func1<Throwable, Completable>() {
+                         @Override
+                         public Completable call(Throwable throwable) {
+                             if (createDocuments && throwable instanceof DocumentDoesNotExistException) {
+                                 return bucket.insert(JsonDocument.create(document.id())).toCompletable();
+                             } else {
+                                 return Completable.error(throwable);
+                             }
+                         }
+                     });
+         }
+         else {
+             return mutation.execute(persistTo, replicateTo)
+                     .toCompletable();
+         }
     }
 }
 
