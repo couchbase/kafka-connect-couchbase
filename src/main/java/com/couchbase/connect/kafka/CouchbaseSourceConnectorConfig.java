@@ -119,10 +119,10 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
     public static final String LOG_REDACTION_DEFAULT = RedactionLevel.NONE.name();
 
     public static final String COMPRESSION_CONFIG = "couchbase.compression";
-    static final String COMPRESSION_DOC = "To reduce bandwidth usage, Couchbase Server 4.5 and later can send documents to the connector in compressed form. " +
+    static final String COMPRESSION_DOC = "To reduce bandwidth usage, Couchbase Server 5.5 and later can send documents to the connector in compressed form. " +
             "(Messages are always published to the Kafka topic in uncompressed form, regardless of this setting.)";
     static final String COMPRESSION_DISPLAY = "Compression";
-    public static final String COMPRESSION_DEFAULT = CompressionMode.DISABLED.name();
+    public static final String COMPRESSION_DEFAULT = CompressionMode.ENABLED.name();
 
     public static final String FORCE_IPV4_CONFIG = "couchbase.forceIPv4";
     static final String FORCE_IPV4_DOC = "In a network environment that supports both IPv4 and IPv6, setting this property" +

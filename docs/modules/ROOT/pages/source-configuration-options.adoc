@@ -141,25 +141,27 @@ Optionally tag sensitive values in the log output for later redaction.
 
 `couchbase.compression`
 
-To reduce bandwidth usage, Couchbase Server 4.5 and later can send
+To reduce bandwidth usage, Couchbase Server 5.5 and later can send
 documents to the connector in compressed form. (Messages are always
 published to the Kafka topic in uncompressed form, regardless of this
-setting.)
+setting.) If the requested mode is not supported by your version of
+Couchbase Server, compression will be disabled.
 
 * Possible values:
-** DISABLED - No compression.
-** ENABLED - Couchbase Server decides whether to use compression on a
-per-document basis. For Couchbase 5.5 and later, the document will be
-sent compressed if the server already has easy access to the compressed
-form. For older server versions, this mode is equivalent to FORCED, and
-may increase server CPU load.
-** FORCED - Compression is used for every document, unless compressed
-size is greater than uncompressed size.
+** `ENABLED` - (default) Couchbase Server decides whether to use compression
+on a per-document basis, depending on whether the compressed form of the
+document is readily available. Select this mode to prioritize Couchbase Server
+performance and reduced bandwidth usage (recommended). *Requires Couchbase Server 5.5 or later*.
+** `DISABLED` - No compression. Select this mode to prioritize reduced CPU load
+for the Kafka connector.
+** `FORCED` - Compression is used for every document, unless compressed
+size is greater than uncompressed size. Select this mode to prioritize bandwidth
+usage reduction above all else. *Requires Couchbase Server 5.5 or later*.
 
-* Since: 3.2.3
+* Since: 3.3.0
 * Type: string
 * Importance: low
-* Default: `"DISABLED"`
+* Default: `"ENABLED"`
 
 `couchbase.forceIPv4`
 
