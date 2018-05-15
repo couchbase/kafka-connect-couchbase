@@ -18,7 +18,7 @@ http://packages.couchbase.com/clients/kafka/3.3.0/kafka-connect-couchbase-3.3.0.
 Compression is now enabled by default (requires Couchbase Server 5.5 or later).
 
 IPv6 is now enabled by default. To disable IPv6 in a dual-stack environment,
-set the new `couchbase.forceIpv4` config property to `true`.
+set the new `couchbase.forceIPv4` config property to `true`.
 
 Resolved a regression that caused the connector to need a restart after
 a Couchbase Server restart.
