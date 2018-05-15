@@ -1,5 +1,56 @@
 Release notes for the Kafka Connector.
 
+[[couchbase-kafka-connector-3.3.0-ga-2018-05-15]]
+Couchbase Kafka Connector 3.3.0 GA (2018-05-15)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+http://packages.couchbase.com/clients/kafka/3.3.0/kafka-connect-couchbase-3.3.0.zip[kafka-connect-couchbase-3.3.0.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.3.0</version>
+</dependency>
+----
+
+Compression is now enabled by default (requires Couchbase Server 5.5 or later).
+
+IPv6 is now enabled by default. To disable IPv6 in a dual-stack environment,
+set the new `couchbase.forceIpv4` config property to `true`.
+
+Resolved a regression that caused the connector to need a restart after
+a Couchbase Server restart.
+
+Couchbase password and SSL keystore password may be specified using via
+`KAFKA_COUCHBASE_PASSWORD` and `KAFKA_COUCHBASE_SSL_KEYSTORE_PASSWORD`
+environment variables.
+
+The sink connector can now modify documents using the sub-document API
+(many thanks to community member Didier Caron).
+
+Issues resolved in this release:
+
+* https://issues.couchbase.com/browse/KAFKAC-97[KAFKAC-97]:
+[BUGFIX] Kafka Connector needs a restart after Couchbase Server restart
+
+* https://issues.couchbase.com/browse/KAFKAC-102[KAFKAC-102]:
+[ENHANCEMENT] Enable compression by default
+
+* https://issues.couchbase.com/browse/KAFKAC-100[KAFKAC-100]:
+[ENHANCEMENT] Enable IPv6 by default, add first-class config option
+
+* https://issues.couchbase.com/browse/KAFKAC-96[KAFKAC-96]:
+[ENHANCEMENT] Support setting password via environment variable
+
+* https://issues.couchbase.com/browse/KAFKAC-98[KAFKAC-98]:
+[ENHANCEMENT] Sink: Support sub-document access (Didier Caron)
+
+* https://issues.couchbase.com/browse/KAFKAC-103[KAFKAC-103]:
+[ENHANCEMENT] Upgrade Couchbase dependencies
+
+
 [[couchbase-kafka-connector-3.2.3-ga-2018-02-20]]
 Couchbase Kafka Connector 3.2.3 GA (2018-02-20)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
