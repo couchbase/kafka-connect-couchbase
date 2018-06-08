@@ -78,8 +78,8 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.LOG_RED
 public class CouchbaseSinkConnectorConfig extends AbstractConfig {
 
     public static final String DOCUMENT_ID_POINTER_CONFIG = "couchbase.document.id";
-    static final String DOCUMENT_ID_POINTER_DOC = "JSON Pointer to the property to use for the Couchbase document ID (overriding the message key).";
-    static final String DOCUMENT_ID_POINTER_DISPLAY = "Document ID Pointer";
+    static final String DOCUMENT_ID_POINTER_DOC = "Format string to use for the Couchbase document ID (overriding the message key). May refer to document fields via placeholders like ${/path/to/field}";
+    static final String DOCUMENT_ID_POINTER_DISPLAY = "Document ID Format";
     public static final String DOCUMENT_ID_POINTER_DEFAULT = "";
 
     public static final String SUBDOCUMENT_PATH_CONFIG = "couchbase.subdocument.path";

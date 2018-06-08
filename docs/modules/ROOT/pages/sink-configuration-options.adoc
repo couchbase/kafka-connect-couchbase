@@ -71,8 +71,29 @@ The password of the private key in the key store file.
 
 `couchbase.document.id`
 
-An optional JSON Pointer specifying a document field to use as the
-Couchbase document ID.
+Optionally set the Couchbase document ID from fields of the message body.
+The value is a format string with a placeholder for each field to include
+in the ID. A placeholder looks like `${/path/to/field}` where the path
+is specified as a JSON pointer.
+
+For backwards compatibility, a format string without placeholders
+is interpreted as a single JSON pointer.
+
+The examples below assume the following sample document content:
+[source,json]
+{
+  "id": 123,
+  "metadata": {
+    "type": "widget"
+  }
+}
+
+* Example values:
+
+** `${/id}` -> 123
+** `invoice::${/id}` -> invoice::123
+** `${/metadata/type}::${/id}` -> widget::123
+** `/id` -> 123 (deprecated, use `${/id}` instead)
 
 * Type: string
 * Importance: low

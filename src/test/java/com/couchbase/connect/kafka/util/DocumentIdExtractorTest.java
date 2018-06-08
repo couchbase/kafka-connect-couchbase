@@ -25,6 +25,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -65,11 +66,16 @@ public class DocumentIdExtractorTest {
 
     private static void checkNotFound(String pointer, String document) throws IOException {
         document = toValidJson(document);
+        final byte[] documentBytes = document.getBytes(UTF_8);
+
         try {
-            new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
+            new DocumentIdExtractor(pointer, true).extractDocumentId(documentBytes);
             fail("expected 'not found'");
         } catch (DocumentIdExtractor.DocumentIdNotFoundException e) {
             // expected
+
+            assertArrayEquals("ID extractor must not modified the byte array when throwing exception",
+                    documentBytes, document.getBytes(UTF_8));
         }
     }
 
@@ -110,11 +116,31 @@ public class DocumentIdExtractorTest {
     }
 
     @Test
+    public void multipleNumericFields() throws Exception {
+        String testDocument = "{'a':1, 'b':2, 'c':3}";
+        check("${/b}-${/c}", testDocument, "2-3", "{'a':1}");
+        check("${/a}-${/b}-${/c}", testDocument, "1-2-3", "{}");
+    }
+
+    @Test
+    public void duplicatePlaceholders() throws Exception {
+        String testDocument = "{'a':1, 'b':2, 'c':3}";
+        check("${/b}-${/b}", testDocument, "2-2", "{'a':1, 'c':3}");
+    }
+
+    @Test
     public void stringFields() throws Exception {
         String testDocument = "{'a':'1', 'b':'2', 'c':'3'}";
         check("/a", testDocument, "1", "{'b':'2', 'c':'3'}");
         check("/b", testDocument, "2", "{'a':'1', 'c':'3'}");
         check("/c", testDocument, "3", "{'a':'1', 'b':'2'}");
+    }
+
+    @Test
+    public void multipleStringFields() throws Exception {
+        String testDocument = "{'a':'1', 'b':'2', 'c':'3'}";
+        check("foo ${/b}-${/c} bar", testDocument, "foo 2-3 bar", "{'a':'1'}");
+        check("foo ${/a}-${/b}-${/c} bar", testDocument, "foo 1-2-3 bar", "{}");
     }
 
     @Test
@@ -138,6 +164,8 @@ public class DocumentIdExtractorTest {
     public void missingPropertyMeansNotFound() throws Exception {
         checkNotFound("/c", "{'a':{'b':3}}");
         checkNotFound("/a/c", "{'a':{'b':3}}");
+
+        checkNotFound("${/a/b}-${/a/c}", "{'a':{'b':3}}");
     }
 
     @Test
