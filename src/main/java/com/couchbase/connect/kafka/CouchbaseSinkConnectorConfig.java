@@ -23,6 +23,7 @@ import com.couchbase.connect.kafka.sink.DocumentMode;
 import com.couchbase.connect.kafka.sink.N1qlMode;
 import com.couchbase.connect.kafka.sink.SubDocumentMode;
 import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
+import com.couchbase.connect.kafka.util.config.DurationValidator;
 import com.couchbase.connect.kafka.util.config.EnumRecommender;
 import com.couchbase.connect.kafka.util.config.EnumValidator;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -128,6 +129,12 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String REPLICATE_TO_DOC = "Durability setting for Couchbase replication.";
     static final String REPLICATE_TO_DISPLAY = "Replicate to";
     public static final String REPLICATE_TO_DEFAULT = ReplicateTo.NONE.name();
+
+    public static final String EXPIRY_CONFIG = "couchbase.document.expiration";
+    static final String EXPIRY_DOC = "Document expiration time specified as an integer followed by a time unit (s = seconds, m = minutes, h = hours, d = days)." +
+            "For example, to have documents expire after 30 minutes, set this value to \"30m\". By default, documents do not expire.";
+    static final String EXPIRY_DISPLAY = "Document Expiration";
+    public static final String EXPIRY_DEFAULT = "";
 
     static ConfigDef config = baseConfigDef();
 
@@ -347,6 +354,16 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         CONNECTOR_GROUP, 20,
                         ConfigDef.Width.LONG,
                         FORCE_IPV4_DISPLAY)
+
+                .define(EXPIRY_CONFIG,
+                        ConfigDef.Type.STRING,
+                        EXPIRY_DEFAULT,
+                        new DurationValidator(),
+                        ConfigDef.Importance.LOW,
+                        EXPIRY_DOC,
+                        CONNECTOR_GROUP, 21,
+                        ConfigDef.Width.LONG,
+                        EXPIRY_DISPLAY)
                 ;
     }
 

@@ -39,6 +39,7 @@ import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
 import com.couchbase.connect.kafka.util.Version;
+import com.couchbase.connect.kafka.util.config.DurationParser;
 import com.couchbase.connect.kafka.util.config.Password;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -64,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_ID_POINTER_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_MODE_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.EXPIRY_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.N1QL_MODE_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.PERSIST_TO_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
@@ -71,6 +73,7 @@ import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REPLICATE
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.SUBDOCUMENT_MODE_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnector.setForceIpv4;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
@@ -95,6 +98,8 @@ public class CouchbaseSinkTask extends SinkTask {
 
     private PersistTo persistTo;
     private ReplicateTo replicateTo;
+
+    private long expiryOffsetSeconds;
 
     @Override
     public String version() {
@@ -149,6 +154,8 @@ public class CouchbaseSinkTask extends SinkTask {
         persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
         replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
 
+        final String expiryDuration = config.getString(EXPIRY_CONFIG);
+        expiryOffsetSeconds = expiryDuration.isEmpty() ? 0 : DurationParser.parseDurationSeconds(expiryDuration);
 
         switch (documentMode) {
             case SUBDOCUMENT: {
@@ -264,7 +271,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
         try {
             if (documentIdExtractor != null) {
-                return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
+                return documentIdExtractor.extractDocumentId(valueAsJsonBytes, getAbsoluteExpirySeconds());
             }
 
         } catch (DocumentIdExtractor.DocumentIdNotFoundException e) {
@@ -279,8 +286,17 @@ public class CouchbaseSinkTask extends SinkTask {
             defaultId = documentIdFromKafkaMetadata(record);
         }
 
-        return JsonBinaryDocument.create(defaultId, valueAsJsonBytes);
+        return JsonBinaryDocument.create(defaultId, getAbsoluteExpirySeconds(), valueAsJsonBytes);
     }
+
+    private int getAbsoluteExpirySeconds() {
+        if (expiryOffsetSeconds == 0) {
+            return 0; // no expiration
+        }
+
+        return (int) (MILLISECONDS.toSeconds(System.currentTimeMillis()) + expiryOffsetSeconds);
+    }
+
 
     @Override
     public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {

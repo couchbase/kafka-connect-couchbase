@@ -173,6 +173,16 @@ to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
 * Importance: low
 * Default: `false`
 
+`couchbase.document.expiration`
+
+Optionally specify a time-to-live for documents written to Couchbase.
+If present, the value must be an integer followed by a time unit.
+(`s` = seconds, `m` = minutes, `h` = hours, `d` = days). Example value: `30m`.
+
+* Since: 3.3.1
+* Type: string
+* Importance: low
+* Default: `""` (documents will not expire)
 
 *Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
 Connector 3.2]

@@ -109,7 +109,7 @@ public class DocumentIdExtractor {
      * @param json The document content encoded as UTF-8. If this method returns normally,
      * it may modify the contents of the array to remove the fields used by the document ID.
      */
-    public JsonBinaryDocument extractDocumentId(final byte[] json) throws IOException, DocumentIdNotFoundException {
+    public JsonBinaryDocument extractDocumentId(final byte[] json, int expiry) throws IOException, DocumentIdNotFoundException {
         final List<ByteRange> rangesToRemove = new ArrayList<ByteRange>(placeholderToJsonPointer.size());
 
         String documentId = documentIdFormat;
@@ -145,7 +145,7 @@ public class DocumentIdExtractor {
             range.fill(json, (byte) ' ');
         }
 
-        return JsonBinaryDocument.create(documentId, json);
+        return JsonBinaryDocument.create(documentId, expiry, json);
     }
 
     private static void swallowOneComma(ByteRange range) {

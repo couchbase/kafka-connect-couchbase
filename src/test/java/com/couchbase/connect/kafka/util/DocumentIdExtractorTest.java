@@ -46,12 +46,12 @@ public class DocumentIdExtractorTest {
         document = toValidJson(document);
         expectedResultDocument = toValidJson(expectedResultDocument);
 
-        JsonBinaryDocument result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
+        JsonBinaryDocument result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8), 0);
         assertEquals(expectedDocumentId, result.id());
         assertJsonEquals(expectedResultDocument, result);
 
         // and again without removing the document id
-        result = new DocumentIdExtractor(pointer, false).extractDocumentId(document.getBytes(UTF_8));
+        result = new DocumentIdExtractor(pointer, false).extractDocumentId(document.getBytes(UTF_8), 0);
         assertEquals(expectedDocumentId, result.id());
         assertEquals(document, result.content().toString(UTF_8));
 
@@ -59,7 +59,7 @@ public class DocumentIdExtractorTest {
         for (char c : ",:[]{}".toCharArray()) {
             document = document.replace(Character.toString(c), "  " + c + "  ");
         }
-        result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
+        result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8), 0);
         assertEquals(expectedDocumentId, result.id());
         assertJsonEquals(expectedResultDocument, result);
     }
@@ -69,7 +69,7 @@ public class DocumentIdExtractorTest {
         final byte[] documentBytes = document.getBytes(UTF_8);
 
         try {
-            new DocumentIdExtractor(pointer, true).extractDocumentId(documentBytes);
+            new DocumentIdExtractor(pointer, true).extractDocumentId(documentBytes, 0);
             fail("expected 'not found'");
         } catch (DocumentIdExtractor.DocumentIdNotFoundException e) {
             // expected
@@ -90,7 +90,7 @@ public class DocumentIdExtractorTest {
     }
 
     private static JsonBinaryDocument extract(DocumentIdExtractor extractor, String s) throws Exception {
-        return extractor.extractDocumentId(toValidJson(s).getBytes(CharsetUtil.UTF_8));
+        return extractor.extractDocumentId(toValidJson(s).getBytes(CharsetUtil.UTF_8), 0);
     }
 
     private static String toValidJson(String json) throws IOException {
