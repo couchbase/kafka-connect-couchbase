@@ -4,21 +4,21 @@ Reference of the source connector options.
 Database
 ~~~~~~~~
 
-`connection.cluster_address`
+=== `connection.cluster_address`
 
 Couchbase Cluster addresses to listen (use comma to specify several).
 
 * Type: list
 * Importance: high
 
-`connection.bucket`
+=== `connection.bucket`
 
 Couchbase bucket name.
 
 * Type: string
 * Importance: high
 
-`connection.username`
+=== `connection.username`
 
 Couchbase username for Couchbase Server 5.0 and later.
 
@@ -26,7 +26,7 @@ Couchbase username for Couchbase Server 5.0 and later.
 * Importance: high
 * Default: the bucket name specified by `connection.bucket`
 
-`connection.password`
+=== `connection.password`
 
 Couchbase password. For Couchbase Server versions prior to 5.0 this is
 the bucket password. For versions 5.0 and later, this is the password
@@ -36,14 +36,14 @@ associated with `connection.username`.
 * Importance: low
 * Default: `""`
 
-`connection.timeout.ms`
+=== `connection.timeout.ms`
 
 Connection timeout in milliseconds.
 
 * Type: long
 * Importance: low
 
-`connection.ssl.enabled`
+=== `connection.ssl.enabled`
 
 Use SSL to connect to Couchbase. This feature only available in
 Couchbase Enterprise.
@@ -54,14 +54,14 @@ Couchbase Enterprise.
 * Dependents: `connection.ssl.keystore.location`,
 `connection.ssl.keystore.password`
 
-`connection.ssl.keystore.location`
+=== `connection.ssl.keystore.location`
 
 The location of the key store file.
 
 * Type: string
 * Importance: low
 
-`connection.ssl.keystore.password`
+=== `connection.ssl.keystore.password`
 
 The password of the private key in the key store file.
 
@@ -73,14 +73,14 @@ The password of the private key in the key store file.
 Connector
 ~~~~~~~~~
 
-`topic.name`
+=== `topic.name`
 
 Name of the Kafka topic to publish data to.
 
 * Type: string
 * Importance: high
 
-`use_snapshots`
+=== `use_snapshots`
 
 If true, it will only commit into Kafka when full snapshot from
 Couchbase received.
@@ -89,7 +89,7 @@ Couchbase received.
 * Importance: low
 * Default: `false`
 
-`dcp.message.converter.class`
+=== `dcp.message.converter.class`
 
 The class name of the message converter to use.
 
@@ -98,7 +98,7 @@ The class name of the message converter to use.
 * Default:
 `"com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler"`
 
-`event.filter.class`
+=== `event.filter.class`
 
 The class name of the event filter to use.
 
@@ -106,7 +106,7 @@ The class name of the event filter to use.
 * Importance: low
 * Default: `"com.couchbase.connect.kafka.filter.AllPassFilter"`
 
-`couchbase.stream_from`
+=== `couchbase.stream_from`
 
 The point in Couchbase history to start streaming from.
 
@@ -125,7 +125,7 @@ state)
 * Importance: low
 * Default: `"SAVED_OFFSET_OR_BEGINNING"`
 
-`couchbase.log_redaction`
+=== `couchbase.log_redaction`
 
 Optionally tag sensitive values in the log output for later redaction.
 
@@ -139,7 +139,7 @@ Optionally tag sensitive values in the log output for later redaction.
 * Importance: low
 * Default: `"NONE"`
 
-`couchbase.compression`
+=== `couchbase.compression`
 
 To reduce bandwidth usage, Couchbase Server 5.5 and later can send
 documents to the connector in compressed form. (Messages are always
@@ -163,7 +163,7 @@ usage reduction above all else. *Requires Couchbase Server 5.5 or later*.
 * Importance: low
 * Default: `"ENABLED"`
 
-`couchbase.forceIPv4`
+=== `couchbase.forceIPv4`
 
 In a network environment that supports both IPv4 and IPv6, setting this property
 to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
