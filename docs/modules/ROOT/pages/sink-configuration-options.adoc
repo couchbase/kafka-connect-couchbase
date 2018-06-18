@@ -95,6 +95,7 @@ The examples below assume the following sample document content:
 ** `${/metadata/type}::${/id}` -> widget::123
 ** `/id` -> 123 (deprecated, use `${/id}` instead)
 
+* Since: 3.3.1 (*Uncommitted*; API may change in a patch release)
 * Type: string
 * Importance: low
 * Default: `""`
@@ -179,7 +180,7 @@ Optionally specify a time-to-live for documents written to Couchbase.
 If present, the value must be an integer followed by a time unit.
 (`s` = seconds, `m` = minutes, `h` = hours, `d` = days). Example value: `30m`.
 
-* Since: 3.3.1
+* Since: 3.3.1 (*Uncommitted*; API may change in a patch release)
 * Type: string
 * Importance: low
 * Default: `""` (documents will not expire)
