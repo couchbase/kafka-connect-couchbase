@@ -1,5 +1,42 @@
 Release notes for the Kafka Connector.
 
+[[couchbase-kafka-connector-3.3.1-ga-2018-06-19]]
+Couchbase Kafka Connector 3.3.1 GA (2018-06-19)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+http://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.3.1</version>
+</dependency>
+----
+
+The sink connector can now set expiration times for documents,
+and can assign document IDs by composing values from multiple fields.
+
+The source connector now continues streaming after a graceful failover.
+
+Issues resolved in this release:
+
+* https://issues.couchbase.com/browse/KAFKAC-104[KAFKAC-104]:
+[ENHANCEMENT] Support for setting TTL on items being written to Couchbase
+
+* https://issues.couchbase.com/browse/KAFKAC-106[KAFKAC-106]:
+[ENHANCEMENT] Support assigning document ID from multiple fields
+
+* https://issues.couchbase.com/browse/KAFKAC-109[KAFKAC-109]:
+[ENHANCEMENT] KAFKAC-109 Upgrade to Java client 2.5.9 and DCP client 0.17.0
+
+* https://issues.couchbase.com/browse/JDCP-85[JDCP-85]:
+[BUGFIX] Client stops receiving some events after failover
+
+* https://issues.couchbase.com/browse/JDCP-94[JDCP-94]:
+[BUGFIX] Should never pass null ChannelFlowController to event handlers
+
 [[couchbase-kafka-connector-3.3.0-ga-2018-05-15]]
 Couchbase Kafka Connector 3.3.0 GA (2018-05-15)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,7 +86,6 @@ Issues resolved in this release:
 
 * https://issues.couchbase.com/browse/KAFKAC-103[KAFKAC-103]:
 [ENHANCEMENT] Upgrade Couchbase dependencies
-
 
 [[couchbase-kafka-connector-3.2.3-ga-2018-02-20]]
 Couchbase Kafka Connector 3.2.3 GA (2018-02-20)
