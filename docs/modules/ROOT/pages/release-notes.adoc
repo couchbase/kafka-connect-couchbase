@@ -1,8 +1,9 @@
+:idprefix:
+:idseparator: -
+
 Release notes for the Kafka Connector.
 
-[[couchbase-kafka-connector-3.3.1-ga-2018-06-19]]
-Couchbase Kafka Connector 3.3.1 GA (2018-06-19)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.3.1 GA (2018-06-19)
 
 http://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
 
@@ -37,9 +38,7 @@ Issues resolved in this release:
 * https://issues.couchbase.com/browse/JDCP-94[JDCP-94]:
 [BUGFIX] Should never pass null ChannelFlowController to event handlers
 
-[[couchbase-kafka-connector-3.3.0-ga-2018-05-15]]
-Couchbase Kafka Connector 3.3.0 GA (2018-05-15)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.3.0 GA (2018-05-15)
 
 http://packages.couchbase.com/clients/kafka/3.3.0/kafka-connect-couchbase-3.3.0.zip[kafka-connect-couchbase-3.3.0.zip]
 
@@ -87,9 +86,7 @@ Issues resolved in this release:
 * https://issues.couchbase.com/browse/KAFKAC-103[KAFKAC-103]:
 [ENHANCEMENT] Upgrade Couchbase dependencies
 
-[[couchbase-kafka-connector-3.2.3-ga-2018-02-20]]
-Couchbase Kafka Connector 3.2.3 GA (2018-02-20)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.2.3 GA (2018-02-20)
 
 Keepalive is now enabled on the Couchbase Server connection. This
 prevents the server from dropping idle connections, and enables dead
@@ -124,9 +121,7 @@ Source: Add config settings to enable compression
 
 http://packages.couchbase.com/clients/kafka/3.2.3/kafka-connect-couchbase-3.2.3.zip[kafka-connect-couchbase-3.2.3.zip]
 
-[[couchbase-kafka-connector-3.2.2-ga-19-december-2017]]
-Couchbase Kafka Connector 3.2.2 GA (19 December 2017)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.2.2 GA (19 December 2017)
 
 The source connector now does a better job of reporting abnormal
 termination. Thanks to community member p_mx (tiny1990).
@@ -166,9 +161,7 @@ Source: Restart from a given state / offset
 
 http://packages.couchbase.com/clients/kafka/3.2.2/kafka-connect-couchbase-3.2.2.zip[kafka-connect-couchbase-3.2.2.zip]
 
-[[couchbase-kafka-connector-3.2.1-ga-8-november-2017]]
-Couchbase Kafka Connector 3.2.1 GA (8 November 2017)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.2.1 GA (8 November 2017)
 
 Fixes a regression in 3.2.0 that prevented the sink connector from
 working.
@@ -192,9 +185,7 @@ JsonBinaryTranscoder.newDocument.
 
 http://packages.couchbase.com/clients/kafka/3.2.1/kafka-connect-couchbase-3.2.1.zip[kafka-connect-couchbase-3.2.1.zip]
 
-[[couchbase-kafka-connector-3.2.0-ga-17-october-2017]]
-Couchbase Kafka Connector 3.2.0 GA (17 October 2017)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.2.0 GA (17 October 2017)
 
 The sink connector is now officially supported.
 
@@ -257,9 +248,7 @@ MutationToken Enabled in Kafka Connector to N1QL at plus.
 
 http://packages.couchbase.com/clients/kafka/3.2.0/kafka-connect-couchbase-3.2.0.zip[kafka-connect-couchbase-3.2.0.zip]
 
-[[couchbase-kafka-connector-3.1.3-ga-31-may-2017]]
-Couchbase Kafka Connector 3.1.3 GA (31 May 2017)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.1.3 GA (31 May 2017)
 
 Version 3.1.3 is maintenance release.
 
@@ -278,9 +267,7 @@ RBAC credentials on Couchbase Server 5+.
 
 http://packages.couchbase.com/clients/kafka/3.1.3/kafka-connect-couchbase-3.1.3.zip[kafka-connect-couchbase-3.1.3.zip]
 
-[[couchbase-kafka-connector-3.1.2-ga-14-march-2017]]
-Couchbase Kafka Connector 3.1.2 GA (14 March 2017)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.1.2 GA (14 March 2017)
 
 Version 3.1.2 is maintenance release..
 
@@ -290,9 +277,7 @@ queue is not drained quickly enough to relay the data into Kafka.
 
 http://packages.couchbase.com/clients/kafka/3.1.2/kafka-connect-couchbase-3.1.2.zip[kafka-connect-couchbase-3.1.2.zip]
 
-[[couchbase-kafka-connector-3.1.1-ga-21-february-2017]]
-Couchbase Kafka Connector 3.1.1 GA (21 February 2017)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.1.1 GA (21 February 2017)
 
 Version 3.1.1 is maintenance release. It contains fixes for resuming DCP
 streams after restart.
@@ -304,9 +289,7 @@ events in Kafka topic).
 
 http://packages.couchbase.com/clients/kafka/3.1.1/kafka-connect-couchbase-3.1.1.zip[kafka-connect-couchbase-3.1.1.zip]
 
-[[couchbase-kafka-connector-3.1.0-ga-03-january-2017]]
-Couchbase Kafka Connector 3.1.0 GA (03 January 2017)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.1.0 GA (03 January 2017)
 
 Version 3.1.0 is GA release.
 
@@ -315,17 +298,13 @@ Connector support
 
 http://packages.couchbase.com/clients/kafka/3.1.0/kafka-connect-couchbase-3.1.0.zip[kafka-connect-couchbase-3.1.0.zip]
 
-[[couchbase-kafka-connector-3.0.0-ga-14-december-2016]]
-Couchbase Kafka Connector 3.0.0 GA (14 December 2016)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.0.0 GA (14 December 2016)
 
 Version 3.0.0 is GA release. It brings documentation update.
 
 http://packages.couchbase.com/clients/kafka/3.0.0/kafka-connect-couchbase-3.0.0.zip[kafka-connect-couchbase-3.0.0.zip]
 
-[[couchbase-kafka-connector-3.0.0-beta-22-november-2016]]
-Couchbase Kafka Connector 3.0.0 BETA (22 November 2016)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.0.0 BETA (22 November 2016)
 
 Version 3.0.0-BETA is pre-release version of the 3.0.0. It brings
 documentation update, feature enhancements and bug fixes
@@ -338,9 +317,7 @@ to versions shipped with 3.1.1
 
 http://packages.couchbase.com/clients/kafka/3.0.0-BETA/kafka-connect-couchbase-3.0.0-BETA.zip[kafka-connect-couchbase-3.0.0-BETA.zip]
 
-[[couchbase-kafka-connector-3.0.0-dp4-5-november-2016]]
-Couchbase Kafka Connector 3.0.0 DP4 (5 November 2016)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.0.0 DP4 (5 November 2016)
 
 Version 3.0.0-DP4 is the fourth developer preview of the 3.0.x series.
 
@@ -353,9 +330,7 @@ inject Filter class to skip events before writing into Kafka
 
 http://packages.couchbase.com/clients/kafka/3.0.0-DP4/kafka-connect-couchbase-3.0.0-DP4.zip[kafka-connect-couchbase-3.0.0-DP4.zip]
 
-[[couchbase-kafka-connector-3.0.0-dp3-20-october-2016]]
-Couchbase Kafka Connector 3.0.0 DP3 (20 October 2016)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.0.0 DP3 (20 October 2016)
 
 Version 3.0.0-DP3 is the third developer preview of the 3.0.x series. It
 implements new features and also includes bug fixes to previous release.
@@ -370,9 +345,7 @@ allocated on the server.
 
 http://packages.couchbase.com/clients/kafka/3.0.0-DP3/kafka-connect-couchbase-3.0.0-DP3.zip[kafka-connect-couchbase-3.0.0-DP3.zip]
 
-[[couchbase-kafka-connector-3.0.0-dp2-24-september-2016]]
-Couchbase Kafka Connector 3.0.0 DP2 (24 September 2016)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.0.0 DP2 (24 September 2016)
 
 Version 3.0.0-DP2 is the second developer preview of the 3.0.x series.
 It improves configuration. And now can maintain replication state, which
@@ -380,9 +353,7 @@ allow to resume transmission.
 
 http://packages.couchbase.com/clients/kafka/3.0.0-DP2/kafka-connect-couchbase-3.0.0-DP2.zip[kafka-connect-couchbase-3.0.0-DP2.zip]
 
-[[couchbase-kafka-connector-3.0.0-dp1-6-september-2016]]
-Couchbase Kafka Connector 3.0.0 DP1 (6 September 2016)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Kafka Connector 3.0.0 DP1 (6 September 2016)
 
 Version 3.0.0-DP1 is the first developer preview of the 3.0.x series.
 

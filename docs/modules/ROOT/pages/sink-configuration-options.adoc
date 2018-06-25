@@ -1,8 +1,9 @@
+:idprefix:
+:idseparator: -
+
 Reference of the source connector options.
 
-[[database]]
-Database
-~~~~~~~~
+== Database
 
 === `connection.cluster_address`
 

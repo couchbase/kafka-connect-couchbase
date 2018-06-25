@@ -1,8 +1,9 @@
+:idprefix:
+:idseparator: -
+
 Reference of the source connector options.
 
-[[database]]
-Database
-~~~~~~~~
+== Database
 
 === `connection.cluster_address`
 
@@ -69,9 +70,7 @@ The password of the private key in the key store file.
 * Importance: low
 * Default: `""`
 
-[[connector]]
-Connector
-~~~~~~~~~
+== Connector
 
 === `topic.name`
 

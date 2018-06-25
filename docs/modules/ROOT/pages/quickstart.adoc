@@ -1,8 +1,9 @@
+:idprefix:
+:idseparator: -
+
 This section shows how to add the connector to your application.
 
-[[download]]
-Download
-~~~~~~~~
+== Download
 
 The connector is shipped as a zip archive, available for download:
 https://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
@@ -12,9 +13,7 @@ https://github.com/couchbase/kafka-connect-couchbase[GitHub repository]
 and run `mvn package` to generate the connector archive (look for
 `kafka-connect-couchbase-<version>.zip` in the `target` directory).
 
-[[getting-started]]
-Getting Started
-~~~~~~~~~~~~~~~
+== Getting Started
 
 However you obtained the connector archive, go ahead and unzip it now.
 The result should be a directory called
@@ -29,9 +28,7 @@ depend on the contents of the documents in the bucket.)
 You'll also need a local installation of Apache Kafka or Confluent
 Platform Kafka.
 
-[[set-up-kafka]]
-Set Up Kafka
-~~~~~~~~~~~~
+== Set Up Kafka
 
 If you already have an installation of Kafka and know how to start the
 servers, feel free to skip this section.
@@ -56,9 +53,7 @@ Make sure the Kafka command line tools are in your path:
 export PATH=<path-to-apache-kafka-or-confluent>/bin:$PATH
 ----
 
-[[start-the-kafka-servers]]
-Start the Kafka Servers
-~~~~~~~~~~~~~~~~~~~~~~~
+== Start the Kafka Servers
 
 If you're using Confluent Platform Kafka, start the servers by running
 these commands, *each in a separate terminal*:
@@ -85,10 +80,7 @@ zookeeper-server-start.sh $KAFKA_HOME/config/zookeeper.properties
 kafka-server-start.sh $KAFKA_HOME/config/server.properties
 ----
 
-[[kafka-3-quickstart__configure_source_connector]]
-[[configure-the-source-connector]]
-Configure the Source Connector
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Configure the Source Connector
 
 The Couchbase connector distribution includes sample config files. Look
 inside `$KAFKA_CONNECT_COUCHBASE_HOME/config` and edit the
@@ -119,9 +111,7 @@ snapshot before committing messages to the Kafka topic. It doesn't
 matter for this exercise; just be aware the option exists and defaults
 to `false`.
 
-[[run-the-source-connector]]
-Run the Source Connector
-~~~~~~~~~~~~~~~~~~~~~~~~
+== Run the Source Connector
 
 Kafka connectors can be run in
 https://kafka.apache.org/documentation/#connect_running[standalone or
@@ -149,9 +139,7 @@ env CLASSPATH=./* \
                        config/quickstart-couchbase-source.properties
 ----
 
-[[alternatively-run-the-connector-with-class-loader-isolation]]
-Alternatively, Run the Connector with Class Loader Isolation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Alternatively, Run the Connector with Class Loader Isolation
 
 Apache Kafka version 0.11.0 (and Confluent Platform 3.3.0) introduced a
 mechanism for plugin class path isolation. To take advantage of this
@@ -163,9 +151,7 @@ Run the connector using the same commands as above, but omitting the
 `env CLASSPATH=./*` prefix. Each Kafka Connect plugin will use a
 separate class loader, removing the possibility of dependency conflicts.
 
-[[observe-messages-published-by-couchbase-source-connector]]
-Observe Messages Published by Couchbase Source Connector
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Observe Messages Published by Couchbase Source Connector
 
 The sample config file tells the source connector to publish to a topic
 called `test-default`. Let's use the Kafka command-line tools to spy on
@@ -288,9 +274,7 @@ shown below:
 }
 ----
 
-[[couchbase-sink-connector]]
-Couchbase Sink Connector
-~~~~~~~~~~~~~~~~~~~~~~~~
+== Couchbase Sink Connector
 
 Now let's talk about the sink connector, which reads messages from one
 or more Kafka topics and writes them to Couchbase Server.
@@ -315,9 +299,7 @@ As of version 3.2.2, if the Kafka message body is null, the sink
 connector will delete the Couchbase document whose ID matches the Kafka
 message key.
 
-[[configure-and-run-the-sink-connector]]
-Configure and Run the Sink Connector
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+== Configure and Run the Sink Connector
 
 In the `$KAFKA_CONNECT_COUCHBASE_HOME/config` directory there is a file
 called `quickstart-couchbase-sink.properties`. Customize this file as
@@ -336,9 +318,7 @@ Source Connector*, but pass `quickstart-couchbase-sink.properties` as
 the second argument to `connect-standalone` instead of
 `quickstart-couchbase-source.properties`.
 
-[[send-test-messages]]
-Send Test Messages
-~~~~~~~~~~~~~~~~~~
+== Send Test Messages
 
 Now that the Couchbase Sink Connector is running, let's give it some
 messages to import:
