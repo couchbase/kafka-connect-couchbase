@@ -6,7 +6,7 @@ This section shows how to add the connector to your application.
 == Download
 
 The connector is shipped as a zip archive, available for download:
-https://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
+https://packages.couchbase.com/clients/kafka/3.3.2/kafka-connect-couchbase-3.3.2.zip[kafka-connect-couchbase-3.3.2.zip]
 
 If you prefer to build the connectors from source, clone the
 https://github.com/couchbase/kafka-connect-couchbase[GitHub repository]

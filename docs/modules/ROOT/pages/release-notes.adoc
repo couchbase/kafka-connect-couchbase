@@ -3,6 +3,29 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 3.3.2 GA (2018-07-02)
+
+http://packages.couchbase.com/clients/kafka/3.3.2/kafka-connect-couchbase-3.3.2.zip[kafka-connect-couchbase-3.3.2.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.3.2</version>
+</dependency>
+----
+
+The source connector now resumes streaming after a Couchbase Server rollback.
+
+Issues resolved in this release:
+
+* https://issues.couchbase.com/browse/KAFKAC-72[KAFKAC-72]:
+[BUGFIX] Connector stops streaming after rollback
+
+* https://issues.couchbase.com/browse/KAFKAC-115[KAFKAC-115]:
+[ENHANCEMENT] Upgrade to DCP client 0.18.0
+
 == Couchbase Kafka Connector 3.3.1 GA (2018-06-19)
 
 http://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
