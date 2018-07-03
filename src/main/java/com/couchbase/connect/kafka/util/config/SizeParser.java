@@ -51,8 +51,8 @@ public class SizeParser {
         final Matcher m = PATTERN.matcher(s);
         if (!m.matches() || !qualifierToScale.containsKey(m.group(2))) {
             throw new IllegalArgumentException("Unable to parse size '" + s + "'." +
-                    " Please specify an integer followed by a size unit (b = bytes, k = kibibytes, m = mebibytes, g = gibibytes)." +
-                    " For example, to specify 64 mebibtyes: 64m");
+                    " Please specify an integer followed by a size unit (b = bytes, k = kilobytes, m = megabytes, g = gigabytes)." +
+                    " For example, to specify 64 megabytes: 64m");
         }
 
         final long value = Long.parseLong(m.group(1));

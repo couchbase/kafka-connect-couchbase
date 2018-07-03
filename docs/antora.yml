@@ -1,6 +1,6 @@
 name: kafka
 title: Kafka
-version: '3.3'
+version: '3.4'
 start_page: ROOT:quickstart.adoc
 nav:
 - modules/ROOT/nav.adoc

@@ -172,12 +172,51 @@ to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
 * Importance: low
 * Default: `false`
 
-*Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
-Connector 3.2]
+=== `couchbase.persistence_polling_interval`
+
+The frequency at which the connector will poll Couchbase Server to determine
+which database changes are unlikely to be rolled back. A value of `0`
+disables polling and causes changes to be published to the Kafka topic as soon as they are received.
+
+NOTE: If polling is disabled, when rollbacks occur you are more likely to end up with events
+in the Kafka topic that do not match the actual database state, because
+they are from an "alternate timeline" in Couchbase Server's history.
+
+The longer the polling interval, the larger the flow control buffer required
+in order to maintain steady throughput, since events are buffered
+until persistence is confirmed.
+
+If present, the value must be `0` or an integer followed by a time unit:
+(`ms` = milliseconds, `s` = seconds)
+
+* Since: 3.4.0-beta.1 (*Uncommitted*; API may change in a patch release)
+* Type: string
+* Importance: low
+* Default: `"100ms"`
+
+=== `couchbase.flow_control_buffer`
+
+The amount of heap space to reserve for the flow control buffer.
+This is the amount of data Couchbase Server will push to the connector
+before awaiting acknowledgement that the data has been published to the Kafka topic.
+
+If present, the value must be an integer followed by a storage size unit:
+(`b` = bytes, `k` = kilobytes, `m` = megabytes, `g` = gigabytes)
+
+NOTE: This value must be smaller than the connect worker's heap size.
+To allocate more memory to the connect worker process,
+set the `KAFKA_HEAP_OPTS` environment variable before starting the worker.
+For example: `export KAFKA_HEAP_OPTS=-Xmx1024M`
+
+* Since: 3.4.0-beta.1 (*Uncommitted*; API may change in a patch release)
+* Type: string
+* Importance: low
+* Default: `"128m"`
+
+*Parent topic:* link:kafka-intro.html[Kafka Connector]
 
 *Previous topic:*
-link:../../connectors/kafka-3.2/quickstart.html[Quickstart]
+link:quickstart.html[Quickstart]
 
 *Next topic:*
-link:../../connectors/kafka-3.2/sink-configuration-options.html[Sink
-Configuration Options]
+link:sink-configuration-options.html[Sink Configuration Options]

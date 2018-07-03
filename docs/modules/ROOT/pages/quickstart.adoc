@@ -8,6 +8,10 @@ This section shows how to add the connector to your application.
 The connector is shipped as a zip archive, available for download:
 https://packages.couchbase.com/clients/kafka/3.3.2/kafka-connect-couchbase-3.3.2.zip[kafka-connect-couchbase-3.3.2.zip]
 
+NOTE: A beta version with support for rollback mitigation is also available.
+Try it and let us know about your experience:
+https://packages.couchbase.com/clients/kafka/3.4.0-beta.1/kafka-connect-couchbase-3.4.0-beta.1.zip[kafka-connect-couchbase-3.4.0-beta.1.zip]
+
 If you prefer to build the connectors from source, clone the
 https://github.com/couchbase/kafka-connect-couchbase[GitHub repository]
 and run `mvn package` to generate the connector archive (look for
@@ -343,9 +347,7 @@ code, edit `quickstart-couchbase-sink.properties` and set
 `couchbase.document.id=/airport`, restart the sink connector, and run
 the producer again.
 
-*Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
-Connector 3.2]
+*Parent topic:* link:kafka-intro.html[Kafka Connector]
 
 *Next topic:*
-link:../../connectors/kafka-3.2/source-configuration-options.html[Source
-Configuration Options]
+link:source-configuration-options.html[Source Configuration Options]

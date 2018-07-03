@@ -186,13 +186,10 @@ If present, the value must be an integer followed by a time unit.
 * Importance: low
 * Default: `""` (documents will not expire)
 
-*Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
-Connector 3.2]
+*Parent topic:* link:kafka-intro.html[Kafka Connector]
 
 *Previous topic:*
-link:../../connectors/kafka-3.2/source-configuration-options.html[Source
-Configuration Options]
+link:source-configuration-options.html[Source Configuration Options]
 
 *Next topic:*
-link:../../connectors/kafka-3.2/streams-sample.html[Couchbase Sample
-with Kafka Streams]
+link:streams-sample.html[Couchbase Sample with Kafka Streams]
