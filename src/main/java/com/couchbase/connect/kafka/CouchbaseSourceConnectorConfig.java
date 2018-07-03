@@ -21,9 +21,11 @@ import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler;
 import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
+import com.couchbase.connect.kafka.util.config.DurationValidator;
 import com.couchbase.connect.kafka.util.config.EnumRecommender;
 import com.couchbase.connect.kafka.util.config.EnumValidator;
 import com.couchbase.connect.kafka.util.config.Password;
+import com.couchbase.connect.kafka.util.config.SizeValidator;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -129,6 +131,16 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             " to 'true' will force the use of IPv4 when resolving Couchbase Server hostnames.";
     static final String FORCE_IPV4_DISPLAY = "Force hostname resolution to use IPv4";
     public static final boolean FORCE_IPV4_DEFAULT = false;
+
+    public static final String PERSISTENCE_POLLING_INTERVAL_CONFIG = "couchbase.persistence_polling_interval";
+    static final String PERSISTENCE_POLLING_INTERVAL_DOC = "How frequently to poll Couchbase Server to see which changes are ready to be published. Specify `0` to disable polling, or an integer followed by a time qualifier (example: 100ms)";
+    static final String PERSISTENCE_POLLING_INTERVAL_DISPLAY = "Persistence polling interval";
+    public static final String PERSISTENCE_POLLING_INTERVAL_DEFAULT = "100ms";
+
+    public static final String FLOW_CONTROL_BUFFER_CONFIG = "couchbase.flow_control_buffer";
+    static final String FLOW_CONTROL_BUFFER_DOC = "How much heap space should be reserved for the flow control buffer. Specify an integer followed by a size qualifier (example: 128m)";
+    static final String FLOW_CONTROL_BUFFER_DISPLAY = "Flow control buffer size";
+    public static final String FLOW_CONTROL_BUFFER_DEFAULT = "128m";
 
     static ConfigDef config = baseConfigDef();
     private final String connectorName;
@@ -317,6 +329,26 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
                         CONNECTOR_GROUP, 10,
                         ConfigDef.Width.LONG,
                         FORCE_IPV4_DISPLAY)
+
+                .define(FLOW_CONTROL_BUFFER_CONFIG,
+                        ConfigDef.Type.STRING,
+                        FLOW_CONTROL_BUFFER_DEFAULT,
+                        new SizeValidator(),
+                        ConfigDef.Importance.LOW,
+                        FLOW_CONTROL_BUFFER_DOC,
+                        CONNECTOR_GROUP, 11,
+                        ConfigDef.Width.LONG,
+                        FLOW_CONTROL_BUFFER_DISPLAY)
+
+                .define(PERSISTENCE_POLLING_INTERVAL_CONFIG,
+                        ConfigDef.Type.STRING,
+                        PERSISTENCE_POLLING_INTERVAL_DEFAULT,
+                        new DurationValidator(),
+                        ConfigDef.Importance.LOW,
+                        PERSISTENCE_POLLING_INTERVAL_DOC,
+                        CONNECTOR_GROUP, 12,
+                        ConfigDef.Width.LONG,
+                        PERSISTENCE_POLLING_INTERVAL_DISPLAY)
                 ;
     }
 

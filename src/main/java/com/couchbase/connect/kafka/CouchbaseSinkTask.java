@@ -74,6 +74,7 @@ import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.SUBDOCUME
 import static com.couchbase.connect.kafka.CouchbaseSourceConnector.setForceIpv4;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class CouchbaseSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
@@ -155,7 +156,7 @@ public class CouchbaseSinkTask extends SinkTask {
         replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
 
         final String expiryDuration = config.getString(EXPIRY_CONFIG);
-        expiryOffsetSeconds = expiryDuration.isEmpty() ? 0 : DurationParser.parseDurationSeconds(expiryDuration);
+        expiryOffsetSeconds = expiryDuration.isEmpty() ? 0 : DurationParser.parseDuration(expiryDuration, SECONDS);
 
         switch (documentMode) {
             case SUBDOCUMENT: {

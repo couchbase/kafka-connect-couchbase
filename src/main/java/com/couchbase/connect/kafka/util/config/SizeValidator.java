@@ -19,14 +19,12 @@ package com.couchbase.connect.kafka.util.config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-public class DurationValidator implements ConfigDef.Validator {
+public class SizeValidator implements ConfigDef.Validator {
     @Override
     public void ensureValid(String name, Object value) {
         try {
             if (value != null && !((String) value).isEmpty()) {
-                DurationParser.parseDuration((String) value, MILLISECONDS);
+                SizeParser.parseSizeBytes((String) value);
             }
         } catch (IllegalArgumentException e) {
             throw new ConfigException("Failed to parse config property '" + name + "' -- " + e.getMessage());

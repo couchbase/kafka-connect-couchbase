@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class CouchbaseReader extends Thread {
     private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseReader.class);
@@ -57,7 +58,8 @@ public class CouchbaseReader extends Thread {
                            final BlockingQueue<Event> queue, BlockingQueue<Throwable> errorQueue, Short[] partitions,
                            final Map<Short, Long> partitionToSavedSeqno, final StreamFrom streamFrom,
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
-                           final String sslKeystorePassword, final CompressionMode compressionMode) {
+                           final String sslKeystorePassword, final CompressionMode compressionMode,
+                           long persistencePollingIntervalMillis, int flowControlBufferBytes) {
         this.snapshots = new ConcurrentHashMap<Short, Snapshot>(partitions.length);
         this.partitions = partitions;
         this.partitionToSavedSeqno = partitionToSavedSeqno;
@@ -69,9 +71,10 @@ public class CouchbaseReader extends Thread {
                 .bucket(bucket)
                 .username(username)
                 .password(password)
-                .controlParam(DcpControl.Names.CONNECTION_BUFFER_SIZE, 20480)
                 .controlParam(DcpControl.Names.ENABLE_NOOP, "true")
                 .compression(compressionMode)
+                .mitigateRollbacks(persistencePollingIntervalMillis, TimeUnit.MILLISECONDS)
+                .flowControl(flowControlBufferBytes)
                 .bufferAckWatermark(60)
                 .sslEnabled(sslEnabled)
                 .sslKeystoreFile(sslKeystoreLocation)

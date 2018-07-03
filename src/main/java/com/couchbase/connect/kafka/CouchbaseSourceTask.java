@@ -31,7 +31,9 @@ import com.couchbase.connect.kafka.handler.source.LegacySourceHandlerAdapter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.util.Version;
+import com.couchbase.connect.kafka.util.config.DurationParser;
 import com.couchbase.connect.kafka.util.config.Password;
+import com.couchbase.connect.kafka.util.config.SizeParser;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -104,6 +106,12 @@ public class CouchbaseSourceTask extends SourceTask {
         StreamFrom streamFrom = config.getEnum(StreamFrom.class, CouchbaseSourceConnectorConfig.STREAM_FROM_CONFIG);
         CompressionMode compressionMode = config.getEnum(CompressionMode.class, CouchbaseSourceConnectorConfig.COMPRESSION_CONFIG);
 
+        final long persistencePollingIntervalMillis = DurationParser.parseDuration(
+                config.getString(CouchbaseSourceConnectorConfig.PERSISTENCE_POLLING_INTERVAL_CONFIG),
+                TimeUnit.MILLISECONDS);
+        final int flowControlBufferBytes = (int) Math.min(Integer.MAX_VALUE,
+                SizeParser.parseSizeBytes(config.getString(CouchbaseSourceConnectorConfig.FLOW_CONTROL_BUFFER_CONFIG)));
+
         long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
         Short[] partitions = toBoxedShortArray(config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG));
 
@@ -114,7 +122,7 @@ public class CouchbaseSourceTask extends SourceTask {
         errorQueue = new LinkedBlockingQueue<Throwable>(1);
         couchbaseReader = new CouchbaseReader(clusterAddress, bucket, username, password, connectionTimeout,
                 queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
-                compressionMode);
+                compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes);
         couchbaseReader.start();
     }
 
