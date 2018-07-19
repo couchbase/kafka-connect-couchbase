@@ -3,17 +3,13 @@ package com.couchbase.connect.kafka.sink;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
-import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
-
-import rx.functions.Action1;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 
@@ -97,16 +93,10 @@ public class SubDocumentWriter {
         }
 
         return mutation
+                .upsertDocument(createDocuments)
                 .execute(persistTo, replicateTo)
-                .doOnError(new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        if(createDocuments && throwable instanceof DocumentDoesNotExistException) {
-                            bucket.insert(JsonDocument.create(document.id())).toBlocking().single();
-                        }
-                    }
-                })
                 .toCompletable();
+
     }
 }
 

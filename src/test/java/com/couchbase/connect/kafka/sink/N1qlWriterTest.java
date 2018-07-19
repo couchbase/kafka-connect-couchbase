@@ -158,10 +158,11 @@ public class N1qlWriterTest {
     public void createDocumentWhenUpdateReturns0Row() {
 
         ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<AsyncN1qlQueryRow>();
+        N1qlMetrics metrics =  new N1qlMetrics(JsonObject.create().put("mutationCount",0));
 
         AsyncN1qlQueryResult result = new DefaultAsyncN1qlQueryResult(Observable.from(rows),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<N1qlMetrics>just(metrics),
                 Observable.<JsonObject>empty(),
                 Observable.<JsonObject>empty(),
                 Observable.<String>empty(),
