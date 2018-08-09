@@ -146,6 +146,43 @@ public class N1qlWriterTest {
 
 
     @Test
+    public void generateStatementWithConditionAndStaticValueAtEnd() {
+        JsonObject object = JsonObject.empty().put("test", "string");
+
+        List<String> fields = new ArrayList<String>();
+        fields.add("styleNumber");
+        fields.add("documentType:option");
+        write(object, N1qlMode.UPDATE, N1qlClause.WHERE, fields, emptyResult);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+
+        assertNotNull(query);
+        assertEquals("UPDATE `default` SET `test` = $test WHERE `styleNumber` = $styleNumber AND `documentType` = 'option' RETURNING meta().id;", query.statement().toString());
+        assertEquals(object.put("__id__", "id"), query.statementParameters());
+    }
+
+    @Test
+    public void generateStatementWithConditionAndStaticValueAtStart() {
+        JsonObject object = JsonObject.empty().put("test", "string");
+
+        List<String> fields = new ArrayList<String>();
+        fields.add("documentType:option");
+        fields.add("styleNumber");
+
+        write(object, N1qlMode.UPDATE, N1qlClause.WHERE, fields, emptyResult);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+
+        assertNotNull(query);
+        assertEquals("UPDATE `default` SET `test` = $test WHERE `documentType` = 'option' AND `styleNumber` = $styleNumber RETURNING meta().id;", query.statement().toString());
+        assertEquals(object.put("__id__", "id"), query.statementParameters());
+    }
+
+    @Test
     public void doesNotCreateDocumentWhenUpdateReturns1Row() {
 
         DefaultAsyncN1qlQueryRow row = new DefaultAsyncN1qlQueryRow(new byte[0]);

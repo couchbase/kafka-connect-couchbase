@@ -140,18 +140,27 @@ public class N1qlWriter {
         String result = statement.toString();
         StringBuilder condition = new StringBuilder();
         for (String name : clause_fields) {
-            if(clause_fields.indexOf(name) == clause_fields.size()-1) {
-                condition.append(String.format("`%s` = $%s", name, name));
-            }
-            else {
-                condition.append(String.format("`%s` = $%s AND ", name, name));
-            }
+            appendClause(condition, name,clause_fields.indexOf(name) == clause_fields.size()-1);
         }
 
         return result.substring(0, result.length() - 2) + " WHERE " + condition.toString() +" RETURNING meta().id;";
     }
 
+    private void appendClause(StringBuilder condition, String name,  boolean last)
+    {
+        String operator = last ? "" : " AND ";
+        if(name.contains(":")){
+            String[] staticValues = name.split(":",2);
+            if(staticValues.length == 2) {
+                condition.append(String.format("`%s` = '%s'%s", staticValues[0], staticValues[1], operator));
+            }
+        }
+        else {
 
+            condition.append(String.format("`%s` = $%s%s", name, name, operator));
+        }
+    }
+    
     private String parseUpsert(String keySpace, JsonObject values) {
         if (values == null || values.equals(JsonObject.empty())) {
             return null;
