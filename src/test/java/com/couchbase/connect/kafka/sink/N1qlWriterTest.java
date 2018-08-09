@@ -5,7 +5,13 @@ import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.*;
+import com.couchbase.client.java.query.AsyncN1qlQueryResult;
+import com.couchbase.client.java.query.AsyncN1qlQueryRow;
+import com.couchbase.client.java.query.DefaultAsyncN1qlQueryResult;
+import com.couchbase.client.java.query.DefaultAsyncN1qlQueryRow;
+import com.couchbase.client.java.query.N1qlMetrics;
+import com.couchbase.client.java.query.N1qlQuery;
+import com.couchbase.client.java.query.ParameterizedN1qlQuery;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,8 +24,8 @@ import org.mockito.runners.MockitoJUnitRunner;
 import rx.Completable;
 import rx.Observable;
 
-
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 import static junit.framework.TestCase.assertNotNull;
@@ -31,7 +37,7 @@ import static org.mockito.Mockito.verify;
 @RunWith(MockitoJUnitRunner.class)
 public class N1qlWriterTest {
 
-    private final N1qlWriter writer = new N1qlWriter(N1qlMode.UPDATE,true);
+    private N1qlWriter writer;
 
     Observable<AsyncN1qlQueryResult> emptyResult = Observable.empty();
 
@@ -48,11 +54,15 @@ public class N1qlWriterTest {
     }
 
     private Completable write(JsonObject object) {
-        return write(object, emptyResult);
+
+        return write(object, N1qlMode.UPDATE, null, emptyResult);
+
     }
 
 
-    private Completable write(JsonObject object, Observable<AsyncN1qlQueryResult> result) {
+    private Completable write(JsonObject object, N1qlMode mode, List<String> fields, Observable<AsyncN1qlQueryResult> result) {
+        writer = new N1qlWriter(mode, fields, true);
+
         Mockito.when(bucket.query(Mockito.any(ParameterizedN1qlQuery.class))).thenReturn(result);
 
         JsonBinaryDocument document = null;
@@ -96,7 +106,7 @@ public class N1qlWriterTest {
         verify(bucket).query(argument.capture());
 
         ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
-        String statement =  query.statement().toString();
+        String statement = query.statement().toString();
 
         assertTrue(statement.contains("`boolean` = $boolean"));
         assertTrue(statement.contains("`string` = $string"));
@@ -104,7 +114,7 @@ public class N1qlWriterTest {
         assertTrue(statement.contains("`int` = $int"));
         assertTrue(statement.contains("`long` = $long"));
 
-        assertEquals(object.put("__id__","id").toString(), query.statementParameters().toString());
+        assertEquals(object.put("__id__", "id").toString(), query.statementParameters().toString());
     }
 
     @Test
@@ -119,7 +129,62 @@ public class N1qlWriterTest {
 
         assertNotNull(query);
         assertEquals("UPDATE `default` USE KEYS $__id__ SET `test` = $test RETURNING meta().id;", query.statement().toString());
-        assertEquals(object.put("__id__","id"), query.statementParameters());
+        assertEquals(object.put("__id__", "id"), query.statementParameters());
+    }
+
+    @Test
+    public void generateStatementWithCondition() {
+        JsonObject object = JsonObject.empty().put("test", "string");
+
+        List<String> fields = new ArrayList<String>();
+        fields.add("styleNumber");
+        write(object, N1qlMode.UPDATE_WHERE, fields, emptyResult);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+
+        assertNotNull(query);
+        assertEquals("UPDATE `default` SET `test` = $test WHERE `styleNumber` = $styleNumber RETURNING meta().id;", query.statement().toString());
+        assertEquals(object.put("__id__", "id"), query.statementParameters());
+    }
+
+
+    @Test
+    public void generateStatementWithConditionAndStaticValueAtEnd() {
+        JsonObject object = JsonObject.empty().put("test", "string");
+
+        List<String> fields = new ArrayList<String>();
+        fields.add("styleNumber");
+        fields.add("documentType:option");
+        write(object, N1qlMode.UPDATE_WHERE, fields, emptyResult);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+
+        assertNotNull(query);
+        assertEquals("UPDATE `default` SET `test` = $test WHERE `styleNumber` = $styleNumber AND `documentType` = 'option' RETURNING meta().id;", query.statement().toString());
+        assertEquals(object.put("__id__", "id"), query.statementParameters());
+    }
+
+    @Test
+    public void generateStatementWithConditionAndStaticValueAtStart() {
+        JsonObject object = JsonObject.empty().put("test", "string");
+
+        List<String> fields = new ArrayList<String>();
+        fields.add("documentType:option");
+        fields.add("styleNumber");
+
+        write(object, N1qlMode.UPDATE_WHERE, fields, emptyResult);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+
+        assertNotNull(query);
+        assertEquals("UPDATE `default` SET `test` = $test WHERE `documentType` = 'option' AND `styleNumber` = $styleNumber RETURNING meta().id;", query.statement().toString());
+        assertEquals(object.put("__id__", "id"), query.statementParameters());
     }
 
     @Test
@@ -143,9 +208,9 @@ public class N1qlWriterTest {
         results.add(result);
         Observable<AsyncN1qlQueryResult> asyncResult = Observable.from(results);
 
-        JsonObject object = JsonObject.create().put("test","test");
+        JsonObject object = JsonObject.create().put("test", "test");
 
-        Completable r = write(object, asyncResult);
+        Completable r = write(object, N1qlMode.UPDATE, null, asyncResult);
 
         r.await();
 
@@ -156,7 +221,7 @@ public class N1qlWriterTest {
     public void createDocumentWhenUpdateReturns0Row() {
 
         ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<AsyncN1qlQueryRow>();
-        N1qlMetrics metrics =  new N1qlMetrics(JsonObject.create().put("mutationCount",0));
+        N1qlMetrics metrics = new N1qlMetrics(JsonObject.create().put("mutationCount", 0));
 
         AsyncN1qlQueryResult result = new DefaultAsyncN1qlQueryResult(Observable.from(rows),
                 Observable.empty(),
@@ -173,9 +238,9 @@ public class N1qlWriterTest {
 
         Observable<AsyncN1qlQueryResult> asyncResult = Observable.from(results);
 
-        JsonObject object = JsonObject.create().put("test","test");
+        JsonObject object = JsonObject.create().put("test", "test");
 
-        Completable r = write(object, asyncResult);
+        Completable r = write(object, N1qlMode.UPDATE, null, asyncResult);
 
         r.await();
 

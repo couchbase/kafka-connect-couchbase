@@ -1,6 +1,5 @@
 package com.couchbase.connect.kafka.sink;
 
-import com.couchbase.client.core.logging.RedactableArgument;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
@@ -9,13 +8,15 @@ import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.N1qlMetrics;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
-
+import com.couchbase.connect.kafka.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import rx.Completable;
 import rx.Observable;
 import rx.functions.Func1;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 
@@ -23,14 +24,15 @@ public class N1qlWriter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(N1qlWriter.class);
 
-    private N1qlMode mode;
+    private static final String ID_FIELD = "__id__";
 
-    private String idField = "__id__";
+    private final N1qlMode mode;
+    private final String conditions;
+    private final boolean createDocuments;
 
-    private boolean createDocuments;
-
-    public N1qlWriter(N1qlMode mode, boolean createDocuments) {
+    public N1qlWriter(N1qlMode mode, List<String> whereFields, boolean createDocuments) {
         this.mode = mode;
+        this.conditions = whereFields == null ? null : conditions(whereFields);
         this.createDocuments = createDocuments;
     }
 
@@ -41,89 +43,126 @@ public class N1qlWriter {
             return Completable.complete();
         }
 
-        final JsonObject node = JsonObject.fromJson(document.content().toString(UTF_8));
-
-        N1qlQuery query = null;
-        if (this.mode == N1qlMode.UPDATE) {
-            String statement = parseUpdate(bucket.name(), node);
-
-            if (statement == null || statement.isEmpty()) {
-                LOGGER.warn("could not generate statement from node " + RedactableArgument.user(node));
-                return Completable.complete();
-            }
-
-            node.put(idField, document.id());
-            query = N1qlQuery.parameterized(statement, node);
-        }
-        if (this.mode == N1qlMode.UPSERT) {
-            String statement = parseUpsert(bucket.name(), node);
-            if (statement == null || statement.isEmpty()) {
-                LOGGER.warn("could not generate statement from node "  + RedactableArgument.user(node));
-                return Completable.complete();
-            }
-
-            JsonObject idObject = JsonObject.empty().put(idField, document.id());
-            query = N1qlQuery.parameterized(statement, idObject);
+        final JsonObject node;
+        try {
+            node = JsonObject.fromJson(document.content().toString(UTF_8));
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("could not generate n1ql statement from node (not json)", e);
+            return Completable.complete();
         }
 
-        if (mode == N1qlMode.UPDATE && createDocuments) {
-            return bucket.query(query)
-                    .flatMap(new Func1<AsyncN1qlQueryResult, Observable<N1qlMetrics>>() {
-                        @Override
-                        public Observable<N1qlMetrics> call(AsyncN1qlQueryResult asyncN1qlQueryResult) {
-                            return asyncN1qlQueryResult.info();
-                        }
-                    })
-                    .flatMap(new Func1<N1qlMetrics, Observable<?>>() {
-                        @Override
-                        public Observable<?> call(N1qlMetrics n1qlMetrics) {
-                            if (n1qlMetrics != null && n1qlMetrics.mutationCount() == 0) {
-                                String statement = parseUpsert(bucket.name(), node);
-                                if (statement == null || statement.isEmpty()) {
-                                    LOGGER.warn("could not generate statement from node " + RedactableArgument.user(node));
-                                }
+        if (node.isEmpty()) {
+            LOGGER.warn("could not generate n1ql statement from empty node");
+            return Completable.complete();
+        }
 
-                                JsonObject idObject = JsonObject.empty().put(idField, document.id());
-                                return bucket.query(N1qlQuery.parameterized(statement, idObject));
-                            } else {
-                                return Observable.just(n1qlMetrics);
+        for (String name : node.getNames()) {
+            if (name.contains("`")) {
+                // todo figure out how to escape backticks when generating N1QL statements.
+                // For now, bail out to avoid N1QL injection.
+                LOGGER.warn("could not generate n1ql statement from node with backtick (`) in field name");
+                return Completable.complete();
+            }
+        }
+
+        switch (this.mode) {
+            case UPSERT: {
+                String statement = upsertStatement(bucket.name(), node);
+                JsonObject idObject = JsonObject.create().put(ID_FIELD, document.id());
+                N1qlQuery query = N1qlQuery.parameterized(statement, idObject);
+                return bucket.query(query).toCompletable();
+            }
+
+            case UPDATE_WHERE: {
+                String statement = updateWithConditionStatement(bucket.name(), node);
+                node.put(ID_FIELD, document.id());
+                N1qlQuery query = N1qlQuery.parameterized(statement, node);
+                return bucket.query(query).toCompletable();
+            }
+
+            case UPDATE: {
+                String statement = updateStatement(bucket.name(), node);
+                node.put(ID_FIELD, document.id());
+                N1qlQuery query = N1qlQuery.parameterized(statement, node);
+                if (!createDocuments) {
+                    return bucket.query(query).toCompletable();
+                }
+
+                return bucket.query(query)
+                        .flatMap(new Func1<AsyncN1qlQueryResult, Observable<N1qlMetrics>>() {
+                            @Override
+                            public Observable<N1qlMetrics> call(AsyncN1qlQueryResult asyncN1qlQueryResult) {
+                                return asyncN1qlQueryResult.info();
                             }
-                        }
-                    })
-                    .toCompletable();
-        }
-        else {
-            return bucket.query(query).toCompletable();
+                        })
+                        .flatMap(new Func1<N1qlMetrics, Observable<?>>() {
+                            @Override
+                            public Observable<?> call(N1qlMetrics n1qlMetrics) {
+                                if (n1qlMetrics != null && n1qlMetrics.mutationCount() == 0) {
+                                    // Document didn't exist, so create it
+                                    node.removeKey(ID_FIELD);
+                                    String statement = upsertStatement(bucket.name(), node);
+                                    JsonObject idObject = JsonObject.create().put(ID_FIELD, document.id());
+                                    return bucket.query(N1qlQuery.parameterized(statement, idObject));
+                                } else {
+                                    return Observable.just(n1qlMetrics);
+                                }
+                            }
+                        })
+                        .toCompletable();
+            }
+
+            default:
+                throw new AssertionError("unrecognized n1ql mode");
         }
     }
 
-    private String parseUpdate(String keySpace, JsonObject values) {
-        if (values == null || values.equals(JsonObject.empty())) {
-            return null;
-        }
+    private String upsertStatement(String keySpace, JsonObject values) {
+        return "UPSERT INTO `" + keySpace + "`" +
+                " (KEY,VALUE) VALUES ($" + ID_FIELD + ", " + values + ")" +
+                " RETURNING meta().id;";
+    }
 
-        StringBuilder statement = new StringBuilder();
-        statement.append(String.format("UPDATE `%s` USE KEYS $%s SET ", keySpace, idField));
+    private String updateStatement(String keySpace, JsonObject values) {
+        return "UPDATE `" + keySpace + "`" +
+                " USE KEYS $" + ID_FIELD +
+                " SET " + assignments(values) +
+                " RETURNING meta().id;";
+    }
 
+    private String updateWithConditionStatement(String keySpace, JsonObject values) {
+        return "UPDATE `" + keySpace + "`" +
+                " SET " + assignments(values) +
+                " WHERE " + conditions +
+                " RETURNING meta().id;";
+    }
+
+    private static String assignments(JsonObject values) {
+        List<String> assignments = new ArrayList<String>();
         for (String name : values.getNames()) {
-            statement.append(String.format("`%s` = $%s, ", name, name));
+            assignments.add("`" + name + "` = $" + name);
         }
-
-        String result = statement.toString();
-        return result.substring(0, result.length() - 2) + " RETURNING meta().id;";
+        return StringUtils.join(assignments, ", ");
     }
 
-    private String parseUpsert(String keySpace, JsonObject values) {
-        if (values == null || values.equals(JsonObject.empty())) {
-            return null;
+    private static String conditions(List<String> fields) {
+        List<String> conditions = new ArrayList<String>();
+
+        for (String name : fields) {
+            final String value;
+
+            int colonIndex = name.indexOf(':');
+            if (colonIndex != -1) {
+                // compare against a string constant (whatever's after the colon)
+                value = "'" + name.substring(colonIndex + 1) + "'";
+                name = name.substring(0, colonIndex);
+            } else {
+                value = "$" + name;
+            }
+
+            conditions.add("`" + name + "` = " + value);
         }
 
-        StringBuilder statement = new StringBuilder();
-        statement.append(String.format("UPSERT INTO `%s` (KEY,VALUE) VALUES ($%s, ", keySpace, idField));
-
-        statement.append(values.toString());
-        statement.append(") RETURNING meta().id;");
-
-        return statement.toString();
+        return StringUtils.join(conditions, " AND ");
     }
 }

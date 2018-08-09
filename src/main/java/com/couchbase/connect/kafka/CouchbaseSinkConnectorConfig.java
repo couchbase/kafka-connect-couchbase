@@ -103,6 +103,12 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String N1QL_MODE_DISPLAY = "N1QL Mode";
     public static final String N1QL_MODE_DEFAULT = N1qlMode.UPSERT.name();
 
+    public static final String N1QL_WHERE_FIELDS_CONFIG = "couchbase.n1ql.where_fields";
+    static final String N1QL_WHERE_FIELDS_DOC = "When using the UPDATE_WHERE operation, this is the list of document fields that must match the Kafka message in order for the document to be updated with the remaining message fields." +
+            " To match against a literal value instead of a message field, use a colon to delimit the document field name and the target value. For example, \"type:widget,color\" matches documents whose 'type' field  is 'widget' and whose 'color' field matches the 'color' field of the Kafka message.";
+    static final String N1QL_WHERE_FIELDS_DISPLAY = "N1QL WHERE Fields";
+    public static final String N1QL_WHERE_FIELDS_DEFAULT = "";
+
     public static final String SUBDOCUMENT_CREATEPATH_CONFIG = "couchbase.subdocument.create_path";
     static final String SUBDOCUMENT_CREATEPATH_DOC = "Whether to add the parent paths if they are missing in the document";
     static final String SUBDOCUMENT_CREATEPATH_DISPLAY = "Create parent paths";
@@ -328,12 +334,21 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         N1QL_MODE_DISPLAY,
                         new EnumRecommender(N1qlMode.class))
 
+                .define(N1QL_WHERE_FIELDS_CONFIG,
+                        ConfigDef.Type.LIST,
+                        N1QL_WHERE_FIELDS_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        N1QL_WHERE_FIELDS_DOC,
+                        DATABASE_GROUP, 18,
+                        ConfigDef.Width.LONG,
+                        N1QL_WHERE_FIELDS_DISPLAY)
+
                 .define(SUBDOCUMENT_CREATEPATH_CONFIG,
                         ConfigDef.Type.BOOLEAN,
                         SUBDOCUMENT_CREATEPATH_DEFAULT,
                         ConfigDef.Importance.LOW,
                         SUBDOCUMENT_CREATEPATH_DOC,
-                        DATABASE_GROUP, 18,
+                        DATABASE_GROUP, 19,
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEPATH_DISPLAY)
 
@@ -342,7 +357,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         SUBDOCUMENT_CREATEDOCUMENT_DEFAULT,
                         ConfigDef.Importance.LOW,
                         SUBDOCUMENT_CREATEDOCUMENT_DOC,
-                        DATABASE_GROUP, 19,
+                        DATABASE_GROUP, 20,
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEDOCUMENT_DISPLAY)
 
@@ -351,7 +366,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         FORCE_IPV4_DEFAULT,
                         ConfigDef.Importance.LOW,
                         FORCE_IPV4_DOC,
-                        CONNECTOR_GROUP, 20,
+                        CONNECTOR_GROUP, 21,
                         ConfigDef.Width.LONG,
                         FORCE_IPV4_DISPLAY)
 
@@ -361,7 +376,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         new DurationValidator(),
                         ConfigDef.Importance.LOW,
                         EXPIRY_DOC,
-                        CONNECTOR_GROUP, 21,
+                        CONNECTOR_GROUP, 22,
                         ConfigDef.Width.LONG,
                         EXPIRY_DISPLAY)
                 ;

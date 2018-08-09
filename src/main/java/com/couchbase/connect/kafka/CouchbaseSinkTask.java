@@ -64,6 +64,7 @@ import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_MODE_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.EXPIRY_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.N1QL_MODE_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.N1QL_WHERE_FIELDS_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.PERSIST_TO_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REPLICATE_TO_CONFIG;
@@ -90,6 +91,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
     private N1qlWriter n1qlWriter;
     private N1qlMode n1qlMode;
+    private List<String> n1qlWhereFields;
 
     private boolean createPaths;
     private boolean createDocuments;
@@ -168,7 +170,9 @@ public class CouchbaseSinkTask extends SinkTask {
             case N1QL: {
                 n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
                 createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
-                n1qlWriter = new N1qlWriter(n1qlMode, createDocuments);
+                n1qlWhereFields = config.getList(N1QL_WHERE_FIELDS_CONFIG);
+
+                n1qlWriter = new N1qlWriter(n1qlMode, n1qlWhereFields, createDocuments);
                 break;
             }
         }
