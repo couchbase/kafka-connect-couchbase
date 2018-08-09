@@ -4,7 +4,6 @@ package com.couchbase.connect.kafka.sink;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
-import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.*;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
@@ -25,7 +24,6 @@ import java.util.ArrayList;
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 import static junit.framework.TestCase.assertNotNull;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -158,10 +156,11 @@ public class N1qlWriterTest {
     public void createDocumentWhenUpdateReturns0Row() {
 
         ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<AsyncN1qlQueryRow>();
+        N1qlMetrics metrics =  new N1qlMetrics(JsonObject.create().put("mutationCount",0));
 
         AsyncN1qlQueryResult result = new DefaultAsyncN1qlQueryResult(Observable.from(rows),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<N1qlMetrics>just(metrics),
                 Observable.<JsonObject>empty(),
                 Observable.<JsonObject>empty(),
                 Observable.<String>empty(),
@@ -182,4 +181,5 @@ public class N1qlWriterTest {
 
         verify(bucket, Mockito.times(2)).query(argument.capture());
     }
+
 }
