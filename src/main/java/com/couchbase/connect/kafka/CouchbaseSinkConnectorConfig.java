@@ -20,6 +20,7 @@ import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
 import com.couchbase.connect.kafka.sink.DocumentMode;
+import com.couchbase.connect.kafka.sink.N1qlClause;
 import com.couchbase.connect.kafka.sink.N1qlMode;
 import com.couchbase.connect.kafka.sink.SubDocumentMode;
 import com.couchbase.connect.kafka.util.config.BooleanParentRecommender;
@@ -102,6 +103,17 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
     static final String N1QL_MODE_DOC = "Setting to indicate the type of update";
     static final String N1QL_MODE_DISPLAY = "N1QL Mode";
     public static final String N1QL_MODE_DEFAULT = N1qlMode.UPSERT.name();
+
+    public static final String N1QL_CLAUSE_CONFIG = "couchbase.n1ql.clause";
+    static final String N1QL_CLAUSE_DOC = "Setting to indicate the type of clause used for the update";
+    static final String N1QL_CLAUSE_DISPLAY = "N1QL Clause";
+    public static final String N1QL_CLAUSE_DEFAULT = N1qlClause.KEYS.name();
+
+    public static final String N1QL_CLAUSE_FIELDS_CONFIG = "couchbase.n1ql.clause.fields";
+    static final String N1QL_CLAUSE_FIELDS_DOC = "Setting to indicate the type of clause used for the update";
+    static final String N1QL_CLAUSE_FIELDS_DISPLAY = "FoN1QL Clause";
+    public static final String N1QL_CLAUSE_FIELDS_DEFAULT = "";
+
 
     public static final String SUBDOCUMENT_CREATEPATH_CONFIG = "couchbase.subdocument.create_path";
     static final String SUBDOCUMENT_CREATEPATH_DOC = "Whether to add the parent paths if they are missing in the document";
@@ -328,12 +340,34 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         N1QL_MODE_DISPLAY,
                         new EnumRecommender(N1qlMode.class))
 
+                .define(N1QL_CLAUSE_CONFIG,
+                        ConfigDef.Type.STRING,
+                        N1QL_CLAUSE_DEFAULT,
+                        new EnumValidator(N1qlClause.class),
+                        ConfigDef.Importance.LOW,
+                        N1QL_CLAUSE_DOC,
+                        DATABASE_GROUP, 18,
+                        ConfigDef.Width.LONG,
+                        N1QL_CLAUSE_DISPLAY,
+                        new EnumRecommender(N1qlClause.class))
+
+
+                .define(N1QL_CLAUSE_FIELDS_CONFIG,
+                        ConfigDef.Type.LIST,
+                        N1QL_CLAUSE_FIELDS_DEFAULT,
+                        ConfigDef.Importance.LOW,
+                        N1QL_CLAUSE_FIELDS_DOC,
+                        DATABASE_GROUP, 19,
+                        ConfigDef.Width.LONG,
+                        N1QL_CLAUSE_FIELDS_DISPLAY)
+
+
                 .define(SUBDOCUMENT_CREATEPATH_CONFIG,
                         ConfigDef.Type.BOOLEAN,
                         SUBDOCUMENT_CREATEPATH_DEFAULT,
                         ConfigDef.Importance.LOW,
                         SUBDOCUMENT_CREATEPATH_DOC,
-                        DATABASE_GROUP, 18,
+                        DATABASE_GROUP, 20,
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEPATH_DISPLAY)
 
@@ -342,7 +376,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         SUBDOCUMENT_CREATEDOCUMENT_DEFAULT,
                         ConfigDef.Importance.LOW,
                         SUBDOCUMENT_CREATEDOCUMENT_DOC,
-                        DATABASE_GROUP, 19,
+                        DATABASE_GROUP, 21,
                         ConfigDef.Width.LONG,
                         SUBDOCUMENT_CREATEDOCUMENT_DISPLAY)
 
@@ -351,7 +385,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         FORCE_IPV4_DEFAULT,
                         ConfigDef.Importance.LOW,
                         FORCE_IPV4_DOC,
-                        CONNECTOR_GROUP, 20,
+                        CONNECTOR_GROUP, 22,
                         ConfigDef.Width.LONG,
                         FORCE_IPV4_DISPLAY)
 
@@ -361,7 +395,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         new DurationValidator(),
                         ConfigDef.Importance.LOW,
                         EXPIRY_DOC,
-                        CONNECTOR_GROUP, 21,
+                        CONNECTOR_GROUP, 23,
                         ConfigDef.Width.LONG,
                         EXPIRY_DISPLAY)
                 ;

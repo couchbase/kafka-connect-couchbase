@@ -30,11 +30,7 @@ import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.retry.RetryBuilder;
-import com.couchbase.connect.kafka.sink.DocumentMode;
-import com.couchbase.connect.kafka.sink.N1qlMode;
-import com.couchbase.connect.kafka.sink.N1qlWriter;
-import com.couchbase.connect.kafka.sink.SubDocumentMode;
-import com.couchbase.connect.kafka.sink.SubDocumentWriter;
+import com.couchbase.connect.kafka.sink.*;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
@@ -63,14 +59,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_ID_POINTER_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.DOCUMENT_MODE_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.EXPIRY_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.N1QL_MODE_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.PERSIST_TO_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REMOVE_DOCUMENT_ID_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.REPLICATE_TO_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.SUBDOCUMENT_MODE_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSinkConnectorConfig.*;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnector.setForceIpv4;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -93,6 +82,8 @@ public class CouchbaseSinkTask extends SinkTask {
 
     private N1qlWriter n1qlWriter;
     private N1qlMode n1qlMode;
+    private N1qlClause n1qlClause;
+    private List<String> n1qlClauseFields;
 
     private boolean createPaths;
     private boolean createDocuments;
@@ -171,7 +162,10 @@ public class CouchbaseSinkTask extends SinkTask {
             case N1QL: {
                 n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
                 createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
-                n1qlWriter = new N1qlWriter(n1qlMode, createDocuments);
+                n1qlClause = config.getEnum(N1qlClause.class, N1QL_CLAUSE_CONFIG);
+                n1qlClauseFields = config.getList(N1QL_CLAUSE_FIELDS_CONFIG);
+
+                n1qlWriter = new N1qlWriter(n1qlMode, n1qlClause, n1qlClauseFields, createDocuments);
                 break;
             }
         }
