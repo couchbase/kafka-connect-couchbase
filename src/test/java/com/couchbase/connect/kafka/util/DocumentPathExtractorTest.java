@@ -25,11 +25,9 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
-public class DocumentIdExtractorTest {
+public class DocumentPathExtractorTest {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -46,22 +44,22 @@ public class DocumentIdExtractorTest {
         document = toValidJson(document);
         expectedResultDocument = toValidJson(expectedResultDocument);
 
-        JsonBinaryDocument result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8), 0);
-        assertEquals(expectedDocumentId, result.id());
-        assertJsonEquals(expectedResultDocument, result);
+        DocumentPathExtractor.DocumentExtraction result = new DocumentPathExtractor(pointer, true).extractDocumentPath(document.getBytes(UTF_8));
+        assertEquals(expectedDocumentId, result.getPathValue());
+        assertJsonEquals(expectedResultDocument, result.getData().toString(UTF_8));
 
         // and again without removing the document id
-        result = new DocumentIdExtractor(pointer, false).extractDocumentId(document.getBytes(UTF_8), 0);
-        assertEquals(expectedDocumentId, result.id());
-        assertEquals(document, result.content().toString(UTF_8));
+        result = new DocumentPathExtractor(pointer, false).extractDocumentPath(document.getBytes(UTF_8));
+        assertEquals(expectedDocumentId, result.getPathValue());
+        assertEquals(document, result.getData().toString(UTF_8));
 
         // and one last time with lots of extra whitespace
         for (char c : ",:[]{}".toCharArray()) {
             document = document.replace(Character.toString(c), "  " + c + "  ");
         }
-        result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8), 0);
-        assertEquals(expectedDocumentId, result.id());
-        assertJsonEquals(expectedResultDocument, result);
+        result = new DocumentPathExtractor(pointer, true).extractDocumentPath(document.getBytes(UTF_8));
+        assertEquals(expectedDocumentId, result.getPathValue());
+        assertJsonEquals(expectedResultDocument, result.getData().toString(UTF_8));
     }
 
     private static void checkNotFound(String pointer, String document) throws IOException {
@@ -69,12 +67,12 @@ public class DocumentIdExtractorTest {
         final byte[] documentBytes = document.getBytes(UTF_8);
 
         try {
-            new DocumentIdExtractor(pointer, true).extractDocumentId(documentBytes, 0);
+            new DocumentPathExtractor(pointer, true).extractDocumentPath(documentBytes);
             fail("expected 'not found'");
         } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
             // expected
 
-            assertArrayEquals("ID extractor must not modified the byte array when throwing exception",
+            assertArrayEquals("path extractor must not modified the byte array when throwing exception",
                     documentBytes, document.getBytes(UTF_8));
         }
     }
@@ -85,12 +83,9 @@ public class DocumentIdExtractorTest {
         assertEquals(parsedExpected, parsedActual);
     }
 
-    private static void assertJsonEquals(String expected, JsonBinaryDocument actual) throws IOException {
-        assertJsonEquals(expected, actual.content().toString(UTF_8));
-    }
 
-    private static JsonBinaryDocument extract(DocumentIdExtractor extractor, String s) throws Exception {
-        return extractor.extractDocumentId(toValidJson(s).getBytes(CharsetUtil.UTF_8), 0);
+    private static DocumentPathExtractor.DocumentExtraction extract(DocumentPathExtractor extractor, String s) throws Exception {
+        return extractor.extractDocumentPath(toValidJson(s).getBytes(CharsetUtil.UTF_8));
     }
 
     private static String toValidJson(String json) throws IOException {
@@ -99,11 +94,11 @@ public class DocumentIdExtractorTest {
 
     @Test
     public void extractorIsReusable() throws Exception {
-        DocumentIdExtractor extractor = new DocumentIdExtractor("/id", true);
+        DocumentPathExtractor extractor = new DocumentPathExtractor("/id", true);
         for (int i = 0; i < 2; i++) {
-            JsonBinaryDocument result = extract(extractor, "{'id':1}");
-            assertEquals("1", result.id());
-            assertJsonEquals("{}", result);
+            DocumentPathExtractor.DocumentExtraction result = extract(extractor, "{'id':1}");
+            assertEquals("1", result.getPathValue());
+            assertJsonEquals("{}", result.getData().toString(UTF_8));
         }
     }
 
@@ -216,11 +211,11 @@ public class DocumentIdExtractorTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void pointerMustNotBeEmpty() {
-        new DocumentIdExtractor("", true);
+        new DocumentPathExtractor("", true);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void pointerMustBeValid() {
-        new DocumentIdExtractor("a/b", true);
+        new DocumentPathExtractor("a/b", true);
     }
 }
