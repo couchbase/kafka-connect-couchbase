@@ -90,6 +90,9 @@ public class SubDocumentWriterTest {
     @Test
     public void upsertsPathWithEmptyJsonObject() {
 
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
+
         Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
@@ -102,6 +105,9 @@ public class SubDocumentWriterTest {
     @Test
     public void upsertsPathWithJsonObject() {
         JsonObject object = JsonObject.create();
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
 
         Mockito.when(mutateInBuilder.upsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
@@ -118,6 +124,10 @@ public class SubDocumentWriterTest {
     public void insertsToArray() {
         JsonObject object = JsonObject.create();
 
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
+
         Mockito.when(mutateInBuilder.arrayInsert(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
@@ -132,6 +142,9 @@ public class SubDocumentWriterTest {
     @Test
     public void appendsToArray() {
         JsonObject object = JsonObject.create();
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
 
         Mockito.when(mutateInBuilder.arrayAppend(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
@@ -148,6 +161,10 @@ public class SubDocumentWriterTest {
     public void prependsToArray() {
         JsonObject object = JsonObject.create();
 
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
+
         Mockito.when(mutateInBuilder.arrayPrepend(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
@@ -162,6 +179,9 @@ public class SubDocumentWriterTest {
     @Test
     public void insertsAllToArray() {
         JsonObject object = JsonObject.create();
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
 
         Mockito.when(mutateInBuilder.arrayInsertAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
@@ -178,6 +198,9 @@ public class SubDocumentWriterTest {
     public void appendsAllToArray() {
         JsonObject object = JsonObject.create();
 
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
+
         Mockito.when(mutateInBuilder.arrayAppendAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
@@ -193,6 +216,9 @@ public class SubDocumentWriterTest {
     public void prependsAllToArray() {
         JsonObject object = JsonObject.create();
 
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
+
         Mockito.when(mutateInBuilder.arrayPrependAll(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
@@ -207,6 +233,9 @@ public class SubDocumentWriterTest {
     @Test
     public void addsToArrayUnique() {
         JsonObject object = JsonObject.create();
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
 
         Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
@@ -226,6 +255,10 @@ public class SubDocumentWriterTest {
 
         JsonObject object = JsonObject.create();
 
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
+
         Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);
 
@@ -244,6 +277,9 @@ public class SubDocumentWriterTest {
         Observable<DocumentFragment<Mutation>> error = Observable.error(new CannotInsertValueException(path));
 
         JsonObject object = JsonObject.create();
+
+        Mockito.when(mutateInBuilder.upsertDocument(Mockito.anyBoolean()))
+                .thenReturn(mutateInBuilder);
 
         Mockito.when(mutateInBuilder.arrayAddUnique(Mockito.any(String.class), Mockito.any(JsonObject.class), Mockito.any(SubdocOptionsBuilder.class)))
                 .thenReturn(mutateInBuilder);

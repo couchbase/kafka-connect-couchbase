@@ -97,16 +97,10 @@ public class SubDocumentWriter {
         }
 
         return mutation
+                .upsertDocument(createDocuments)
                 .execute(persistTo, replicateTo)
-                .doOnError(new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        if(createDocuments && throwable instanceof DocumentDoesNotExistException) {
-                            bucket.insert(JsonDocument.create(document.id())).toBlocking().single();
-                        }
-                    }
-                })
                 .toCompletable();
+
     }
 }
 
