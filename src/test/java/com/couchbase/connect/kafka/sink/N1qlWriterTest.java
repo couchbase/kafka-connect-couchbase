@@ -20,6 +20,7 @@ import rx.Observable;
 
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 import static junit.framework.TestCase.assertNotNull;
@@ -31,7 +32,7 @@ import static org.mockito.Mockito.verify;
 @RunWith(MockitoJUnitRunner.class)
 public class N1qlWriterTest {
 
-    private final N1qlWriter writer = new N1qlWriter(N1qlMode.UPDATE,true);
+    private N1qlWriter writer;
 
     Observable<AsyncN1qlQueryResult> emptyResult = Observable.empty();
 
@@ -48,11 +49,15 @@ public class N1qlWriterTest {
     }
 
     private Completable write(JsonObject object) {
-        return write(object, emptyResult);
+
+        return write(object, N1qlMode.UPDATE,N1qlClause.KEYS,null, emptyResult);
+
     }
 
 
-    private Completable write(JsonObject object, Observable<AsyncN1qlQueryResult> result) {
+    private Completable write(JsonObject object, N1qlMode mode, N1qlClause clause, List<String> fields, Observable<AsyncN1qlQueryResult> result) {
+        writer = new N1qlWriter(mode,clause,fields,true);
+
         Mockito.when(bucket.query(Mockito.any(ParameterizedN1qlQuery.class))).thenReturn(result);
 
         JsonBinaryDocument document = null;
@@ -123,6 +128,24 @@ public class N1qlWriterTest {
     }
 
     @Test
+    public void generateStatementWithCondition() {
+        JsonObject object = JsonObject.empty().put("test", "string");
+
+        List<String> fields = new ArrayList<String>();
+        fields.add("styleNumber");
+        write(object, N1qlMode.UPDATE, N1qlClause.WHERE, fields, emptyResult);
+
+        verify(bucket).query(argument.capture());
+
+        ParameterizedN1qlQuery query = (ParameterizedN1qlQuery) argument.getValue();
+
+        assertNotNull(query);
+        assertEquals("UPDATE `default` SET `test` = $test WHERE `styleNumber` = $styleNumber RETURNING meta().id;", query.statement().toString());
+        assertEquals(object.put("__id__", "id"), query.statementParameters());
+    }
+
+
+    @Test
     public void doesNotCreateDocumentWhenUpdateReturns1Row() {
 
         DefaultAsyncN1qlQueryRow row = new DefaultAsyncN1qlQueryRow(new byte[0]);
@@ -145,7 +168,7 @@ public class N1qlWriterTest {
 
         JsonObject object = JsonObject.create().put("test","test");
 
-        Completable r = write(object, asyncResult);
+        Completable r = write(object, N1qlMode.UPDATE, N1qlClause.KEYS,null, asyncResult);
 
         r.await();
 
@@ -175,7 +198,7 @@ public class N1qlWriterTest {
 
         JsonObject object = JsonObject.create().put("test","test");
 
-        Completable r = write(object, asyncResult);
+        Completable r = write(object, N1qlMode.UPDATE, N1qlClause.KEYS,null, asyncResult);
 
         r.await();
 

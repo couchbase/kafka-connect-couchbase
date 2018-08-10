@@ -17,6 +17,8 @@ import rx.Completable;
 import rx.Observable;
 import rx.functions.Func1;
 
+import java.util.List;
+
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 
 public class N1qlWriter {
@@ -25,14 +27,21 @@ public class N1qlWriter {
 
     private N1qlMode mode;
 
+    private N1qlClause clause;
+
     private String idField = "__id__";
+
+    private List<String> clause_fields;
 
     private boolean createDocuments;
 
-    public N1qlWriter(N1qlMode mode, boolean createDocuments) {
+    public N1qlWriter(N1qlMode mode, N1qlClause clause, List<String> clause_fields, boolean createDocuments) {
         this.mode = mode;
+        this.clause = clause;
+        this.clause_fields = clause_fields;
         this.createDocuments = createDocuments;
     }
+
 
     public Completable write(final AsyncBucket bucket, final JsonBinaryDocument document, PersistTo persistTo, ReplicateTo replicateTo) {
         if (document == null || document.content() == null) {
@@ -45,7 +54,10 @@ public class N1qlWriter {
 
         N1qlQuery query = null;
         if (this.mode == N1qlMode.UPDATE) {
-            String statement = parseUpdate(bucket.name(), node);
+            String statement = this.clause == N1qlClause.KEYS
+                    ? parseUpdate(bucket.name(), node)
+                    : parseUpdateWithCondition(bucket.name(), node);
+
 
             if (statement == null || statement.isEmpty()) {
                 LOGGER.warn("could not generate statement from node " + RedactableArgument.user(node));
@@ -112,6 +124,33 @@ public class N1qlWriter {
         String result = statement.toString();
         return result.substring(0, result.length() - 2) + " RETURNING meta().id;";
     }
+
+    private String parseUpdateWithCondition(String keySpace, JsonObject values) {
+        if (values == null || values.equals(JsonObject.empty())) {
+            return null;
+        }
+
+        StringBuilder statement = new StringBuilder();
+        statement.append(String.format("UPDATE `%s` SET ", keySpace));
+
+        for (String name : values.getNames()) {
+            statement.append(String.format("`%s` = $%s, ", name, name));
+        }
+
+        String result = statement.toString();
+        StringBuilder condition = new StringBuilder();
+        for (String name : clause_fields) {
+            if(clause_fields.indexOf(name) == clause_fields.size()-1) {
+                condition.append(String.format("`%s` = $%s", name, name));
+            }
+            else {
+                condition.append(String.format("`%s` = $%s AND ", name, name));
+            }
+        }
+
+        return result.substring(0, result.length() - 2) + " WHERE " + condition.toString() +" RETURNING meta().id;";
+    }
+
 
     private String parseUpsert(String keySpace, JsonObject values) {
         if (values == null || values.equals(JsonObject.empty())) {
