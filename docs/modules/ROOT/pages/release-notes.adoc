@@ -17,6 +17,10 @@ http://packages.couchbase.com/clients/kafka/3.4.0-beta.1/kafka-connect-couchbase
 </dependency>
 ----
 
+WARNING: Version 3.4.0-beta.1 has a bug that can cause data loss. When rollback mitigation is enabled,
+some events might not be published to the Kafka topic. See https://issues.couchbase.com/browse/KAFKAC-124[KAFKAC-124]
+for details.
+
 When database changes are rolled back due to failover of a Couchbase Server node,
 the connector will now by default prevent the rolled-back changes from being published to the Kafka topic.
 This is done by buffering changes until they have been persisted to all replicas
