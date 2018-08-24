@@ -1,6 +1,5 @@
-name: kafka
-title: Kafka
+name: kafka-connector
+title: Kafka Connector
 version: '3.4'
-start_page: ROOT:quickstart.adoc
 nav:
 - modules/ROOT/nav.adoc

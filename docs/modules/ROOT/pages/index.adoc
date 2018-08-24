@@ -1,0 +1,21 @@
+= Introduction
+
+[abstract]
+The Kafka connector provides functionality to stream, filter, and transform events between Couchbase Server and Kafka.
+
+The Couchbase sink connector allows you to import data from https://kafka.apache.org[Kafka^] topics into Couchbase Server.
+
+The Couchbase source connector allows you to export data from Couchbase Server to Kafka topics.
+
+Data is loaded efficiently and reliably using Couchbase's internal replication protocol, DCP.
+Every change to or deletion of the document generates a replication event, which is then sent to the configured Kafka topic.
+When copying data from a bucket, the connector loads only new or modified documents.
+
+== Compatibility
+
+Because the Kafka connector relies heavily on DCP, it is only compatible with Couchbase Server 3.0 and later.
+
+== Contributing
+
+Couchbase welcomes community contributions to the Kafka connector.
+The https://github.com/couchbase/kafka-connect-couchbase[Kafka Connector source code^] is available on GitHub.
