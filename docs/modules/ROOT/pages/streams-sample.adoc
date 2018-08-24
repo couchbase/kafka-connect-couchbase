@@ -1,18 +1,15 @@
-:idprefix:
-:idseparator: -
+= Couchbase Sample with Kakfa Streams
 
 Sample application which uses Couchbase connector with Kafka Streams.
 
 == Prerequisites
 
-This example demonstrates how to build a data pipeline using Kafka to
-move data from Couchbase Server to a MySQL database. It assumes a
-Couchbase Server instance with the `beer-sample` bucket deployed on
-localhost and a MySQL server accessible on its default port (`3306`).
-MySQL should also have a `beer_sample_sql` database. The following
-snippet describes the schema of the database:
+This example demonstrates how to build a data pipeline using Kafka to move data from Couchbase Server to a MySQL database.
+It assumes a Couchbase Server instance with the `beer-sample` bucket deployed on localhost and a MySQL server accessible on its default port (`3306`).
+MySQL should also have a `beer_sample_sql` database.
+The following snippet describes the schema of the database:
 
-[source,text]
+[source,sql]
 ----
 DROP DATABASE IF EXISTS beer_sample_sql;
 CREATE DATABASE beer_sample_sql CHARACTER SET utf8 COLLATE utf8_general_ci;
@@ -42,13 +39,9 @@ CREATE TABLE beers (
 );
 ----
 
-This example is built on top of the
-http://docs.confluent.io/3.1.1/installation.html[Confluent Platform]
-which also installed on localhost, along with the Couchbase connector.
-We will use the Confluent
-http://docs.confluent.io/3.1.1/control-center/docs/index.html[Control
-Center] to configure the link, so make sure this service also is
-running. The commands below can be used to start all dependencies:
+This example is built on top of the http://docs.confluent.io/3.1.1/installation.html[Confluent Platform] which also installed on localhost, along with the Couchbase connector.
+We will use the Confluent http://docs.confluent.io/3.1.1/control-center/docs/index.html[Control Center] to configure the link, so make sure this service also is running.
+The commands below can be used to start all dependencies:
 
 [source,bash]
 ----
@@ -66,10 +59,8 @@ $ ./bin/connect-distributed $CONNECTOR_DIST/config/connect-distributed.propertie
 $ ./bin/control-center-start etc/confluent-control-center/control-center.properties
 ----
 
-Note that for the `connect-distributed` script we use the configuration
-from the couchbase connector. You can use a stock configuration too, but
-make sure that it will use Avro convertors and configure interceptors
-for monitoring:
+Note that for the `connect-distributed` script we use the configuration from the couchbase connector.
+You can use a stock configuration too, but make sure that it will use Avro convertors and configure interceptors for monitoring:
 
 [source,javascript]
 ----
@@ -83,9 +74,7 @@ producer.interceptor.classes=io.confluent.monitoring.clients.interceptor.Monitor
 
 == Code Overview
 
-The full code of this sample is accessible in the connector repository
-at
-https://github.com/couchbase/kafka-connect-couchbase/blob/master/src/test/java/examples/KafkaStreamsDemo.java[src/test/java/examples/KafkaStreamsDemo.java].
+The full code of this sample is accessible in the connector repository at https://github.com/couchbase/kafka-connect-couchbase/blob/master/src/test/java/examples/KafkaStreamsDemo.java[src/test/java/examples/KafkaStreamsDemo.java].
 
 [source,java]
 ----
@@ -112,9 +101,7 @@ final PreparedStatement insertBeer = connection.prepareStatement(
                 " ibu=VALUES(ibu), updated_at=VALUES(updated_at)");
 ----
 
-The `main` function of the `KafkaStreamsDemo` class starts with loading
-the MySQL driver, establishing connection and preparing insert
-statements for both kinds of the documents: `brewery` and `beer`.
+The `main` function of the `KafkaStreamsDemo` class starts with loading the MySQL driver, establishing connection and preparing insert statements for both kinds of the documents: `brewery` and `beer`.
 
 [source,java]
 ----
@@ -129,15 +116,10 @@ props.put(StreamsConfig.VALUE_SERDE_CLASS_CONFIG, ValueAvroSerde.class);
 props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 ----
 
-The next block supplies the Streams configuration. Along with endpoints,
-it sets serializers and deserializers for keys and values, which appear
-in the Kafka topics. These values are written by the Couchbase
-connector. Here we use simple classes
-https://github.com/couchbase/kafka-connect-couchbase/blob/master/src/test/java/examples/serde/KeyAvroSerde.java[src/test/java/examples/serde/KeyAvroSerde.java]
-and
-https://github.com/couchbase/kafka-connect-couchbase/blob/master/src/test/java/examples/serde/ValueAvroSerde.java[src/test/java/examples/serde/ValueAvroSerde.java],
-which do not make assumptions about the document body, but the real
-application might implement serdes, working with more specific classes.
+The next block supplies the Streams configuration.
+Along with endpoints, it sets serializers and deserializers for keys and values, which appear in the Kafka topics.
+These values are written by the Couchbase connector.
+Here we use simple classes https://github.com/couchbase/kafka-connect-couchbase/blob/master/src/test/java/examples/serde/KeyAvroSerde.java[src/test/java/examples/serde/KeyAvroSerde.java] and https://github.com/couchbase/kafka-connect-couchbase/blob/master/src/test/java/examples/serde/ValueAvroSerde.java[src/test/java/examples/serde/ValueAvroSerde.java], which do not make assumptions about the document body, but the real application might implement serdes, working with more specific classes.
 
 [source,java]
 ----
@@ -147,8 +129,7 @@ KStream<String, GenericRecord> source = builder
         .stream("streaming-topic-beer-sample");
 ----
 
-We start constructing the source stream by pulling data from the Kafka
-topic `streaming-topic-beer-sample`.
+We start constructing the source stream by pulling data from the Kafka topic `streaming-topic-beer-sample`.
 
 [source,java]
 ----
@@ -196,12 +177,8 @@ KStream<String, JsonNode>[] documents = source
         );
 ----
 
-The first step in our pipeline would be to extract `content` from the
-Couchbase event and deserialize it as JSON, as Couchbase operates with
-JSON documents normally, and in `beer-sample` bucket in particular. With
-`branch` operator, we split stream into two by the document type, and in
-the same type we filter out documents that don't have all the fields we
-want to insert into the MySQL database.
+The first step in our pipeline would be to extract `content` from the Couchbase event and deserialize it as JSON, as Couchbase operates with JSON documents normally, and in `beer-sample` bucket in particular.
+With `branch` operator, we split stream into two by the document type, and in the same type we filter out documents that don't have all the fields we want to insert into the MySQL database.
 
 [source,java]
 ----
@@ -248,13 +225,10 @@ documents[1].foreach(new ForeachAction<String, JsonNode>() {
 });
 ----
 
-Once the documents are extracted and filtered we are ready to insert
-them into the MySQL database using statements prepared earlier. Note
-that inserted records are using the document ID from Couchbase, which
-means that records will be updated in place automatically without
-creating duplicates. This example does not handle document deletions or
-expiration, but it won't be complex to do with an additional stream that
-executes `DELETE` statements
+Once the documents are extracted and filtered we are ready to insert them into the MySQL database using statements prepared earlier.
+Note that inserted records are using the document ID from Couchbase, which means that records will be updated in place automatically without creating duplicates.
+This example does not handle document deletions or expiration, but it won't be complex to do with an additional stream that
+executes `DELETE` statements.
 
 [source,java]
 ----
@@ -272,26 +246,22 @@ The last step is to execute the whole pipeline.
 
 == Running
 
-We start by setting up the connector to relay the bucket contents into
-the Kafka topic `streaming-topic-beer-sample`. It could be done either
-using property files and `connect-standalone` as in
-link:quickstart.html[Quickstart], using REST interface of
-`connect-distributed` or using Web UI provided by Control Center. We
-will use the last two options.
+We start by setting up the connector to relay the bucket contents into the Kafka topic `streaming-topic-beer-sample`.
+It could be done either using property files and `connect-standalone` as in xref:quickstart.adoc[Quickstart], using REST interface of `connect-distributed` or using Web UI provided by Control Center.
+We will use the last two options.
 
-By default Control Center starts at `http://localhost:9021/`. Connector
-configuration is accessible in the "Kafka Connect" section: +
-image:images/kafka3-kafka-connect.png[image,width=570] +
+By default Control Center starts at `\http://localhost:9021/`.
+Connector configuration is accessible in the "Kafka Connect" section:
+
+image::connect.png[Kafka Connect Sources]
 
 Clicking on "New source" will open the configuration page of connectors.
-Specify "Connection Name" as `sample` and "Connection Class" as
-`CouchbaseSourceConnector`. Once the connector class is selected, the UI
-will render a list of all accessible configuration properties: +
-image:images/kafka3-setup-source-connector.png[image,width=570] +
+Specify "Connection Name" as `sample` and "Connection Class" as `CouchbaseSourceConnector`.
+Once the connector class is selected, the UI will render a list of all accessible configuration properties:
 
-The "Continue" button will lead to the next step where the form values
-are converted into JSON, which can be used to define the connector using
-the REST API:
+image::setup-source-connector.png[Kafka Connect New Source]
+
+The "Continue" button will lead to the next step where the form values are converted into JSON, which can be used to define the connector using the REST API:
 
 [source,bash]
 ----
@@ -306,8 +276,7 @@ $ curl -X POST -H "Content-Type: application/json" http://localhost:8083/connect
              }'
 ----
 
-Submitting the form (or using a REST call) will register the new
-Connector link and start it immediately.
+Submitting the form (or using a REST call) will register the new Connector link and start it immediately.
 
 Now lets pull the sample sources and build them:
 
@@ -322,9 +291,8 @@ $ java -cp ./target/test-classes:$(mvn dependency:build-classpath | grep ^/) \
 
 The records will start filling the `beers` and `breweries` tables.
 
-*Parent topic:* link:kafka-intro.html[Kafka Connector]
+*Parent topic:* xref:index.adoc[Kafka Connector]
 
-*Previous topic:*
-link:sink-configuration-options.html[Sink Configuration Options]
+*Previous topic:* xref:sink-configuration-options.adoc[Sink Configuration Options]
 
-*Next topic:* link:release-notes.html[Release Notes]
+*Next topic:* xref:release-notes.adoc[Release Notes]

@@ -1,5 +1,4 @@
-:idprefix:
-:idseparator: -
+= Source Configuration Options
 
 Reference of the source connector options.
 
@@ -213,10 +212,8 @@ For example: `export KAFKA_HEAP_OPTS=-Xmx1024M`
 * Importance: low
 * Default: `"128m"`
 
-*Parent topic:* link:kafka-intro.html[Kafka Connector]
+*Parent topic:* xref:index.adoc[Kafka Connector]
 
-*Previous topic:*
-link:quickstart.html[Quickstart]
+*Previous topic:* xref:quickstart.adoc[Quickstart]
 
-*Next topic:*
-link:sink-configuration-options.html[Sink Configuration Options]
+*Next topic:* xref:sink-configuration-options.adoc[Sink Configuration Options]
