@@ -1,5 +1,4 @@
-:idprefix:
-:idseparator: -
+= Source Configuration Options
 
 Reference of the source connector options.
 
@@ -29,9 +28,8 @@ Couchbase username for Couchbase Server 5.0 and later.
 
 === `connection.password`
 
-Couchbase password. For Couchbase Server versions prior to 5.0 this is
-the bucket password. For versions 5.0 and later, this is the password
-associated with `connection.username`.
+Couchbase password. For Couchbase Server versions prior to 5.0 this is the bucket password.
+For versions 5.0 and later, this is the password associated with `connection.username`.
 
 * Type: password
 * Importance: low
@@ -46,14 +44,13 @@ Connection timeout in milliseconds.
 
 === `connection.ssl.enabled`
 
-Use SSL to connect to Couchbase. This feature only available in
-Couchbase Enterprise.
+Use SSL to connect to Couchbase.
+This feature only available in Couchbase Enterprise.
 
 * Type: boolean
 * Importance: low
 * Default: `false`
-* Dependents: `connection.ssl.keystore.location`,
-`connection.ssl.keystore.password`
+* Dependents: `connection.ssl.keystore.location`, `connection.ssl.keystore.password`
 
 === `connection.ssl.keystore.location`
 
@@ -81,8 +78,7 @@ Name of the Kafka topic to publish data to.
 
 === `use_snapshots`
 
-If true, it will only commit into Kafka when full snapshot from
-Couchbase received.
+If true, it will only commit into Kafka when full snapshot from Couchbase received.
 
 * Type: boolean
 * Importance: low
@@ -94,8 +90,7 @@ The class name of the message converter to use.
 
 * Type: string
 * Importance: low
-* Default:
-`"com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler"`
+* Default: `"com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler"`
 
 === `event.filter.class`
 
@@ -110,14 +105,10 @@ The class name of the event filter to use.
 The point in Couchbase history to start streaming from.
 
 * Possible values:
-** SAVED_OFFSET_OR_BEGINNING - Restart from saved state, or if none,
-restart from oldest available mutation in Couchbase
-** SAVED_OFFSET_OR_NOW - Restart from saved state, or if none, restart
-from current Couchbase state
-** BEGINNING - Restart from oldest available mutation in Couchbase
-(ignore any potential saved state)
-** NOW - Restart from current Couchbase state (ignore any potential saved
-state)
+ ** SAVED_OFFSET_OR_BEGINNING - Restart from saved state, or if none, restart from oldest available mutation in Couchbase
+ ** SAVED_OFFSET_OR_NOW - Restart from saved state, or if none, restart from current Couchbase state
+ ** BEGINNING - Restart from oldest available mutation in Couchbase (ignore any potential saved state)
+ ** NOW - Restart from current Couchbase state (ignore any potential saved state)
 
 * Since: 3.2.2
 * Type: string
@@ -129,9 +120,9 @@ state)
 Optionally tag sensitive values in the log output for later redaction.
 
 * Possible values:
-** NONE - No redaction is performed.
-** PARTIAL - Only user data is redacted, system and metadata are not.
-** FULL - User, System and Metadata are all redacted.
+ ** NONE - No redaction is performed.
+ ** PARTIAL - Only user data is redacted, system and metadata are not.
+ ** FULL - User, System and Metadata are all redacted.
 
 * Since: 3.2.3
 * Type: string
@@ -140,22 +131,19 @@ Optionally tag sensitive values in the log output for later redaction.
 
 === `couchbase.compression`
 
-To reduce bandwidth usage, Couchbase Server 5.5 and later can send
-documents to the connector in compressed form. (Messages are always
-published to the Kafka topic in uncompressed form, regardless of this
-setting.) If the requested mode is not supported by your version of
-Couchbase Server, compression will be disabled.
+To reduce bandwidth usage, Couchbase Server 5.5 and later can send documents to the connector in compressed form.
+(Messages are always published to the Kafka topic in uncompressed form, regardless of this setting.)
+If the requested mode is not supported by your version of Couchbase Server, compression will be disabled.
 
 * Possible values:
-** `ENABLED` - (default) Couchbase Server decides whether to use compression
-on a per-document basis, depending on whether the compressed form of the
-document is readily available. Select this mode to prioritize Couchbase Server
-performance and reduced bandwidth usage (recommended). *Requires Couchbase Server 5.5 or later*.
-** `DISABLED` - No compression. Select this mode to prioritize reduced CPU load
-for the Kafka connector.
-** `FORCED` - Compression is used for every document, unless compressed
-size is greater than uncompressed size. Select this mode to prioritize bandwidth
-usage reduction above all else. *Requires Couchbase Server 5.5 or later*.
+ ** `ENABLED` - (default) Couchbase Server decides whether to use compression on a per-document basis, depending on whether the compressed form of the document is readily available.
+Select this mode to prioritize Couchbase Server performance and reduced bandwidth usage (recommended).
+*Requires Couchbase Server 5.5 or later*.
+ ** `DISABLED` - No compression.
+Select this mode to prioritize reduced CPU load for the Kafka connector.
+ ** `FORCED` - Compression is used for every document, unless compressed size is greater than uncompressed size.
+Select this mode to prioritize bandwidth usage reduction above all else.
+*Requires Couchbase Server 5.5 or later*.
 
 * Since: 3.3.0
 * Type: string
@@ -164,20 +152,15 @@ usage reduction above all else. *Requires Couchbase Server 5.5 or later*.
 
 === `couchbase.forceIPv4`
 
-In a network environment that supports both IPv4 and IPv6, setting this property
-to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
+In a network environment that supports both IPv4 and IPv6, setting this property to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
 
 * Since: 3.3.0
 * Type: boolean
 * Importance: low
 * Default: `false`
 
-*Parent topic:* link:../../connectors/kafka-3.2/kafka-intro.html[Kafka
-Connector 3.2]
+*Parent topic:* xref:index.adoc[Kafka Connector]
 
-*Previous topic:*
-link:../../connectors/kafka-3.2/quickstart.html[Quickstart]
+*Previous topic:* xref:quickstart.adoc[Quickstart]
 
-*Next topic:*
-link:../../connectors/kafka-3.2/sink-configuration-options.html[Sink
-Configuration Options]
+*Next topic:* xref:sink-configuration-options.adoc[Sink Configuration Options]
