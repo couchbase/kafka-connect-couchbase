@@ -1,6 +1,6 @@
 = Sink Configuration Options
 
-Reference of the source connector options.
+Reference of the sink connector options.
 
 == Database
 
