@@ -21,6 +21,7 @@ import com.couchbase.client.core.config.parser.BucketConfigParser;
 import com.couchbase.client.core.env.ConfigParserEnvironment;
 import com.couchbase.client.core.node.DefaultMemcachedHashingStrategy;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
+import com.couchbase.client.core.utils.NetworkAddress;
 import com.couchbase.client.dcp.config.ClientEnvironment;
 import com.couchbase.client.dcp.config.SSLEngineFactory;
 import com.couchbase.client.dcp.config.SecureEnvironment;
@@ -122,7 +123,7 @@ public class Cluster {
                                                     try {
                                                         if (msg.getStatus().equals(HttpResponseStatus.OK)) {
                                                             String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
-                                                            result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv));
+                                                            result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv, NetworkAddress.create(hostname)));
                                                         }
                                                     } finally {
                                                         latch.countDown();

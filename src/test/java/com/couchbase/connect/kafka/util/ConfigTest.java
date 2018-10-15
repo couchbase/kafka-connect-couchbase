@@ -18,6 +18,7 @@ package com.couchbase.connect.kafka.util;
 
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.parser.BucketConfigParser;
+import com.couchbase.client.core.utils.NetworkAddress;
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -38,7 +39,7 @@ public class ConfigTest {
 
     private CouchbaseBucketConfig loadConfig(String resource) {
         String body = Resources.read(resource, getClass());
-        return (CouchbaseBucketConfig) BucketConfigParser.parse(body, Cluster.dummyBootstrapEnv);
+        return (CouchbaseBucketConfig) BucketConfigParser.parse(body, Cluster.dummyBootstrapEnv, NetworkAddress.localhost());
     }
 
     private int numberOfConnections(CouchbaseBucketConfig bucketConfig, List<List<Short>> groups) {
