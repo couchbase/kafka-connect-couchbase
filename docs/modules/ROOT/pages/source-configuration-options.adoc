@@ -188,7 +188,9 @@ until persistence is confirmed.
 If present, the value must be `0` or an integer followed by a time unit:
 (`ms` = milliseconds, `s` = seconds)
 
-* Since: 3.4.0-beta.1 (*Uncommitted*; API may change in a patch release)
+CAUTION: If the source is an ephemeral bucket (which never persists documents) this value must be set to `0` to disable the persistence check.
+
+* Since: 3.4.0
 * Type: string
 * Importance: low
 * Default: `"100ms"`
@@ -207,7 +209,7 @@ To allocate more memory to the connect worker process,
 set the `KAFKA_HEAP_OPTS` environment variable before starting the worker.
 For example: `export KAFKA_HEAP_OPTS=-Xmx1024M`
 
-* Since: 3.4.0-beta.1 (*Uncommitted*; API may change in a patch release)
+* Since: 3.4.0
 * Type: string
 * Importance: low
 * Default: `"128m"`
