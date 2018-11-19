@@ -80,7 +80,7 @@ The rest are specific to the Couchbase connector.
 
 For this exercise, change the value of `connection.bucket` to `travel-sample` (or whichever bucket you want to stream from).
 For `connection.username` and `connection.password`, supply the credentials of a Couchbase user who has the "Data DCP Reader" role for the bucket.
-If you have not yet created such a user, now is a good time to read about xref:server:security:security-rbac-for-admins-and-apps.adoc[Creating and Managing Users with the UI].
+If you have not yet created such a user, now is a good time to read about xref:server:manage:manage-security/manage-users-and-roles.adoc[Creating and Managing Users with the UI].
 
 NOTE: For Couchbase Server versions prior to 5.0, leave the username blank.
 Set the password property to the bucket password, or leave it blank if the bucket does not have a password.
@@ -156,7 +156,7 @@ The possible values are:
 * `deletion`: Removal or expiration of the document.
 * `expiration`: Reserved for document expiration (Couchbase Server does not currently send this event type, but may in future versions).
 
-Once the consumer catches up to the current state of the bucket, try xref:java-sdk::common/webui-cli-access.adoc[adding a new document to the bucket via the Couchbase Web Console].
+Once the consumer catches up to the current state of the bucket, try xref:java-sdk::webui-cli-access.adoc[adding a new document to the bucket via the Couchbase Web Console].
 The consumer will print a notification of type `mutation`.
 Now delete the document and watch for an event of type `deletion`.
 
@@ -257,7 +257,7 @@ In the `$KAFKA_CONNECT_COUCHBASE_HOME/config` directory there is a file called `
 Customize this file as described in <<Configure the Source Connector>>, only now the bucket will receive messages and the user must have _write_ access to the bucket.
 
 Note: Make sure to specify an existing bucket, otherwise the sink connector will fail.
-You may wish to xref:server:clustersetup:create-bucket.adoc[create a new bucket] to receive the messages.
+You may wish to xref:server:manage:manage-buckets/create-bucket.adoc[create a new bucket] to receive the messages.
 
 To run the sink connector, use the same command as described in *Run the Source Connector*, but pass `quickstart-couchbase-sink.properties` as the second argument to `connect-standalone` instead of `quickstart-couchbase-source.properties`.
 
