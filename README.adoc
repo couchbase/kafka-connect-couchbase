@@ -1,0 +1,30 @@
+https://docs.couchbase.com/kafka-connector/3.4/release-notes.html[*Download*]
+| https://docs.couchbase.com/kafka-connector/3.4/index.html[*Documentation*]
+| https://issues.couchbase.com/projects/KAFKAC[*Issues*]
+| https://forums.couchbase.com/c/Kafka-Connector[*Discussion*]
+
+= Kafka Connect Couchbase
+
+[abstract]
+A plug-in for the https://kafka.apache.org/documentation.html#connect[Kafka Connect framework].
+
+== What does it do?
+
+The plugin includes a "source connector" for publishing document change notifications from Couchbase to
+a Kafka topic, as well as a "sink connector" that subscribes to one or more Kafka topics and writes the
+messages to Couchbase.
+
+See the documentation linked above for more details and a quickstart guide.
+
+== Customizing the message format
+
+The example project in `examples/custom-source-handler` shows how to extend the source connector and customize the format of messages published to Kafka.
+
+== Building the connector from source
+
+Pre-built distributions are available from the download link above.
+The following instructions are intended for developers working on the connector.
+
+. Clone this GitHub repository.
+. Run `mvn package` in the project's root directory to generate the connector archive.
+. Look for `kafka-connect-couchbase-<version>.zip` in the `target` directory.
