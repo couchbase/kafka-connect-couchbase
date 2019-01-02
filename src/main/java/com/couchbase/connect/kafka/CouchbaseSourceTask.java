@@ -162,29 +162,31 @@ public class CouchbaseSourceTask extends SourceTask {
         while (running) {
             Event event = queue.poll(100, TimeUnit.MILLISECONDS);
             if (event != null) {
-
-                for (ByteBuf message : event) {
-                    if (filter == null || filter.pass(message)) {
-                        SourceRecord record = convert(message);
-                        if (record != null) {
-                            results.add(record);
+                try {
+                    for (ByteBuf message : event) {
+                        if (filter == null || filter.pass(message)) {
+                            SourceRecord record = convert(message);
+                            if (record != null) {
+                                results.add(record);
+                            }
                         }
                     }
-                }
 
-                event.ack();
-                for (ByteBuf message : event) {
-                    message.release();
+                    event.ack();
+                    batchSize--;
+                } finally {
+                    releaseAll(event);
                 }
-                batchSize--;
             }
             if (!results.isEmpty() &&
                     (batchSize == 0 || event == null || event instanceof Snapshot)) {
                 LOGGER.info("Poll returns {} result(s)", results.size());
                 return results;
             }
-            if (!errorQueue.isEmpty()) {
-                throw new ConnectException(errorQueue.poll());
+
+            final Throwable fatalError = errorQueue.poll();
+            if (fatalError != null) {
+                throw new ConnectException(fatalError);
             }
         }
         return results;
@@ -216,8 +218,33 @@ public class CouchbaseSourceTask extends SourceTask {
         couchbaseReader.shutdown();
         try {
             couchbaseReader.join(MAX_TIMEOUT);
+            if (couchbaseReader.isAlive()) {
+                LOGGER.error("Reader thread is still alive after shutdown request.");
+            }
         } catch (InterruptedException e) {
-            // Ignore, shouldn't be interrupted
+            LOGGER.error("Interrupted while joining reader thread.", e);
+        }
+
+        LOGGER.info("Releasing unconsumed events: {}", queue.size());
+        for (Event event : queue) {
+            // Don't need to ACK, since DCP connection is already closed.
+            releaseAll(event);
+        }
+    }
+
+    private void releaseAll(Iterable<ByteBuf> buffers) {
+        RuntimeException deferredException = null;
+
+        for (ByteBuf buffer : buffers) {
+            try {
+                buffer.release();
+            } catch (RuntimeException t) {
+                LOGGER.warn("Failed to release buffer {}", buffer, t);
+                deferredException = t;
+            }
+        }
+        if (deferredException != null) {
+            throw deferredException;
         }
     }
 

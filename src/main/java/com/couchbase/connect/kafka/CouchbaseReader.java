@@ -29,6 +29,7 @@ import com.couchbase.client.dcp.message.RollbackMessage;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.deps.io.netty.util.IllegalReferenceCountException;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.dcp.Message;
 import com.couchbase.connect.kafka.dcp.Snapshot;
@@ -55,7 +56,7 @@ public class CouchbaseReader extends Thread {
     private final BlockingQueue<Throwable> errorQueue;
 
     public CouchbaseReader(List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
-                           final BlockingQueue<Event> queue, BlockingQueue<Throwable> errorQueue, Short[] partitions,
+                           final BlockingQueue<Event> queue, final BlockingQueue<Throwable> errorQueue, Short[] partitions,
                            final Map<Short, Long> partitionToSavedSeqno, final StreamFrom streamFrom,
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
                            final String sslKeystorePassword, final CompressionMode compressionMode,
@@ -83,8 +84,8 @@ public class CouchbaseReader extends Thread {
         client.controlEventHandler(new ControlEventHandler() {
             @Override
             public void onEvent(ChannelFlowController flowController, ByteBuf event) {
-                if (useSnapshots) {
-                    if (DcpSnapshotMarkerRequest.is(event)) {
+                try {
+                    if (useSnapshots && DcpSnapshotMarkerRequest.is(event)) {
                         Snapshot snapshot = new Snapshot(
                                 DcpSnapshotMarkerRequest.partition(event),
                                 DcpSnapshotMarkerRequest.startSeqno(event),
@@ -95,68 +96,78 @@ public class CouchbaseReader extends Thread {
                             LOGGER.warn("Incomplete snapshot detected: {}", prev);
                         }
                     }
+
+                    if (RollbackMessage.is(event)) {
+                        final short partition = RollbackMessage.vbucket(event);
+                        final long seqno = RollbackMessage.seqno(event);
+
+                        LOGGER.warn("Rolling back partition {} to seqno {}", partition, seqno);
+
+                        // Careful, we're in the Netty IO thread, so must not await completion.
+                        client.rollbackAndRestartStream(partition, seqno)
+                                .subscribe(new CompletableSubscriber() {
+                                    @Override
+                                    public void onCompleted() {
+                                        LOGGER.info("Rollback for partition {} complete", partition);
+                                    }
+
+                                    @Override
+                                    public void onError(Throwable e) {
+                                        LOGGER.error("Failed to roll back partition {} to seqno {}", partition, seqno, e);
+                                    }
+
+                                    @Override
+                                    public void onSubscribe(Subscription d) {
+                                    }
+                                });
+                    }
+
+                } catch (Throwable t) {
+                    LOGGER.error("Exception in control event handler", t);
+                    errorQueue.offer(t);
+                } finally {
+                    ackAndRelease(flowController, event);
                 }
-
-                if (RollbackMessage.is(event)) {
-                    final short partition = RollbackMessage.vbucket(event);
-                    final long seqno = RollbackMessage.seqno(event);
-
-                    LOGGER.warn("Rolling back partition {} to seqno {}", partition, seqno);
-
-                    // Careful, we're in the Netty IO thread, so must not await completion.
-                    client.rollbackAndRestartStream(partition, seqno)
-                            .subscribe(new CompletableSubscriber() {
-                                @Override
-                                public void onCompleted() {
-                                    LOGGER.info("Rollback for partition {} complete", partition);
-                                }
-
-                                @Override
-                                public void onError(Throwable e) {
-                                    LOGGER.error("Failed to roll back partition {} to seqno {}", partition, seqno, e);
-                                }
-
-                                @Override
-                                public void onSubscribe(Subscription d) {
-                                }
-                            });
-                }
-
-                flowController.ack(event);
-                event.release();
             }
         });
         client.dataEventHandler(new DataEventHandler() {
             @Override
             public void onEvent(ChannelFlowController flowController, ByteBuf event) {
                 if (useSnapshots) {
-                    short partition = DcpMutationMessage.partition(event);
-                    long seqno = DcpMutationMessage.bySeqno(event);
+                    try {
+                        short partition = DcpMutationMessage.partition(event);
+                        long seqno = DcpMutationMessage.bySeqno(event);
 
-                    Snapshot snapshot = snapshots.get(partition);
-                    if (snapshot == null) {
-                        LOGGER.warn("Event with seqno {} for partition {} ignored, because missing snapshot", seqno, partition);
-                    } else if (seqno < snapshot.startSeqno()) {
-                        LOGGER.warn("Event with seqno {} for partition {} ignored, because current snapshot has higher seqno {}",
-                                seqno, partition, snapshot.startSeqno());
-                    } else {
-                        event.retain();
-                        boolean completed = snapshot.add(event);
-                        if (completed) {
-                            Snapshot oldSnapshot = snapshots.remove(partition);
-                            if (snapshot != oldSnapshot) {
-                                LOGGER.warn("Conflict of snapshots detected, expected to remove {}, but removed {}", snapshot, oldSnapshot);
+                        Snapshot snapshot = snapshots.get(partition);
+                        if (snapshot == null) {
+                            LOGGER.warn("Event with seqno {} for partition {} ignored, because missing snapshot", seqno, partition);
+                        } else if (seqno < snapshot.startSeqno()) {
+                            LOGGER.warn("Event with seqno {} for partition {} ignored, because current snapshot has higher seqno {}",
+                                    seqno, partition, snapshot.startSeqno());
+                        } else {
+                            event.retain();
+                            boolean completed = snapshot.add(event);
+                            if (completed) {
+                                Snapshot oldSnapshot = snapshots.remove(partition);
+                                if (snapshot != oldSnapshot) {
+                                    LOGGER.warn("Conflict of snapshots detected, expected to remove {}, but removed {}", snapshot, oldSnapshot);
+                                }
+                                queue.add(snapshot);
                             }
-                            queue.add(snapshot);
                         }
+                    } catch (Throwable t) {
+                        LOGGER.error("Exception in data event handler", t);
+                        errorQueue.offer(t);
+                    } finally {
+                        ackAndRelease(flowController, event);
                     }
-                    flowController.ack(event);
-                    event.release();
                 } else {
                     try {
                         queue.put(new Message(event, flowController));
-                    } catch (InterruptedException e) {
-                        LOGGER.error("Unable to put DCP request into the queue", e);
+                    } catch (Throwable t) {
+                        LOGGER.error("Unable to put DCP request into the queue", t);
+                        ackAndRelease(flowController, event);
+                        errorQueue.offer(t);
                     }
                 }
             }
@@ -185,7 +196,7 @@ public class CouchbaseReader extends Thread {
             client.startStreaming(partitions).await();
 
         } catch (Throwable t) {
-            errorQueue.add(t);
+            errorQueue.offer(t);
         }
     }
 
@@ -229,5 +240,22 @@ public class CouchbaseReader extends Thread {
 
     public void shutdown() {
         client.disconnect().await();
+    }
+
+    private static void ackAndRelease(ChannelFlowController flowController, ByteBuf buffer) throws IllegalReferenceCountException {
+        ack(flowController, buffer);
+        buffer.release();
+    }
+
+    private static void ack(ChannelFlowController flowController, ByteBuf buffer) throws IllegalReferenceCountException {
+        try {
+            flowController.ack(buffer);
+
+        } catch (IllegalReferenceCountException e) {
+            throw e;
+
+        } catch (Exception e) {
+            LOGGER.warn("Flow control ack failed (channel already closed?)", e);
+        }
     }
 }
