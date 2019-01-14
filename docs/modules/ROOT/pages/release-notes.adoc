@@ -2,9 +2,30 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 3.4.1 (2019-01-15)
+
+https://packages.couchbase.com/clients/kafka/3.4.1/kafka-connect-couchbase-3.4.1.zip[kafka-connect-couchbase-3.4.1.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.4.1</version>
+</dependency>
+----
+
+This maintenance release fixes memory leaks that can occur in distributed mode or under certain error conditions.
+
+Also, the connector now responds to more error conditions by reporting them to the Kafka Connect framework instead of failing silently.
+
+=== Issues resolved
+
+* https://issues.couchbase.com/browse/KAFKAC-133[KAFKAC-133]: [BUGFIX] Buffers not released on all code paths
+
 == Couchbase Kafka Connector 3.4.0 (2018-10-16)
 
-http://packages.couchbase.com/clients/kafka/3.4.0/kafka-connect-couchbase-3.4.0.zip[kafka-connect-couchbase-3.4.0.zip]
+https://packages.couchbase.com/clients/kafka/3.4.0/kafka-connect-couchbase-3.4.0.zip[kafka-connect-couchbase-3.4.0.zip]
 
 [source,xml]
 ----
@@ -38,7 +59,7 @@ This is an increase over the previous hard-coded value of 20 megabytes.
 
 == Couchbase Kafka Connector 3.4.0-beta.1 (2018-07-06)
 
-http://packages.couchbase.com/clients/kafka/3.4.0-beta.1/kafka-connect-couchbase-3.4.0-beta.1.zip[kafka-connect-couchbase-3.4.0-beta.1.zip]
+https://packages.couchbase.com/clients/kafka/3.4.0-beta.1/kafka-connect-couchbase-3.4.0-beta.1.zip[kafka-connect-couchbase-3.4.0-beta.1.zip]
 
 [source,xml]
 ----
@@ -72,7 +93,7 @@ Issues resolved in this release:
 
 == Couchbase Kafka Connector 3.3.2 GA (2018-07-02)
 
-http://packages.couchbase.com/clients/kafka/3.3.2/kafka-connect-couchbase-3.3.2.zip[kafka-connect-couchbase-3.3.2.zip]
+https://packages.couchbase.com/clients/kafka/3.3.2/kafka-connect-couchbase-3.3.2.zip[kafka-connect-couchbase-3.3.2.zip]
 
 [source,xml]
 ----
@@ -92,7 +113,7 @@ Issues resolved in this release:
 
 == Couchbase Kafka Connector 3.3.1 GA (2018-06-19)
 
-http://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
+https://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
 
 [source,xml]
 ----
@@ -117,7 +138,7 @@ Issues resolved in this release:
 
 == Couchbase Kafka Connector 3.3.0 GA (2018-05-15)
 
-http://packages.couchbase.com/clients/kafka/3.3.0/kafka-connect-couchbase-3.3.0.zip[kafka-connect-couchbase-3.3.0.zip]
+https://packages.couchbase.com/clients/kafka/3.3.0/kafka-connect-couchbase-3.3.0.zip[kafka-connect-couchbase-3.3.0.zip]
 
 [source,xml]
 ----
@@ -174,7 +195,7 @@ Issues resolved in this release:
 </dependency>
 ----
 
-http://packages.couchbase.com/clients/kafka/3.2.3/kafka-connect-couchbase-3.2.3.zip[kafka-connect-couchbase-3.2.3.zip]
+https://packages.couchbase.com/clients/kafka/3.2.3/kafka-connect-couchbase-3.2.3.zip[kafka-connect-couchbase-3.2.3.zip]
 
 == Couchbase Kafka Connector 3.2.2 GA (19 December 2017)
 
@@ -205,7 +226,7 @@ Issues resolved in this release:
 </dependency>
 ----
 
-http://packages.couchbase.com/clients/kafka/3.2.2/kafka-connect-couchbase-3.2.2.zip[kafka-connect-couchbase-3.2.2.zip]
+https://packages.couchbase.com/clients/kafka/3.2.2/kafka-connect-couchbase-3.2.2.zip[kafka-connect-couchbase-3.2.2.zip]
 
 == Couchbase Kafka Connector 3.2.1 GA (8 November 2017)
 
@@ -225,7 +246,7 @@ Issues resolved in this release:
 </dependency>
 ----
 
-http://packages.couchbase.com/clients/kafka/3.2.1/kafka-connect-couchbase-3.2.1.zip[kafka-connect-couchbase-3.2.1.zip]
+https://packages.couchbase.com/clients/kafka/3.2.1/kafka-connect-couchbase-3.2.1.zip[kafka-connect-couchbase-3.2.1.zip]
 
 == Couchbase Kafka Connector 3.2.0 GA (17 October 2017)
 
@@ -267,7 +288,7 @@ Issues resolved in this release:
 </dependency>
 ----
 
-http://packages.couchbase.com/clients/kafka/3.2.0/kafka-connect-couchbase-3.2.0.zip[kafka-connect-couchbase-3.2.0.zip]
+https://packages.couchbase.com/clients/kafka/3.2.0/kafka-connect-couchbase-3.2.0.zip[kafka-connect-couchbase-3.2.0.zip]
 
 == Couchbase Kafka Connector 3.1.3 GA (31 May 2017)
 
@@ -285,7 +306,7 @@ Java DCP Client updated to 0.10.0.
 </dependency>
 ----
 
-http://packages.couchbase.com/clients/kafka/3.1.3/kafka-connect-couchbase-3.1.3.zip[kafka-connect-couchbase-3.1.3.zip]
+https://packages.couchbase.com/clients/kafka/3.1.3/kafka-connect-couchbase-3.1.3.zip[kafka-connect-couchbase-3.1.3.zip]
 
 == Couchbase Kafka Connector 3.1.2 GA (14 March 2017)
 
@@ -293,7 +314,7 @@ Version 3.1.2 is maintenance release.
 
 * https://issues.couchbase.com/browse/KAFKAC-66[KAFKAC-66]: On backfilling from large bucket, it is possible to get OOM when internal queue is not drained quickly enough to relay the data into Kafka.
 
-http://packages.couchbase.com/clients/kafka/3.1.2/kafka-connect-couchbase-3.1.2.zip[kafka-connect-couchbase-3.1.2.zip]
+https://packages.couchbase.com/clients/kafka/3.1.2/kafka-connect-couchbase-3.1.2.zip[kafka-connect-couchbase-3.1.2.zip]
 
 == Couchbase Kafka Connector 3.1.1 GA (21 February 2017)
 
@@ -301,7 +322,7 @@ Version 3.1.1 is maintenance release. It contains fixes for resuming DCP streams
 
 * https://issues.couchbase.com/browse/KAFKAC-56[KAFKAC-56]: Session state might be left partially initialized, which leads to rolling back to sequence number zero (0) and starting from the beginning (duplicating events in Kafka topic).
 
-http://packages.couchbase.com/clients/kafka/3.1.1/kafka-connect-couchbase-3.1.1.zip[kafka-connect-couchbase-3.1.1.zip]
+https://packages.couchbase.com/clients/kafka/3.1.1/kafka-connect-couchbase-3.1.1.zip[kafka-connect-couchbase-3.1.1.zip]
 
 == Couchbase Kafka Connector 3.1.0 GA (03 January 2017)
 
@@ -309,14 +330,14 @@ Version 3.1.0 is GA release.
 
 * https://issues.couchbase.com/browse/KAFKAC-55[KAFKAC-55]: Sink Connector support
 
-http://packages.couchbase.com/clients/kafka/3.1.0/kafka-connect-couchbase-3.1.0.zip[kafka-connect-couchbase-3.1.0.zip]
+https://packages.couchbase.com/clients/kafka/3.1.0/kafka-connect-couchbase-3.1.0.zip[kafka-connect-couchbase-3.1.0.zip]
 
 == Couchbase Kafka Connector 3.0.0 GA (14 December 2016)
 
 Version 3.0.0 is GA release.
 It brings documentation update.
 
-http://packages.couchbase.com/clients/kafka/3.0.0/kafka-connect-couchbase-3.0.0.zip[kafka-connect-couchbase-3.0.0.zip]
+https://packages.couchbase.com/clients/kafka/3.0.0/kafka-connect-couchbase-3.0.0.zip[kafka-connect-couchbase-3.0.0.zip]
 
 == Couchbase Kafka Connector 3.0.0 BETA (22 November 2016)
 
@@ -327,7 +348,7 @@ It brings documentation update, feature enhancements and bug fixes
 * Update dependencies: dcp-client to 0.7.0, and confluent libraries up to versions shipped with 3.1.1
 * Cleanup various configuration workarounds for platform 3.0
 
-http://packages.couchbase.com/clients/kafka/3.0.0-BETA/kafka-connect-couchbase-3.0.0-BETA.zip[kafka-connect-couchbase-3.0.0-BETA.zip]
+https://packages.couchbase.com/clients/kafka/3.0.0-BETA/kafka-connect-couchbase-3.0.0-BETA.zip[kafka-connect-couchbase-3.0.0-BETA.zip]
 
 == Couchbase Kafka Connector 3.0.0 DP4 (5 November 2016)
 
@@ -337,7 +358,7 @@ Version 3.0.0-DP4 is the fourth developer preview of the 3.0.x series.
 * Rename internal classes, and make configuration more consistent with other connectors (e.g. instead of timeout_ms, use timeout.ms)
 * Allow to override internal convertor into SourceRecord, and allow to inject Filter class to skip events before writing into Kafka
 
-http://packages.couchbase.com/clients/kafka/3.0.0-DP4/kafka-connect-couchbase-3.0.0-DP4.zip[kafka-connect-couchbase-3.0.0-DP4.zip]
+https://packages.couchbase.com/clients/kafka/3.0.0-DP4/kafka-connect-couchbase-3.0.0-DP4.zip[kafka-connect-couchbase-3.0.0-DP4.zip]
 
 == Couchbase Kafka Connector 3.0.0 DP3 (20 October 2016)
 
@@ -350,7 +371,7 @@ Allows to use multiple Kafka partitions.
 * https://issues.couchbase.com/browse/KAFKAC-53[KAFKAC-53]: Node-aware distribution of partitions for Tasks.
 Reduces amount of resources allocated on the server.
 
-http://packages.couchbase.com/clients/kafka/3.0.0-DP3/kafka-connect-couchbase-3.0.0-DP3.zip[kafka-connect-couchbase-3.0.0-DP3.zip]
+https://packages.couchbase.com/clients/kafka/3.0.0-DP3/kafka-connect-couchbase-3.0.0-DP3.zip[kafka-connect-couchbase-3.0.0-DP3.zip]
 
 == Couchbase Kafka Connector 3.0.0 DP2 (24 September 2016)
 
@@ -358,13 +379,13 @@ Version 3.0.0-DP2 is the second developer preview of the 3.0.x series.
 It improves configuration.
 And now can maintain replication state, which allow to resume transmission.
 
-http://packages.couchbase.com/clients/kafka/3.0.0-DP2/kafka-connect-couchbase-3.0.0-DP2.zip[kafka-connect-couchbase-3.0.0-DP2.zip]
+https://packages.couchbase.com/clients/kafka/3.0.0-DP2/kafka-connect-couchbase-3.0.0-DP2.zip[kafka-connect-couchbase-3.0.0-DP2.zip]
 
 == Couchbase Kafka Connector 3.0.0 DP1 (6 September 2016)
 
 Version 3.0.0-DP1 is the first developer preview of the 3.0.x series.
 
-http://packages.couchbase.com/clients/kafka/3.0.0-DP1/kafka-connect-couchbase-3.0.0-DP1.zip[kafka-connect-couchbase-3.0.0-DP1.zip]
+https://packages.couchbase.com/clients/kafka/3.0.0-DP1/kafka-connect-couchbase-3.0.0-DP1.zip[kafka-connect-couchbase-3.0.0-DP1.zip]
 
 *Parent topic:* xref:index.adoc[Kafka Connector]
 

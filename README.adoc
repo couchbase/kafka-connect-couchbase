@@ -10,9 +10,7 @@ A plug-in for the https://kafka.apache.org/documentation.html#connect[Kafka Conn
 
 == What does it do?
 
-The plugin includes a "source connector" for publishing document change notifications from Couchbase to
-a Kafka topic, as well as a "sink connector" that subscribes to one or more Kafka topics and writes the
-messages to Couchbase.
+The plugin includes a "source connector" for publishing document change notifications from Couchbase to a Kafka topic, as well as a "sink connector" that subscribes to one or more Kafka topics and writes the messages to Couchbase.
 
 See the documentation linked above for more details and a quickstart guide.
 
