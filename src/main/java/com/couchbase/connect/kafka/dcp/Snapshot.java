@@ -32,7 +32,7 @@ public class Snapshot implements Event {
         this.partition = partition;
         this.startSeqno = startSeqno;
         this.endSeqno = endSeqno;
-        this.messages = new LinkedList<ByteBuf>();
+        this.messages = new LinkedList<>();
     }
 
     public short partition() {

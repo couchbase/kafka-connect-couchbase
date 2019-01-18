@@ -89,7 +89,7 @@ public class DocumentPathExtractor {
 
     private static final JsonFactory factory = new JsonFactory();
     private final String documentPathFormat;
-    private final Map<String, JsonPointer> placeholderToJsonPointer = new HashMap<String, JsonPointer>();
+    private final Map<String, JsonPointer> placeholderToJsonPointer = new HashMap<>();
 
     private final boolean removeDocumentPath;
 
@@ -126,7 +126,7 @@ public class DocumentPathExtractor {
      * it may modify the contents of the array to remove the fields used by the document ID.
      */
     public DocumentExtraction extractDocumentPath(final byte[] json) throws IOException, DocumentPathNotFoundException {
-        final List<ByteRange> rangesToRemove = new ArrayList<ByteRange>(placeholderToJsonPointer.size());
+        final List<ByteRange> rangesToRemove = new ArrayList<>(placeholderToJsonPointer.size());
 
         String documentId = documentPathFormat;
 

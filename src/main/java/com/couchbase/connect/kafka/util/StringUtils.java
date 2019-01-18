@@ -21,18 +21,12 @@ import java.util.List;
 public enum StringUtils {
     ;
 
+    /**
+     * @deprecated In favor of {@link String#join(CharSequence, Iterable)}
+     */
+    @Deprecated
     public static String join(final List<String> list, final String separator) {
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (String item : list) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(separator);
-            }
-            sb.append(item);
-        }
-        return sb.toString();
+        return String.join(separator, list);
     }
 
 }

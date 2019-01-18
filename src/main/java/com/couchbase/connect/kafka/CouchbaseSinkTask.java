@@ -139,7 +139,7 @@ public class CouchbaseSinkTask extends SinkTask {
         cluster.authenticate(username, password);
 
         List<Transcoder<? extends Document, ?>> transcoders =
-                Collections.<Transcoder<? extends Document, ?>>singletonList(new JsonBinaryTranscoder());
+                Collections.singletonList(new JsonBinaryTranscoder());
         bucket = cluster.openBucket(bucketName, transcoders);
 
         converter = new JsonConverter();
@@ -232,8 +232,8 @@ public class CouchbaseSinkTask extends SinkTask {
                     @Override
                     public Observable<JsonDocument> call(Throwable throwable) {
                         return (throwable instanceof DocumentDoesNotExistException)
-                                ? Observable.<JsonDocument>empty()
-                                : Observable.<JsonDocument>error(throwable);
+                                ? Observable.empty()
+                                : Observable.error(throwable);
                     }
                 }).toCompletable();
     }

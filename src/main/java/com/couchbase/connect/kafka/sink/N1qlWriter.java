@@ -8,7 +8,6 @@ import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.N1qlMetrics;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
-import com.couchbase.connect.kafka.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Completable;
@@ -138,15 +137,15 @@ public class N1qlWriter {
     }
 
     private static String assignments(JsonObject values) {
-        List<String> assignments = new ArrayList<String>();
+        List<String> assignments = new ArrayList<>();
         for (String name : values.getNames()) {
             assignments.add("`" + name + "` = $" + name);
         }
-        return StringUtils.join(assignments, ", ");
+        return String.join(", ", assignments);
     }
 
     private static String conditions(List<String> fields) {
-        List<String> conditions = new ArrayList<String>();
+        List<String> conditions = new ArrayList<>();
 
         for (String name : fields) {
             final String value;
@@ -163,6 +162,6 @@ public class N1qlWriter {
             conditions.add("`" + name + "` = " + value);
         }
 
-        return StringUtils.join(conditions, " AND ");
+        return String.join(" AND ", conditions);
     }
 }

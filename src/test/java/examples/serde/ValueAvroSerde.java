@@ -38,7 +38,7 @@ public class ValueAvroSerde implements Serde<GenericRecord> {
     }
 
     public ValueAvroSerde(SchemaRegistryClient client) {
-        this(client, Collections.<String, Object>emptyMap());
+        this(client, Collections.emptyMap());
     }
 
     public ValueAvroSerde(SchemaRegistryClient client, Map<String, ?> props) {

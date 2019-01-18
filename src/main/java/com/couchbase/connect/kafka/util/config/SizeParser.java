@@ -33,7 +33,7 @@ public class SizeParser {
     private static final Map<String, Integer> qualifierToScale;
 
     static {
-        final Map<String, Integer> temp = new HashMap<String, Integer>();
+        final Map<String, Integer> temp = new HashMap<>();
         temp.put("b", 1);
         temp.put("k", 1024);
         temp.put("m", 1024 * 1024);

@@ -68,7 +68,7 @@
     </developers>
 
     <properties>
-        <java-compat.version>1.6</java-compat.version>
+        <java-compat.version>1.8</java-compat.version>
         <confluent.version>3.1.1</confluent.version>
         <kafka-connect-api.version>0.10.1.1</kafka-connect-api.version>
         <kafka-connect-json.version>0.10.1.1</kafka-connect-json.version>

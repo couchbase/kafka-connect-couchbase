@@ -250,7 +250,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
                         new ConfigDef.Recommender() {
                             @Override
                             public List<Object> validValues(String name, Map<String, Object> parsedConfig) {
-                                return Arrays.<Object>asList(true, false);
+                                return Arrays.asList(true, false);
                             }
 
                             @Override

@@ -20,9 +20,9 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.couchbase.client.core.lang.backport.java.util.Objects.requireNonNull;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG;
+import static java.util.Objects.requireNonNull;
 
 public enum Password {
     CONNECTION("KAFKA_COUCHBASE_PASSWORD", CONNECTION_PASSWORD_CONFIG),

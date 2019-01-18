@@ -118,8 +118,8 @@ public class CouchbaseSourceTask extends SourceTask {
         Map<Short, Long> partitionToSavedSeqno = readSourceOffsets(partitions);
 
         running = true;
-        queue = new LinkedBlockingQueue<Event>();
-        errorQueue = new LinkedBlockingQueue<Throwable>(1);
+        queue = new LinkedBlockingQueue<>();
+        errorQueue = new LinkedBlockingQueue<>(1);
         couchbaseReader = new CouchbaseReader(clusterAddress, bucket, username, password, connectionTimeout,
                 queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
                 compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes);
@@ -156,7 +156,7 @@ public class CouchbaseSourceTask extends SourceTask {
     @Override
     public List<SourceRecord> poll()
             throws InterruptedException {
-        List<SourceRecord> results = new LinkedList<SourceRecord>();
+        List<SourceRecord> results = new LinkedList<>();
         int batchSize = batchSizeMax;
 
         while (running) {
@@ -255,7 +255,7 @@ public class CouchbaseSourceTask extends SourceTask {
      * @return a map of partitions to sequence numbers.
      */
     private Map<Short, Long> readSourceOffsets(Short[] partitions) {
-        Map<Short, Long> partitionToSequenceNumber = new HashMap<Short, Long>();
+        Map<Short, Long> partitionToSequenceNumber = new HashMap<>();
 
         Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
                 sourcePartitions(partitions));
@@ -278,7 +278,7 @@ public class CouchbaseSourceTask extends SourceTask {
     }
 
     private List<Map<String, Object>> sourcePartitions(Short[] partitions) {
-        List<Map<String, Object>> sourcePartitions = new ArrayList<Map<String, Object>>();
+        List<Map<String, Object>> sourcePartitions = new ArrayList<>();
         for (Short partition : partitions) {
             sourcePartitions.add(sourcePartition(partition));
         }
@@ -289,7 +289,7 @@ public class CouchbaseSourceTask extends SourceTask {
      * Converts a Couchbase DCP partition (also known as a vBucket) into the Map format required by Kafka Connect.
      */
     private Map<String, Object> sourcePartition(short partition) {
-        final Map<String, Object> sourcePartition = new HashMap<String, Object>(3);
+        final Map<String, Object> sourcePartition = new HashMap<>(3);
         sourcePartition.put("bucket", bucket);
         sourcePartition.put("partition", String.valueOf(partition)); // Stringify for robust round-tripping across Kafka [de]serialization
         if (connectorNameInOffsets) {
@@ -302,7 +302,7 @@ public class CouchbaseSourceTask extends SourceTask {
      * Converts a Couchbase DCP sequence number into the Map format required by Kafka Connect.
      */
     private static Map<String, Object> sourceOffset(long sequenceNumber) {
-        return Collections.<String, Object>singletonMap("bySeqno", sequenceNumber);
+        return Collections.singletonMap("bySeqno", sequenceNumber);
     }
 
     private static Short[] toBoxedShortArray(Collection<String> stringifiedShorts) {

@@ -54,7 +54,7 @@ public class CouchbaseSinkConnector extends SinkConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
-        List<Map<String, String>> taskConfigs = new ArrayList<Map<String, String>>(maxTasks);
+        List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
         for (int i = 0; i < maxTasks; i++) {
             taskConfigs.add(configProperties);
         }

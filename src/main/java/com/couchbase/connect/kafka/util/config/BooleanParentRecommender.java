@@ -31,7 +31,7 @@ public class BooleanParentRecommender implements ConfigDef.Recommender {
 
     @Override
     public List<Object> validValues(String name, Map<String, Object> connectorConfigs) {
-        return new LinkedList<Object>();
+        return new LinkedList<>();
     }
 
     @Override

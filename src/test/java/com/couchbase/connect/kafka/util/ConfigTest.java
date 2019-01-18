@@ -46,7 +46,7 @@ public class ConfigTest {
         int numberOfConnections = 0;
 
         for (List<Short> group : groups) {
-            Set<Short> nodes = new HashSet<Short>();
+            Set<Short> nodes = new HashSet<>();
             for (short partition : group) {
                 nodes.add(bucketConfig.nodeIndexForMaster(partition, false));
             }

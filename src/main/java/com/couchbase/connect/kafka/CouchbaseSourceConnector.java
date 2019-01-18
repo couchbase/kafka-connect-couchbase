@@ -19,7 +19,6 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.utils.NetworkAddress;
 import com.couchbase.connect.kafka.util.Cluster;
 import com.couchbase.connect.kafka.util.Config;
-import com.couchbase.connect.kafka.util.StringUtils;
 import com.couchbase.connect.kafka.util.Version;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -81,11 +80,11 @@ public class CouchbaseSourceConnector extends SourceConnector {
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
         List<List<String>> partitionsGrouped = bucketConfig.groupGreedyToString(maxTasks);
-        List<Map<String, String>> taskConfigs = new ArrayList<Map<String, String>>(partitionsGrouped.size());
+        List<Map<String, String>> taskConfigs = new ArrayList<>(partitionsGrouped.size());
         for (List<String> taskPartitions : partitionsGrouped) {
-            Map<String, String> taskProps = new HashMap<String, String>(configProperties);
+            Map<String, String> taskProps = new HashMap<>(configProperties);
             taskProps.put(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG,
-                    StringUtils.join(taskPartitions, ","));
+                    String.join(",", taskPartitions));
             taskConfigs.add(taskProps);
         }
         return taskConfigs;

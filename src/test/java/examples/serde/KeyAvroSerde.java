@@ -37,7 +37,7 @@ public class KeyAvroSerde implements Serde<String> {
     }
 
     public KeyAvroSerde(SchemaRegistryClient client) {
-        this(client, Collections.<String, Object>emptyMap());
+        this(client, Collections.emptyMap());
     }
 
     public KeyAvroSerde(SchemaRegistryClient client, Map<String, ?> props) {

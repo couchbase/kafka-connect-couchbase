@@ -27,11 +27,11 @@ public class EnumRecommender implements ConfigDef.Recommender {
     private final List<Object> validValues;
 
     public EnumRecommender(Class<? extends Enum> streamFromClass) {
-        List<String> names = new ArrayList<String>();
+        List<String> names = new ArrayList<>();
         for (Enum value : streamFromClass.getEnumConstants()) {
             names.add(value.name());
         }
-        this.validValues = Collections.<Object>unmodifiableList(names);
+        this.validValues = Collections.unmodifiableList(names);
     }
 
     @Override

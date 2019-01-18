@@ -53,7 +53,7 @@ public class SubDocumentWriterTest {
     @Before
     public void before(){
         Observable<DocumentFragment<Mutation>> result = Observable.empty();
-        List<JsonDocument> documents = new ArrayList();
+        List<JsonDocument> documents = new ArrayList<>();
         documents.add(JsonDocument.create("id"));
 
         Observable<JsonDocument> insert = Observable.from(documents);

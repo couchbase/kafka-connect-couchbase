@@ -27,7 +27,7 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <java-compat.version>1.6</java-compat.version>
+        <java-compat.version>1.8</java-compat.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <kafka-connect-couchbase.version>3.4.1</kafka-connect-couchbase.version>

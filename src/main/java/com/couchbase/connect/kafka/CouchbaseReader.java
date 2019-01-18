@@ -61,7 +61,7 @@ public class CouchbaseReader extends Thread {
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
                            final String sslKeystorePassword, final CompressionMode compressionMode,
                            long persistencePollingIntervalMillis, int flowControlBufferBytes) {
-        this.snapshots = new ConcurrentHashMap<Short, Snapshot>(partitions.length);
+        this.snapshots = new ConcurrentHashMap<>(partitions.length);
         this.partitions = partitions;
         this.partitionToSavedSeqno = partitionToSavedSeqno;
         this.streamFrom = streamFrom;

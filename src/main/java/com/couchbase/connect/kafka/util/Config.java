@@ -42,9 +42,9 @@ public class Config {
 
     public List<List<Short>> partitionsByNodes() {
         int numberOfNodes = numberOfNodes();
-        List<List<Short>> groups = new ArrayList<List<Short>>(numberOfNodes);
+        List<List<Short>> groups = new ArrayList<>(numberOfNodes);
         for (int nodeIdx = 0; nodeIdx < numberOfNodes; nodeIdx++) {
-            groups.add(nodeIdx, new ArrayList<Short>());
+            groups.add(nodeIdx, new ArrayList<>());
         }
         int numberOfPartitions = numberOfPartitions();
         for (short partition = 0; partition < numberOfPartitions; partition++) {
@@ -77,7 +77,7 @@ public class Config {
         } else {
             int groupsPerNode = numberOfGroups / numberOfNodes();
             numberOfGroups = groupsPerNode * numberOfNodes();
-            List<List<Short>> groups = new ArrayList<List<Short>>(numberOfGroups);
+            List<List<Short>> groups = new ArrayList<>(numberOfGroups);
             int groupIdx = 0;
             for (List<Short> partitionGroup : partitionsByNodes) {
                 int minimumPartitionsInGroup = partitionGroup.size() / groupsPerNode;
@@ -99,9 +99,9 @@ public class Config {
 
     public List<List<String>> groupGreedyToString(int numberOfGroups) {
         List<List<Short>> groups = groupGreedy(numberOfGroups);
-        List<List<String>> groupsString = new ArrayList<List<String>>(groups.size());
+        List<List<String>> groupsString = new ArrayList<>(groups.size());
         for (List<Short> group : groups) {
-            List<String> groupString = new ArrayList<String>(group.size());
+            List<String> groupString = new ArrayList<>(group.size());
             for (Short partition : group) {
                 groupString.add(partition.toString());
             }

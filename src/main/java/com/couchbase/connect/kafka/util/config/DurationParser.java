@@ -34,7 +34,7 @@ public class DurationParser {
     private static final Map<String, TimeUnit> qualifierToTimeUnit;
 
     static {
-        final Map<String, TimeUnit> temp = new HashMap<String, TimeUnit>();
+        final Map<String, TimeUnit> temp = new HashMap<>();
         temp.put("ms", TimeUnit.MILLISECONDS);
         temp.put("s", TimeUnit.SECONDS);
         temp.put("m", TimeUnit.MINUTES);

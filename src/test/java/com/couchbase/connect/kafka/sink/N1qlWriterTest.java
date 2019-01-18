@@ -136,7 +136,7 @@ public class N1qlWriterTest {
     public void generateStatementWithCondition() {
         JsonObject object = JsonObject.empty().put("test", "string");
 
-        List<String> fields = new ArrayList<String>();
+        List<String> fields = new ArrayList<>();
         fields.add("styleNumber");
         write(object, N1qlMode.UPDATE_WHERE, fields, emptyResult);
 
@@ -154,7 +154,7 @@ public class N1qlWriterTest {
     public void generateStatementWithConditionAndStaticValueAtEnd() {
         JsonObject object = JsonObject.empty().put("test", "string");
 
-        List<String> fields = new ArrayList<String>();
+        List<String> fields = new ArrayList<>();
         fields.add("styleNumber");
         fields.add("documentType:option");
         write(object, N1qlMode.UPDATE_WHERE, fields, emptyResult);
@@ -172,7 +172,7 @@ public class N1qlWriterTest {
     public void generateStatementWithConditionAndStaticValueAtStart() {
         JsonObject object = JsonObject.empty().put("test", "string");
 
-        List<String> fields = new ArrayList<String>();
+        List<String> fields = new ArrayList<>();
         fields.add("documentType:option");
         fields.add("styleNumber");
 
@@ -191,20 +191,20 @@ public class N1qlWriterTest {
     public void doesNotCreateDocumentWhenUpdateReturns1Row() {
 
         DefaultAsyncN1qlQueryRow row = new DefaultAsyncN1qlQueryRow(new byte[0]);
-        ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<AsyncN1qlQueryRow>();
+        ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<>();
         rows.add(row);
 
         AsyncN1qlQueryResult result = new DefaultAsyncN1qlQueryResult(Observable.from(rows),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
-                Observable.<JsonObject>empty(),
-                Observable.<JsonObject>empty(),
-                Observable.<String>empty(),
+                Observable.empty(),
+                Observable.empty(),
+                Observable.empty(),
+                Observable.empty(),
                 true,
                 "",
                 "");
 
-        ArrayList<AsyncN1qlQueryResult> results = new ArrayList<AsyncN1qlQueryResult>();
+        ArrayList<AsyncN1qlQueryResult> results = new ArrayList<>();
         results.add(result);
         Observable<AsyncN1qlQueryResult> asyncResult = Observable.from(results);
 
@@ -220,20 +220,20 @@ public class N1qlWriterTest {
     @Test
     public void createDocumentWhenUpdateReturns0Row() {
 
-        ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<AsyncN1qlQueryRow>();
+        ArrayList<AsyncN1qlQueryRow> rows = new ArrayList<>();
         N1qlMetrics metrics = new N1qlMetrics(JsonObject.create().put("mutationCount", 0));
 
         AsyncN1qlQueryResult result = new DefaultAsyncN1qlQueryResult(Observable.from(rows),
                 Observable.empty(),
-                Observable.<N1qlMetrics>just(metrics),
-                Observable.<JsonObject>empty(),
-                Observable.<JsonObject>empty(),
-                Observable.<String>empty(),
+                Observable.just(metrics),
+                Observable.empty(),
+                Observable.empty(),
+                Observable.empty(),
                 true,
                 "",
                 "");
 
-        ArrayList<AsyncN1qlQueryResult> results = new ArrayList<AsyncN1qlQueryResult>();
+        ArrayList<AsyncN1qlQueryResult> results = new ArrayList<>();
         results.add(result);
 
         Observable<AsyncN1qlQueryResult> asyncResult = Observable.from(results);

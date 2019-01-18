@@ -98,7 +98,7 @@ public class Cluster {
                     }
                 });
 
-        final AtomicReference<CouchbaseBucketConfig> result = new AtomicReference<CouchbaseBucketConfig>(null);
+        final AtomicReference<CouchbaseBucketConfig> result = new AtomicReference<>(null);
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             for (final String hostname : nodes) {
