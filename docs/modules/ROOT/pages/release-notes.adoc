@@ -2,6 +2,42 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 3.4.2 (2019-02-19)
+
+https://packages.couchbase.com/clients/kafka/3.4.2/kafka-connect-couchbase-3.4.2.zip[kafka-connect-couchbase-3.4.2.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.4.2</version>
+</dependency>
+----
+
+This maintenance release improves the behavior of persistence polling and connection keep-alive.
+
+When connecting to a multi-node Couchbase cluster, connections not used for streaming will no longer be incorrectly flagged as dead.
+
+Persistence polling no longer repeatedly closes connections to servers not hosting any partitions during a rebalance operation.
+
+NOTE: In this release the Couchbase client dependency has been upgraded to version 2.7.2 for security updates in the repackaged Jackson databind library.
+Because Jackson versions compatible with Java 1.6 are no longer maintained, the connector is no longer compatible with Java 1.6.
+*The connector now requires Java 1.8 or later.*
+Couchbase prefers to make such platform changes in minor releases, but is applying the change here given the nature of the issue.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-136[KAFKAC-136] Require Java 1.8 or later
+* https://issues.couchbase.com/browse/KAFKAC-137[KAFKAC-137] Fix Maven issues with Java 11
+* https://issues.couchbase.com/browse/KAFKAC-138[KAFKAC-138] Upgrade Kafka API dependencies to 1.0.2
+* https://issues.couchbase.com/browse/KAFKAC-139[KAFKAC-139] Upgrade Couchbase client to 2.7.2 and DCP client to 0.21.0
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/JDCP-116[JDCP-116] BucketConfigHelper.getHostedPartitions() fails when node hosts no partitions
+* https://issues.couchbase.com/browse/JDCP-117[JDCP-117] Dead connection detection gives false positives when no streams are open
+
 == Couchbase Kafka Connector 3.4.1 (2019-01-15)
 
 https://packages.couchbase.com/clients/kafka/3.4.1/kafka-connect-couchbase-3.4.1.zip[kafka-connect-couchbase-3.4.1.zip]
