@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
+import com.couchbase.client.dcp.DefaultConnectionNameGenerator;
 import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.client.dcp.config.DcpControl;
@@ -33,6 +34,7 @@ import com.couchbase.client.deps.io.netty.util.IllegalReferenceCountException;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.dcp.Message;
 import com.couchbase.connect.kafka.dcp.Snapshot;
+import com.couchbase.connect.kafka.util.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.CompletableSubscriber;
@@ -55,7 +57,7 @@ public class CouchbaseReader extends Thread {
     private final Map<Short, Snapshot> snapshots;
     private final BlockingQueue<Throwable> errorQueue;
 
-    public CouchbaseReader(List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
+    public CouchbaseReader(final String connectorName, List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
                            final BlockingQueue<Event> queue, final BlockingQueue<Throwable> errorQueue, Short[] partitions,
                            final Map<Short, Long> partitionToSavedSeqno, final StreamFrom streamFrom,
                            final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
@@ -67,6 +69,7 @@ public class CouchbaseReader extends Thread {
         this.streamFrom = streamFrom;
         this.errorQueue = errorQueue;
         client = Client.configure()
+                .connectionNameGenerator(DefaultConnectionNameGenerator.forProduct("kafka-connector", Version.getVersion(), connectorName))
                 .connectTimeout(connectionTimeout)
                 .hostnames(clusterAddress)
                 .bucket(bucket)

@@ -105,6 +105,7 @@ public class CouchbaseSourceTask extends SourceTask {
         batchSizeMax = config.getInt(CouchbaseSourceConnectorConfig.BATCH_SIZE_MAX_CONFIG);
         StreamFrom streamFrom = config.getEnum(StreamFrom.class, CouchbaseSourceConnectorConfig.STREAM_FROM_CONFIG);
         CompressionMode compressionMode = config.getEnum(CompressionMode.class, CouchbaseSourceConnectorConfig.COMPRESSION_CONFIG);
+        String connectorName = config.getConnectorName();
 
         final long persistencePollingIntervalMillis = DurationParser.parseDuration(
                 config.getString(CouchbaseSourceConnectorConfig.PERSISTENCE_POLLING_INTERVAL_CONFIG),
@@ -120,7 +121,7 @@ public class CouchbaseSourceTask extends SourceTask {
         running = true;
         queue = new LinkedBlockingQueue<>();
         errorQueue = new LinkedBlockingQueue<>(1);
-        couchbaseReader = new CouchbaseReader(clusterAddress, bucket, username, password, connectionTimeout,
+        couchbaseReader = new CouchbaseReader(connectorName, clusterAddress, bucket, username, password, connectionTimeout,
                 queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
                 compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes);
         couchbaseReader.start();
@@ -306,11 +307,8 @@ public class CouchbaseSourceTask extends SourceTask {
     }
 
     private static Short[] toBoxedShortArray(Collection<String> stringifiedShorts) {
-        Short[] shortArray = new Short[stringifiedShorts.size()];
-        int index = 0;
-        for (String s : stringifiedShorts) {
-            shortArray[index++] = Short.valueOf(s);
-        }
-        return shortArray;
+        return stringifiedShorts.stream()
+                .map(Short::valueOf)
+                .toArray(Short[]::new);
     }
 }
