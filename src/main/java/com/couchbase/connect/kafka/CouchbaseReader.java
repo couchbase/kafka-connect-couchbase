@@ -39,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.CompletableSubscriber;
 import rx.Subscription;
-import rx.functions.Action1;
 
 import java.util.List;
 import java.util.Map;
@@ -219,21 +218,11 @@ public class CouchbaseReader extends Thread {
     }
 
     private void initFailoverLogs() {
-        client.failoverLogs(partitions).toBlocking().forEach(new Action1<ByteBuf>() {
-            @Override
-            public void call(ByteBuf event) {
-                short partition = DcpFailoverLogResponse.vbucket(event);
-                int numEntries = DcpFailoverLogResponse.numLogEntries(event);
-                PartitionState ps = client.sessionState().get(partition);
-                ps.getFailoverLog().clear();
-                for (int i = 0; i < numEntries; i++) {
-                    ps.addToFailoverLog(
-                            DcpFailoverLogResponse.seqnoEntry(event, i),
-                            DcpFailoverLogResponse.vbuuidEntry(event, i)
-                    );
-                }
-                client.sessionState().set(partition, ps);
-            }
+        client.failoverLogs(partitions).toBlocking().forEach(event -> {
+            short partition = DcpFailoverLogResponse.vbucket(event);
+            PartitionState ps = client.sessionState().get(partition);
+            ps.setFailoverLog(DcpFailoverLogResponse.entries(event));
+            client.sessionState().set(partition, ps);
         });
     }
 
