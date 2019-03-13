@@ -91,4 +91,10 @@ public class DocumentEvent {
     public long revisionSeqno() {
         return revisionSeqno;
     }
+
+    /**
+     * Returns true if the document was created or updated,
+     * otherwise false.
+     */
+    public boolean isMutation() { return DcpMutationMessage.is(rawDcpEvent); }
 }

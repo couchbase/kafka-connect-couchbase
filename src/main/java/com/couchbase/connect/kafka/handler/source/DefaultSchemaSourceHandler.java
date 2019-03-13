@@ -30,6 +30,8 @@ import static com.couchbase.connect.kafka.converter.ConverterUtils.bufToBytes;
  * The standard handler. Publishes metadata along with document content.
  *
  * @see Schemas
+ * @see RawJsonSourceHandler
+ * @see RawJsonWithMetadataSourceHandler
  */
 public class DefaultSchemaSourceHandler extends SourceHandler {
 
