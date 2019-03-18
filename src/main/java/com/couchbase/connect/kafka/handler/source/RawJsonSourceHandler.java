@@ -52,7 +52,7 @@ import java.io.IOException;
  * value.converter=org.apache.kafka.connect.json.JsonConverter
  * value.converter.schemas.enable=false
  * transforms=deserializeJson,ignoreDeletes,addField
- * transforms.deserializeJson.type=com.couchbase.connect.kafka.transform.DeserializeJava
+ * transforms.deserializeJson.type=com.couchbase.connect.kafka.transform.DeserializeJson
  * transforms.ignoreDeletes.type=com.couchbase.connect.kafka.transform.DropIfNullValue
  * transforms.addField.type=org.apache.kafka.connect.transforms.InsertField$Value
  * transforms.addField.static.field=magicWord
