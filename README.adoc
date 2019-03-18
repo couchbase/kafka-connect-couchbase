@@ -16,7 +16,7 @@ See the documentation linked above for more details and a quickstart guide.
 
 == Customizing the message format
 
-The example project in `examples/custom-source-handler` shows how to extend the source connector and customize the format of messages published to Kafka.
+The example project in `examples/custom-extensions` shows how to extend the source connector and customize the format of messages published to Kafka.
 
 == Building the connector from source
 
