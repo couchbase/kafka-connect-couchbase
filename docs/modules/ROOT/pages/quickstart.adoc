@@ -5,7 +5,7 @@ This section shows how to add the connector to your application.
 == Download
 
 The connector is shipped as a zip archive, available for download:
-https://packages.couchbase.com/clients/kafka/3.4.2/kafka-connect-couchbase-3.4.2.zip[kafka-connect-couchbase-3.4.2.zip]
+https://packages.couchbase.com/clients/kafka/3.4.3/kafka-connect-couchbase-3.4.3.zip[kafka-connect-couchbase-3.4.3.zip]
 
 If you prefer to build the connectors from source:
 
@@ -69,7 +69,14 @@ zookeeper-server-start.sh $KAFKA_HOME/config/zookeeper.properties
 kafka-server-start.sh $KAFKA_HOME/config/server.properties
 ----
 
-== Configure the Source Connector
+== Couchbase Source Connector
+
+The source connector listens for changes to Couchbase documents and publishes them to a Kafka topic.
+
+TIP: If you're more interested in saving Kafka messages to Couchbase, skip ahead to the <<sink>> section.
+
+[[source-config]]
+=== Configure the Source Connector
 
 The Couchbase connector distribution includes sample config files.
 Look inside `$KAFKA_CONNECT_COUCHBASE_HOME/config` and edit the `quickstart-couchbase-source.properties` file.
@@ -90,7 +97,7 @@ You might also want to set `use_snapshots` to `true`, in which case the source c
 It doesn't matter for this exercise;
 just be aware the option exists and defaults to `false`.
 
-== Run the Source Connector
+=== Run the Source Connector
 
 Kafka connectors can be run in https://kafka.apache.org/documentation/#connect_running[standalone or distributed] mode.
 For now let's run the connector in standalone mode, using the CLASSPATH environment variable to include the Couchbase connector JAR in the class path.
@@ -115,7 +122,7 @@ env CLASSPATH=./* \
                        config/quickstart-couchbase-source.properties
 ----
 
-== Alternatively, Run the Connector with Class Loader Isolation
+=== Alternatively, Run the Connector with Class Loader Isolation
 
 Apache Kafka version 0.11.0 (and Confluent Platform 3.3.0) introduced a mechanism for plugin class path isolation.
 To take advantage of this feature, edit the connect worker config file (the `connect-*.properties` file in the above commands).
@@ -124,7 +131,7 @@ Modify the `plugin.path` property to include the parent directory of `kafka-conn
 Run the connector using the same commands as above, but omitting the `env CLASSPATH=./*` prefix.
 Each Kafka Connect plugin will use a separate class loader, removing the possibility of dependency conflicts.
 
-== Observe Messages Published by Couchbase Source Connector
+=== Observe Messages Published by Couchbase Source Connector
 
 The sample config file tells the source connector to publish to a topic called `test-default`.
 Let's use the Kafka command-line tools to spy on the contents of the topic.
@@ -234,6 +241,47 @@ For reference, the Avro schema for this payload format is shown below:
 }
 ----
 
+=== Publishing Raw Json Messages
+
+NOTE: The information in this section applies to connector versions 3.4.3 and later.
+
+Since version 3.4.3 it's easy to configure the connector to publish schemaless JSON messages identical to the JSON documents from Couchbase.
+This feature is enabled by setting the `dcp.message.converter.class` and `value.converter` source connector configuration properties like so:
+
+[source]
+----
+dcp.message.converter.class=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
+value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
+----
+
+When a Couchbase document is deleted, `RawJsonSourceHandler` sends a Kafka message with a null value.
+If instead you wish to ignore deletion events, filter them out with the `DropIfNullValue` transform:
+
+[source]
+----
+transforms=ignoreDeletes
+transforms.ignoreDeletes.type=com.couchbase.connect.kafka.transform.DropIfNullValue
+----
+
+As a performance optimization, `RawJsonSourceHandler` and its cousin `RawJsonWithMetadataSourceHandler` create Kafka Connect records whose values are byte arrays.
+If you wish to use these handlers together with transforms that modify document content, the record value must be converted from a byte array to a compatible format.
+To do this, include the `DeserializeJson` transform as the first in the chain and set `value.converter` to `JsonConverter` instead of `ByteArrayConverter` like so:
+
+[source]
+----
+dcp.message.converter.class=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
+
+value.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter.schemas.enable=false
+
+transforms=deserializeJson,someOtherTransform
+transforms.deserializeJson.type=com.couchbase.connect.kafka.transform.DeserializeJson
+transforms.someOtherTransform.type=...
+----
+
+TIP: When a topic contains JSON messages, Confluent users should view the messages by running `kafka-console-consumer` instead of `kafka-avro-console-consumer`.
+
+[[sink]]
 == Couchbase Sink Connector
 
 Now let's talk about the sink connector, which reads messages from one or more Kafka topics and writes them to Couchbase Server.
@@ -251,17 +299,17 @@ If the connector fails to locate the document ID node, it will fall back to usin
 
 As of version 3.2.2, if the Kafka message body is null, the sink connector will delete the Couchbase document whose ID matches the Kafka message key.
 
-== Configure and Run the Sink Connector
+=== Configure and Run the Sink Connector
 
 In the `$KAFKA_CONNECT_COUCHBASE_HOME/config` directory there is a file called `quickstart-couchbase-sink.properties`.
-Customize this file as described in <<Configure the Source Connector>>, only now the bucket will receive messages and the user must have _write_ access to the bucket.
+Customize this file as described in <<source-config>>, only now the bucket will receive messages and the user must have _write_ access to the bucket.
 
 Note: Make sure to specify an existing bucket, otherwise the sink connector will fail.
 You may wish to xref:server:manage:manage-buckets/create-bucket.adoc[create a new bucket] to receive the messages.
 
 To run the sink connector, use the same command as described in *Run the Source Connector*, but pass `quickstart-couchbase-sink.properties` as the second argument to `connect-standalone` instead of `quickstart-couchbase-source.properties`.
 
-== Send Test Messages
+=== Send Test Messages
 
 Now that the Couchbase Sink Connector is running, let's give it some messages to import:
 
@@ -277,6 +325,24 @@ If all goes well, the messages will appear in the Couchbase bucket you specified
 If you wish to see how the Couchbase Sink Connector behaves in the absence of message keys, modify the `publishMessage` method in the example source code to set the message keys to null, then rerun the producer.
 
 Alternatively, if you want the Couchbase document ID to be the airport code, edit `quickstart-couchbase-sink.properties` and set `couchbase.document.id=/airport`, restart the sink connector, and run the producer again.
+
+=== Modify Documents Before Writing to Couchbase
+
+Kafka Connect supports https://kafka.apache.org/documentation/#connect_transforms[Single Message Transforms] that let you change the structure or content of a message.
+To experiment with this feature, try adding these lines to your sink connector configuration:
+
+[source]
+----
+transforms=addMagicWord
+transforms.addMagicWord.type=org.apache.kafka.connect.transforms.InsertField$Value
+transforms.addMagicWord.static.field=magicWord
+transforms.addMagicWord.static.value=xyzzy
+----
+
+Now if you restart the sink connector and send some more test messages, each new Couchbase document should have a "magicWord" field with value "xyzzy".
+
+If the built-in transforms are not sufficient, you can write Java code to implement more complex logic.
+Since version 3.4.3, the `examples/custom-extensions` project in `$KAFKA_CONNECT_COUCHBASE_HOME` includes a sample `CustomTransform` which may be used as a starting point for creating your own transforms.
 
 *Parent topic:* xref:index.adoc[Kafka Connector]
 

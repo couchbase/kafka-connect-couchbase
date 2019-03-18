@@ -2,6 +2,33 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 3.4.3 (2019-03-19)
+
+https://packages.couchbase.com/clients/kafka/3.4.3/kafka-connect-couchbase-3.4.3.zip[kafka-connect-couchbase-3.4.3.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.4.3</version>
+</dependency>
+----
+
+This patch release adds out-of-the-box support for publishing Couchbase documents to Kafka as raw JSON using `RawJsonSourceHandler`.
+
+The quickstart guide has been updated with an example of how to apply Single Message Transforms to modify documents before the Sink connector writes them to Couchbase.
+
+The included `examples/custom-extensions` Maven project now demonstrates how to implement a custom transform.
+
+NOTE: The new source handlers and transforms introduced in this patch version are "uncommitted" features, meaning they may change without advance notice in a future patch version.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-141[KAFKAC-141] Add example of a custom Single Message Transform
+* https://issues.couchbase.com/browse/KAFKAC-142[KAFKAC-142] Support publishing raw JSON without having to build example project
+* https://issues.couchbase.com/browse/KAFKAC-143[KAFKAC-143] Upgrade DCP client to 0.22.0
+
 == Couchbase Kafka Connector 3.4.2 (2019-02-19)
 
 https://packages.couchbase.com/clients/kafka/3.4.2/kafka-connect-couchbase-3.4.2.zip[kafka-connect-couchbase-3.4.2.zip]
