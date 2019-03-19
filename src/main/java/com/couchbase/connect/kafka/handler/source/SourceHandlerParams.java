@@ -20,25 +20,25 @@ package com.couchbase.connect.kafka.handler.source;
  * Parameter block for document event handling.
  */
 public class SourceHandlerParams {
-    private final DocumentEvent documentEvent;
-    private final String topic;
+  private final DocumentEvent documentEvent;
+  private final String topic;
 
-    public SourceHandlerParams(DocumentEvent documentEvent, String topic) {
-        this.documentEvent = documentEvent;
-        this.topic = topic;
-    }
+  public SourceHandlerParams(DocumentEvent documentEvent, String topic) {
+    this.documentEvent = documentEvent;
+    this.topic = topic;
+  }
 
-    /**
-     * Returns the event to be converted to a {@link CouchbaseSourceRecord}.
-     */
-    public DocumentEvent documentEvent() {
-        return documentEvent;
-    }
+  /**
+   * Returns the event to be converted to a {@link CouchbaseSourceRecord}.
+   */
+  public DocumentEvent documentEvent() {
+    return documentEvent;
+  }
 
-    /**
-     * Returns the Kafka topic name from the connector configuration.
-     */
-    public String topic() {
-        return topic;
-    }
+  /**
+   * Returns the Kafka topic name from the connector configuration.
+   */
+  public String topic() {
+    return topic;
+  }
 }

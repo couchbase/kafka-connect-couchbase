@@ -23,19 +23,19 @@ import java.util.List;
 import java.util.Map;
 
 public class BooleanParentRecommender implements ConfigDef.Recommender {
-    protected String parentConfigName;
+  protected String parentConfigName;
 
-    public BooleanParentRecommender(String parentConfigName) {
-        this.parentConfigName = parentConfigName;
-    }
+  public BooleanParentRecommender(String parentConfigName) {
+    this.parentConfigName = parentConfigName;
+  }
 
-    @Override
-    public List<Object> validValues(String name, Map<String, Object> connectorConfigs) {
-        return new LinkedList<>();
-    }
+  @Override
+  public List<Object> validValues(String name, Map<String, Object> connectorConfigs) {
+    return new LinkedList<>();
+  }
 
-    @Override
-    public boolean visible(String name, Map<String, Object> connectorConfigs) {
-        return (Boolean) connectorConfigs.get(parentConfigName);
-    }
+  @Override
+  public boolean visible(String name, Map<String, Object> connectorConfigs) {
+    return (Boolean) connectorConfigs.get(parentConfigName);
+  }
 }

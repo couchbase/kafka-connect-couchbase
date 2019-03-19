@@ -24,35 +24,35 @@ import java.util.Map;
 
 public class KeyAvroDeserializer implements Deserializer<String> {
 
-    KafkaAvroDeserializer inner;
+  KafkaAvroDeserializer inner;
 
-    /**
-     * Constructor used by Kafka Streams.
-     */
-    public KeyAvroDeserializer() {
-        inner = new KafkaAvroDeserializer();
-    }
+  /**
+   * Constructor used by Kafka Streams.
+   */
+  public KeyAvroDeserializer() {
+    inner = new KafkaAvroDeserializer();
+  }
 
-    public KeyAvroDeserializer(SchemaRegistryClient client) {
-        inner = new KafkaAvroDeserializer(client);
-    }
+  public KeyAvroDeserializer(SchemaRegistryClient client) {
+    inner = new KafkaAvroDeserializer(client);
+  }
 
-    public KeyAvroDeserializer(SchemaRegistryClient client, Map<String, ?> props) {
-        inner = new KafkaAvroDeserializer(client, props);
-    }
+  public KeyAvroDeserializer(SchemaRegistryClient client, Map<String, ?> props) {
+    inner = new KafkaAvroDeserializer(client, props);
+  }
 
-    @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-        inner.configure(configs, isKey);
-    }
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    inner.configure(configs, isKey);
+  }
 
-    @Override
-    public String deserialize(String s, byte[] bytes) {
-        return (String) inner.deserialize(s, bytes);
-    }
+  @Override
+  public String deserialize(String s, byte[] bytes) {
+    return (String) inner.deserialize(s, bytes);
+  }
 
-    @Override
-    public void close() {
-        inner.close();
-    }
+  @Override
+  public void close() {
+    inner.close();
+  }
 }

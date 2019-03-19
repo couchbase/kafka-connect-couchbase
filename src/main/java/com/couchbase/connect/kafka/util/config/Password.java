@@ -25,37 +25,37 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECT
 import static java.util.Objects.requireNonNull;
 
 public enum Password {
-    CONNECTION("KAFKA_COUCHBASE_PASSWORD", CONNECTION_PASSWORD_CONFIG),
-    SSL_KEYSTORE("KAFKA_COUCHBASE_SSL_KEYSTORE_PASSWORD", CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG);
+  CONNECTION("KAFKA_COUCHBASE_PASSWORD", CONNECTION_PASSWORD_CONFIG),
+  SSL_KEYSTORE("KAFKA_COUCHBASE_SSL_KEYSTORE_PASSWORD", CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG);
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Password.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(Password.class);
 
-    private final String environmentVariableName;
-    private final String configPropertyName;
+  private final String environmentVariableName;
+  private final String configPropertyName;
 
-    Password(String environmentVariableName, String configPropertyName) {
-        this.environmentVariableName = requireNonNull(environmentVariableName);
-        this.configPropertyName = requireNonNull(configPropertyName);
+  Password(String environmentVariableName, String configPropertyName) {
+    this.environmentVariableName = requireNonNull(environmentVariableName);
+    this.configPropertyName = requireNonNull(configPropertyName);
+  }
+
+  public String getEnvironmentVariableName() {
+    return environmentVariableName;
+  }
+
+  public String getConfigPropertyName() {
+    return configPropertyName;
+  }
+
+  public String get(AbstractConfig config) {
+    requireNonNull(config);
+
+    String envar = System.getenv(environmentVariableName);
+    if (envar != null && !envar.isEmpty()) {
+      LOGGER.debug("Using {} password from environment variable {}", this, environmentVariableName);
+      return envar;
     }
 
-    public String getEnvironmentVariableName() {
-        return environmentVariableName;
-    }
-
-    public String getConfigPropertyName() {
-        return configPropertyName;
-    }
-
-    public String get(AbstractConfig config) {
-        requireNonNull(config);
-
-        String envar = System.getenv(environmentVariableName);
-        if (envar != null && !envar.isEmpty()) {
-            LOGGER.debug("Using {} password from environment variable {}", this, environmentVariableName);
-            return envar;
-        }
-
-        LOGGER.debug("Using {} password from config property {}", this, configPropertyName);
-        return config.getPassword(configPropertyName).value();
-    }
+    LOGGER.debug("Using {} password from config property {}", this, configPropertyName);
+    return config.getPassword(configPropertyName).value();
+  }
 }

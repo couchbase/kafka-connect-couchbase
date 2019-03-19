@@ -22,20 +22,20 @@ import org.slf4j.LoggerFactory;
 import java.util.Properties;
 
 public class Version {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Version.class);
-    private static String version = "unknown";
+  private static final Logger LOGGER = LoggerFactory.getLogger(Version.class);
+  private static String version = "unknown";
 
-    static {
-        try {
-            Properties props = new Properties();
-            props.load(Version.class.getResourceAsStream("/kafka-connect-couchbase-version.properties"));
-            version = props.getProperty("version", version).trim();
-        } catch (Exception e) {
-            LOGGER.warn("Error while loading version:", e);
-        }
+  static {
+    try {
+      Properties props = new Properties();
+      props.load(Version.class.getResourceAsStream("/kafka-connect-couchbase-version.properties"));
+      version = props.getProperty("version", version).trim();
+    } catch (Exception e) {
+      LOGGER.warn("Error while loading version:", e);
     }
+  }
 
-    public static String getVersion() {
-        return version;
-    }
+  public static String getVersion() {
+    return version;
+  }
 }

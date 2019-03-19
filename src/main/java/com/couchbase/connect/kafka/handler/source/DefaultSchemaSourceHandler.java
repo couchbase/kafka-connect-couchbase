@@ -35,70 +35,70 @@ import static com.couchbase.connect.kafka.converter.ConverterUtils.bufToBytes;
  */
 public class DefaultSchemaSourceHandler extends SourceHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultSchemaSourceHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultSchemaSourceHandler.class);
 
-    @Override
-    public CouchbaseSourceRecord handle(SourceHandlerParams params) {
-        CouchbaseSourceRecord.Builder builder = CouchbaseSourceRecord.builder();
+  @Override
+  public CouchbaseSourceRecord handle(SourceHandlerParams params) {
+    CouchbaseSourceRecord.Builder builder = CouchbaseSourceRecord.builder();
 
-        // A handler may choose to route the message to any topic.
-        // The code shown here sends the message to the topic from the connector configuration.
-        // This is optional; if no topic is specified, it defaults to the one from the config.
-        builder.topic(params.topic());
+    // A handler may choose to route the message to any topic.
+    // The code shown here sends the message to the topic from the connector configuration.
+    // This is optional; if no topic is specified, it defaults to the one from the config.
+    builder.topic(params.topic());
 
-        buildKey(params, builder);
+    buildKey(params, builder);
 
-        if (!buildValue(params, builder)) {
-            // Don't know how to handle this message; skip it!
-            // A custom handler may filter the event stream by returning null to skip a message.
-            return null;
-        }
-
-        return builder.build();
+    if (!buildValue(params, builder)) {
+      // Don't know how to handle this message; skip it!
+      // A custom handler may filter the event stream by returning null to skip a message.
+      return null;
     }
 
-    protected void buildKey(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
-        builder.key(Schemas.KEY_SCHEMA, params.documentEvent().key());
+    return builder.build();
+  }
+
+  protected void buildKey(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
+    builder.key(Schemas.KEY_SCHEMA, params.documentEvent().key());
+  }
+
+  /**
+   * @return true to publish the message, or false to skip it
+   */
+  protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
+    final DocumentEvent docEvent = params.documentEvent();
+    final ByteBuf event = docEvent.rawDcpEvent();
+
+    final EventType type = EventType.of(event);
+    if (type == null) {
+      LOGGER.warn("unexpected event type {}", event.getByte(1));
+      return false;
     }
 
-    /**
-     * @return true to publish the message, or false to skip it
-     */
-    protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
-        final DocumentEvent docEvent = params.documentEvent();
-        final ByteBuf event = docEvent.rawDcpEvent();
+    final Struct record = new Struct(Schemas.VALUE_DEFAULT_SCHEMA);
+    record.put("bucket", docEvent.bucket());
+    record.put("partition", docEvent.vBucket());
+    record.put("vBucketUuid", docEvent.vBucketUuid());
+    record.put("key", docEvent.key());
+    record.put("cas", docEvent.cas());
+    record.put("bySeqno", docEvent.bySeqno());
+    record.put("revSeqno", docEvent.revisionSeqno());
 
-        final EventType type = EventType.of(event);
-        if (type == null) {
-            LOGGER.warn("unexpected event type {}", event.getByte(1));
-            return false;
-        }
-
-        final Struct record = new Struct(Schemas.VALUE_DEFAULT_SCHEMA);
-        record.put("bucket", docEvent.bucket());
-        record.put("partition", docEvent.vBucket());
-        record.put("vBucketUuid", docEvent.vBucketUuid());
-        record.put("key", docEvent.key());
-        record.put("cas", docEvent.cas());
-        record.put("bySeqno", docEvent.bySeqno());
-        record.put("revSeqno", docEvent.revisionSeqno());
-
-        if (type == EventType.MUTATION) {
-            record.put("event", "mutation");
-            record.put("expiration", DcpMutationMessage.expiry(event));
-            record.put("flags", DcpMutationMessage.flags(event));
-            record.put("lockTime", DcpMutationMessage.lockTime(event));
-            record.put("content", bufToBytes(DcpMutationMessage.content(event)));
-        } else if (type == EventType.DELETION) {
-            record.put("event", "deletion");
-        } else if (type == EventType.EXPIRATION) {
-            record.put("event", "expiration");
-        } else {
-            LOGGER.warn("unexpected event type {}", event.getByte(1));
-            return false;
-        }
-
-        builder.value(Schemas.VALUE_DEFAULT_SCHEMA, record);
-        return true;
+    if (type == EventType.MUTATION) {
+      record.put("event", "mutation");
+      record.put("expiration", DcpMutationMessage.expiry(event));
+      record.put("flags", DcpMutationMessage.flags(event));
+      record.put("lockTime", DcpMutationMessage.lockTime(event));
+      record.put("content", bufToBytes(DcpMutationMessage.content(event)));
+    } else if (type == EventType.DELETION) {
+      record.put("event", "deletion");
+    } else if (type == EventType.EXPIRATION) {
+      record.put("event", "expiration");
+    } else {
+      LOGGER.warn("unexpected event type {}", event.getByte(1));
+      return false;
     }
+
+    builder.value(Schemas.VALUE_DEFAULT_SCHEMA, record);
+    return true;
+  }
 }

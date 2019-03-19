@@ -24,24 +24,24 @@ import java.util.Map;
 
 public class DropIfNullValue<R extends ConnectRecord<R>> implements Transformation<R> {
 
-    public static final String OVERVIEW_DOC =
-            "Propagate a record only if its value is non-null.";
+  public static final String OVERVIEW_DOC =
+      "Propagate a record only if its value is non-null.";
 
-    @Override
-    public R apply(R record) {
-        return record.value() == null ? null : record;
-    }
+  @Override
+  public R apply(R record) {
+    return record.value() == null ? null : record;
+  }
 
-    @Override
-    public ConfigDef config() {
-        return new ConfigDef();
-    }
+  @Override
+  public ConfigDef config() {
+    return new ConfigDef();
+  }
 
-    @Override
-    public void close() {
-    }
+  @Override
+  public void close() {
+  }
 
-    @Override
-    public void configure(Map<String, ?> configs) {
-    }
+  @Override
+  public void configure(Map<String, ?> configs) {
+  }
 }

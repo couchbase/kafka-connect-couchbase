@@ -20,14 +20,14 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 public class SizeValidator implements ConfigDef.Validator {
-    @Override
-    public void ensureValid(String name, Object value) {
-        try {
-            if (value != null && !((String) value).isEmpty()) {
-                SizeParser.parseSizeBytes((String) value);
-            }
-        } catch (IllegalArgumentException e) {
-            throw new ConfigException("Failed to parse config property '" + name + "' -- " + e.getMessage());
-        }
+  @Override
+  public void ensureValid(String name, Object value) {
+    try {
+      if (value != null && !((String) value).isEmpty()) {
+        SizeParser.parseSizeBytes((String) value);
+      }
+    } catch (IllegalArgumentException e) {
+      throw new ConfigException("Failed to parse config property '" + name + "' -- " + e.getMessage());
     }
+  }
 }

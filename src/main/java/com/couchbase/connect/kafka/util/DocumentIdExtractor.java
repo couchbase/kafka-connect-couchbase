@@ -25,18 +25,18 @@ import java.io.IOException;
  */
 public class DocumentIdExtractor {
 
-    private final DocumentPathExtractor pathExtractor;
+  private final DocumentPathExtractor pathExtractor;
 
-    public DocumentIdExtractor(String documentIdFormat, boolean removeDocumentId) {
-        pathExtractor = new DocumentPathExtractor(documentIdFormat,removeDocumentId);
-    }
+  public DocumentIdExtractor(String documentIdFormat, boolean removeDocumentId) {
+    pathExtractor = new DocumentPathExtractor(documentIdFormat, removeDocumentId);
+  }
 
-    /**
-     * @param json The document content encoded as UTF-8. If this method returns normally,
-     * it may modify the contents of the array to remove the fields used by the document ID.
-     */
-    public JsonBinaryDocument extractDocumentId(final byte[] json, int expiry) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException {
-        DocumentPathExtractor.DocumentExtraction extraction = pathExtractor.extractDocumentPath(json);
-        return JsonBinaryDocument.create(extraction.getPathValue(), expiry, extraction.getData());
-    }
+  /**
+   * @param json The document content encoded as UTF-8. If this method returns normally,
+   * it may modify the contents of the array to remove the fields used by the document ID.
+   */
+  public JsonBinaryDocument extractDocumentId(final byte[] json, int expiry) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException {
+    DocumentPathExtractor.DocumentExtraction extraction = pathExtractor.extractDocumentPath(json);
+    return JsonBinaryDocument.create(extraction.getPathValue(), expiry, extraction.getData());
+  }
 }

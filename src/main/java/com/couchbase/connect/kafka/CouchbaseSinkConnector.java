@@ -26,38 +26,38 @@ import java.util.List;
 import java.util.Map;
 
 public class CouchbaseSinkConnector extends SinkConnector {
-    private Map<String, String> configProperties;
+  private Map<String, String> configProperties;
 
-    @Override
-    public String version() {
-        return Version.getVersion();
-    }
+  @Override
+  public String version() {
+    return Version.getVersion();
+  }
 
-    @Override
-    public void start(Map<String, String> properties) {
-        configProperties = properties;
-    }
+  @Override
+  public void start(Map<String, String> properties) {
+    configProperties = properties;
+  }
 
-    @Override
-    public void stop() {
-    }
+  @Override
+  public void stop() {
+  }
 
-    @Override
-    public ConfigDef config() {
-        return CouchbaseSinkConnectorConfig.config;
-    }
+  @Override
+  public ConfigDef config() {
+    return CouchbaseSinkConnectorConfig.config;
+  }
 
-    @Override
-    public Class<? extends Task> taskClass() {
-        return CouchbaseSinkTask.class;
-    }
+  @Override
+  public Class<? extends Task> taskClass() {
+    return CouchbaseSinkTask.class;
+  }
 
-    @Override
-    public List<Map<String, String>> taskConfigs(int maxTasks) {
-        List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
-        for (int i = 0; i < maxTasks; i++) {
-            taskConfigs.add(configProperties);
-        }
-        return taskConfigs;
+  @Override
+  public List<Map<String, String>> taskConfigs(int maxTasks) {
+    List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
+    for (int i = 0; i < maxTasks; i++) {
+      taskConfigs.add(configProperties);
     }
+    return taskConfigs;
+  }
 }

@@ -29,13 +29,13 @@ import org.apache.kafka.connect.source.SourceRecord;
 @Deprecated
 public interface Converter {
 
-    /**
-     * Convert a DCP message to a SourceRecord.
-     *
-     * @param byteBuf The DCP message as a ByteBuf.
-     * @param bucket The bucket.
-     * @param topic The topic.
-     * @return A converted SourceRecord.
-     */
-    SourceRecord convert(final ByteBuf byteBuf, final String bucket, final String topic);
+  /**
+   * Convert a DCP message to a SourceRecord.
+   *
+   * @param byteBuf The DCP message as a ByteBuf.
+   * @param bucket The bucket.
+   * @param topic The topic.
+   * @return A converted SourceRecord.
+   */
+  SourceRecord convert(final ByteBuf byteBuf, final String bucket, final String topic);
 }

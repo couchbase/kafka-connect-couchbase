@@ -29,58 +29,58 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class DeserializeJson<R extends ConnectRecord<R>> implements Transformation<R> {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    static {
-        objectMapper.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
-    }
+  static {
+    objectMapper.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+  }
 
-    public static final String OVERVIEW_DOC =
-            "Convert JSON values from a byte[] or ByteBuffer to a Map so downstream transforms can operate on the value." +
-                    " Any null values are passed through unmodified." +
-                    " The value schema is passed through unmodified (may be null).";
+  public static final String OVERVIEW_DOC =
+      "Convert JSON values from a byte[] or ByteBuffer to a Map so downstream transforms can operate on the value." +
+          " Any null values are passed through unmodified." +
+          " The value schema is passed through unmodified (may be null).";
 
-    @Override
-    public R apply(R record) {
-        final Object value = record.value();
-        final Map newValue;
+  @Override
+  public R apply(R record) {
+    final Object value = record.value();
+    final Map newValue;
 
-        try {
-            if (value == null) {
-                return record;
+    try {
+      if (value == null) {
+        return record;
 
-            } else if (value instanceof byte[]) {
-                newValue = objectMapper.readValue((byte[]) value, Map.class);
+      } else if (value instanceof byte[]) {
+        newValue = objectMapper.readValue((byte[]) value, Map.class);
 
-            } else if (value instanceof ByteBuffer) {
-                try (ByteBufferInputStream in = new ByteBufferInputStream((ByteBuffer) value)) {
-                    newValue = objectMapper.readValue(in, Map.class);
-                }
-
-            } else {
-                throw new DataException(getClass().getSimpleName() + " transform expected value to be a byte array or ByteBuffer but got " + value.getClass().getName());
-            }
-
-            return record.newRecord(record.topic(), record.kafkaPartition(),
-                    record.keySchema(), record.key(),
-                    record.valueSchema(), newValue,
-                    record.timestamp());
-
-        } catch (IOException e) {
-            throw new DataException(getClass().getSimpleName() + " transform expected value to be JSON but got something else.", e);
+      } else if (value instanceof ByteBuffer) {
+        try (ByteBufferInputStream in = new ByteBufferInputStream((ByteBuffer) value)) {
+          newValue = objectMapper.readValue(in, Map.class);
         }
-    }
 
-    @Override
-    public ConfigDef config() {
-        return new ConfigDef();
-    }
+      } else {
+        throw new DataException(getClass().getSimpleName() + " transform expected value to be a byte array or ByteBuffer but got " + value.getClass().getName());
+      }
 
-    @Override
-    public void close() {
-    }
+      return record.newRecord(record.topic(), record.kafkaPartition(),
+          record.keySchema(), record.key(),
+          record.valueSchema(), newValue,
+          record.timestamp());
 
-    @Override
-    public void configure(Map<String, ?> configs) {
+    } catch (IOException e) {
+      throw new DataException(getClass().getSimpleName() + " transform expected value to be JSON but got something else.", e);
     }
+  }
+
+  @Override
+  public ConfigDef config() {
+    return new ConfigDef();
+  }
+
+  @Override
+  public void close() {
+  }
+
+  @Override
+  public void configure(Map<String, ?> configs) {
+  }
 }

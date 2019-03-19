@@ -22,20 +22,20 @@ import org.apache.kafka.common.config.ConfigException;
 import java.util.Arrays;
 
 public class EnumValidator implements ConfigDef.Validator {
-    private final Class<? extends Enum> enumClass;
+  private final Class<? extends Enum> enumClass;
 
-    public EnumValidator(Class<? extends Enum> enumClass) {
-        this.enumClass = enumClass;
-    }
+  public EnumValidator(Class<? extends Enum> enumClass) {
+    this.enumClass = enumClass;
+  }
 
-    @Override
-    public void ensureValid(String name, Object value) {
-        try {
-            //noinspection unchecked
-            Enum.valueOf(enumClass, (String) value);
-        } catch (IllegalArgumentException e) {
-            throw new ConfigException("Bad value '" + value + "' for config key '" + name + "'" +
-                    "; must be one of " + Arrays.toString(enumClass.getEnumConstants()));
-        }
+  @Override
+  public void ensureValid(String name, Object value) {
+    try {
+      //noinspection unchecked
+      Enum.valueOf(enumClass, (String) value);
+    } catch (IllegalArgumentException e) {
+      throw new ConfigException("Bad value '" + value + "' for config key '" + name + "'" +
+          "; must be one of " + Arrays.toString(enumClass.getEnumConstants()));
     }
+  }
 }

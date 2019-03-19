@@ -50,113 +50,113 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * @see RawJsonSourceHandler
  */
 public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RawJsonWithMetadataSourceHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(RawJsonWithMetadataSourceHandler.class);
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Override
-    public CouchbaseSourceRecord handle(SourceHandlerParams params) {
-        CouchbaseSourceRecord.Builder builder = CouchbaseSourceRecord.builder();
+  @Override
+  public CouchbaseSourceRecord handle(SourceHandlerParams params) {
+    CouchbaseSourceRecord.Builder builder = CouchbaseSourceRecord.builder();
 
-        if (!buildValue(params, builder)) {
-            return null;
-        }
-
-        return builder
-                .topic(getTopic(params))
-                .key(Schema.STRING_SCHEMA, params.documentEvent().key())
-                .build();
+    if (!buildValue(params, builder)) {
+      return null;
     }
 
-    protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
+    return builder
+        .topic(getTopic(params))
+        .key(Schema.STRING_SCHEMA, params.documentEvent().key())
+        .build();
+  }
 
-        if (!super.buildValue(params, builder)) {
-            return false;
-        }
+  protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
 
-        final DocumentEvent docEvent = params.documentEvent();
-        final ByteBuf event = docEvent.rawDcpEvent();
-
-        final EventType type = EventType.of(event);
-
-        Map<String, Object> metadata = new HashMap<String, Object>();
-
-        metadata.put("bucket", docEvent.bucket());
-        metadata.put("partition", docEvent.vBucket());
-        metadata.put("vBucketUuid", docEvent.vBucketUuid());
-        metadata.put("key", docEvent.key());
-        metadata.put("cas", docEvent.cas());
-        metadata.put("bySeqno", docEvent.bySeqno());
-        metadata.put("revSeqno", docEvent.revisionSeqno());
-
-        if (type == EventType.MUTATION) {
-            metadata.put("event", "mutation");
-            metadata.put("expiration", DcpMutationMessage.expiry(event));
-            metadata.put("flags", DcpMutationMessage.flags(event));
-            metadata.put("lockTime", DcpMutationMessage.lockTime(event));
-
-        } else if (type == EventType.DELETION) {
-            metadata.put("event", "deletion");
-        } else if (type == EventType.EXPIRATION) {
-            metadata.put("event", "expiration");
-        } else {
-            LOGGER.warn("unexpected event type {}", event.getByte(1));
-            return false;
-        }
-
-        try {
-            byte[] value = objectMapper.writeValueAsBytes(metadata);
-            if (type == EventType.MUTATION) {
-                value = withContentField(value, (byte[]) builder.value());
-            }
-            builder.value(null, value);
-            return true;
-        } catch (JsonProcessingException e) {
-            throw new DataException("Failed to serialize event metadata", e);
-        }
+    if (!super.buildValue(params, builder)) {
+      return false;
     }
 
-    private static final byte[] contentFieldNameBytes = ",\"content\":".getBytes(UTF_8);
+    final DocumentEvent docEvent = params.documentEvent();
+    final ByteBuf event = docEvent.rawDcpEvent();
 
-    protected static byte[] withContentField(byte[] metadata, byte[] documentContent) {
-        final int resultLength = metadata.length + contentFieldNameBytes.length + documentContent.length;
-        return new ByteArrayBuilder(resultLength)
-                .append(metadata, metadata.length - 1) // omit trailing brace; we'll add it later
-                .append(contentFieldNameBytes) // ,content=
-                .append(documentContent) // known to be well-formed JSON
-                .append((byte) '}')
-                .build();
+    final EventType type = EventType.of(event);
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+
+    metadata.put("bucket", docEvent.bucket());
+    metadata.put("partition", docEvent.vBucket());
+    metadata.put("vBucketUuid", docEvent.vBucketUuid());
+    metadata.put("key", docEvent.key());
+    metadata.put("cas", docEvent.cas());
+    metadata.put("bySeqno", docEvent.bySeqno());
+    metadata.put("revSeqno", docEvent.revisionSeqno());
+
+    if (type == EventType.MUTATION) {
+      metadata.put("event", "mutation");
+      metadata.put("expiration", DcpMutationMessage.expiry(event));
+      metadata.put("flags", DcpMutationMessage.flags(event));
+      metadata.put("lockTime", DcpMutationMessage.lockTime(event));
+
+    } else if (type == EventType.DELETION) {
+      metadata.put("event", "deletion");
+    } else if (type == EventType.EXPIRATION) {
+      metadata.put("event", "expiration");
+    } else {
+      LOGGER.warn("unexpected event type {}", event.getByte(1));
+      return false;
     }
 
-    // A zero-copy cousin of ByteArrayOutputStream
-    protected static class ByteArrayBuilder {
-        private final byte[] bytes;
-        private int destIndex = 0;
-
-        public ByteArrayBuilder(int finalSize) {
-            this.bytes = new byte[finalSize];
-        }
-
-        public ByteArrayBuilder append(byte[] source, int len) {
-            System.arraycopy(source, 0, bytes, destIndex, len);
-            destIndex += len;
-            return this;
-        }
-
-        public ByteArrayBuilder append(byte[] source) {
-            return append(source, source.length);
-        }
-
-        public ByteArrayBuilder append(byte b) {
-            bytes[destIndex++] = b;
-            return this;
-        }
-
-        public byte[] build() {
-            if (destIndex != bytes.length) {
-                throw new IllegalStateException("Byte array not sized properly. Expected " + bytes.length + " bytes but got " + destIndex);
-            }
-            return bytes;
-        }
+    try {
+      byte[] value = objectMapper.writeValueAsBytes(metadata);
+      if (type == EventType.MUTATION) {
+        value = withContentField(value, (byte[]) builder.value());
+      }
+      builder.value(null, value);
+      return true;
+    } catch (JsonProcessingException e) {
+      throw new DataException("Failed to serialize event metadata", e);
     }
+  }
+
+  private static final byte[] contentFieldNameBytes = ",\"content\":".getBytes(UTF_8);
+
+  protected static byte[] withContentField(byte[] metadata, byte[] documentContent) {
+    final int resultLength = metadata.length + contentFieldNameBytes.length + documentContent.length;
+    return new ByteArrayBuilder(resultLength)
+        .append(metadata, metadata.length - 1) // omit trailing brace; we'll add it later
+        .append(contentFieldNameBytes) // ,content=
+        .append(documentContent) // known to be well-formed JSON
+        .append((byte) '}')
+        .build();
+  }
+
+  // A zero-copy cousin of ByteArrayOutputStream
+  protected static class ByteArrayBuilder {
+    private final byte[] bytes;
+    private int destIndex = 0;
+
+    public ByteArrayBuilder(int finalSize) {
+      this.bytes = new byte[finalSize];
+    }
+
+    public ByteArrayBuilder append(byte[] source, int len) {
+      System.arraycopy(source, 0, bytes, destIndex, len);
+      destIndex += len;
+      return this;
+    }
+
+    public ByteArrayBuilder append(byte[] source) {
+      return append(source, source.length);
+    }
+
+    public ByteArrayBuilder append(byte b) {
+      bytes[destIndex++] = b;
+      return this;
+    }
+
+    public byte[] build() {
+      if (destIndex != bytes.length) {
+        throw new IllegalStateException("Byte array not sized properly. Expected " + bytes.length + " bytes but got " + destIndex);
+      }
+      return bytes;
+    }
+  }
 }

@@ -67,133 +67,133 @@ import static java.util.Collections.singletonMap;
  * codes reversed and converted to lower case.
  */
 public class CustomTransform<R extends ConnectRecord<R>> implements Transformation<R> {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final JsonConverter jsonConverter = newSchemalessJsonConverter();
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final JsonConverter jsonConverter = newSchemalessJsonConverter();
 
-    private static JsonConverter newSchemalessJsonConverter() {
-        JsonConverter converter = new JsonConverter();
-        converter.configure(singletonMap("schemas.enable", false), false);
-        return converter;
+  private static JsonConverter newSchemalessJsonConverter() {
+    JsonConverter converter = new JsonConverter();
+    converter.configure(singletonMap("schemas.enable", false), false);
+    return converter;
+  }
+
+  private static final String OP_CONFIG = "op";
+
+  private static final ConfigDef CONFIG_DEF = new ConfigDef()
+      .define(OP_CONFIG,
+          ConfigDef.Type.STRING,
+          ConfigDef.NO_DEFAULT_VALUE,
+          new EnumValidator(Operation.class),
+          ConfigDef.Importance.HIGH,
+          "The type of conversion to apply to all text fields in the document. Valid values are: " + Arrays.toString(Operation.values()));
+
+  private enum Operation implements Function<String, String> {
+    REVERSE() {
+      @Override
+      public String apply(String s) {
+        return new StringBuffer(s).reverse().toString();
+      }
+    },
+    LOWER_CASE() {
+      @Override
+      public String apply(String s) {
+        return s.toLowerCase(Locale.ROOT);
+      }
+    }
+  }
+
+  private Function<String, String> textTransformer;
+
+  @Override
+  public ConfigDef config() {
+    return CONFIG_DEF;
+  }
+
+  @Override
+  public void configure(Map<String, ?> configs) {
+    final AbstractConfig config = new AbstractConfig(config(), configs);
+    this.textTransformer = Operation.valueOf(config.getString(OP_CONFIG));
+  }
+
+  @Override
+  public R apply(R record) {
+    if (record.value() == null) {
+      return record;
     }
 
-    private static final String OP_CONFIG = "op";
+    try {
+      final JsonNode document = getValueAsJsonNode(record);
 
-    private static final ConfigDef CONFIG_DEF = new ConfigDef()
-            .define(OP_CONFIG,
-                    ConfigDef.Type.STRING,
-                    ConfigDef.NO_DEFAULT_VALUE,
-                    new EnumValidator(Operation.class),
-                    ConfigDef.Importance.HIGH,
-                    "The type of conversion to apply to all text fields in the document. Valid values are: " + Arrays.toString(Operation.values()));
+      // Working with a Map instead of a JsonNode might be more efficient, since you
+      // won't have to convert back to a Map when submitting the result.
+      // To go down that road, call getValueAsMap(record) instead.
 
-    private enum Operation implements Function<String, String> {
-        REVERSE() {
-            @Override
-            public String apply(String s) {
-                return new StringBuffer(s).reverse().toString();
-            }
-        },
-        LOWER_CASE() {
-            @Override
-            public String apply(String s) {
-                return s.toLowerCase(Locale.ROOT);
-            }
+      // Just for a fun example, this code modifies the values of all text fields.
+      // For example, if the operation is REVERSE, then {"foo":"bar"} becomes {"foo":"rab"}.
+      transformTextFields(document, textTransformer);
+
+      final Map<String, Object> resultAsMap = objectMapper.convertValue(document, new TypeReference<Map<String, Object>>() {
+      });
+
+      return record.newRecord(
+          record.topic(), record.kafkaPartition(),
+          record.keySchema(), record.key(),
+          null, resultAsMap,
+          record.timestamp());
+
+    } catch (IOException e) {
+      throw new DataException("Expected JSON Object but got something else.", e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> getValueAsMap(ConnectRecord record) throws IOException {
+    return record.value() instanceof Map
+        ? (Map) record.value()
+        : objectMapper.convertValue(getValueAsJsonNode(record), Map.class);
+  }
+
+  private static JsonNode getValueAsJsonNode(ConnectRecord record) throws IOException {
+    if (record.value() instanceof Map) {
+      return objectMapper.convertValue(record.value(), JsonNode.class);
+    }
+
+    return objectMapper.readTree(getValueAsJsonBytes(record));
+  }
+
+  private static byte[] getValueAsJsonBytes(ConnectRecord record) {
+    return jsonConverter.fromConnectData(record.topic(), record.valueSchema(), record.value());
+  }
+
+  // Walk the JSON tree and modify textual fields in-place.
+  private void transformTextFields(JsonNode node, Function<String, String> transformer) {
+    if (node.isObject()) {
+      // take a snapshot of the field names to avoid concurrent modification
+      final List<String> fieldNames = new ArrayList<>(node.size());
+      node.fieldNames().forEachRemaining(fieldNames::add);
+
+      for (String fieldName : fieldNames) {
+        final JsonNode child = node.get(fieldName);
+        if (child.isContainerNode()) {
+          transformTextFields(child, transformer);
+        } else if (child.isTextual()) {
+          final String oldValue = child.textValue();
+          ((ObjectNode) node).set(fieldName, new TextNode(transformer.apply(oldValue)));
         }
-    }
-
-    private Function<String, String> textTransformer;
-
-    @Override
-    public ConfigDef config() {
-        return CONFIG_DEF;
-    }
-
-    @Override
-    public void configure(Map<String, ?> configs) {
-        final AbstractConfig config = new AbstractConfig(config(), configs);
-        this.textTransformer = Operation.valueOf(config.getString(OP_CONFIG));
-    }
-
-    @Override
-    public R apply(R record) {
-        if (record.value() == null) {
-            return record;
+      }
+    } else if (node.isArray()) {
+      for (int i = 0; i < node.size(); i++) {
+        final JsonNode child = node.get(i);
+        if (child.isContainerNode()) {
+          transformTextFields(child, transformer);
+        } else if (child.isTextual()) {
+          final String oldValue = child.textValue();
+          ((ArrayNode) node).set(i, new TextNode(transformer.apply(oldValue)));
         }
-
-        try {
-            final JsonNode document = getValueAsJsonNode(record);
-
-            // Working with a Map instead of a JsonNode might be more efficient, since you
-            // won't have to convert back to a Map when submitting the result.
-            // To go down that road, call getValueAsMap(record) instead.
-
-            // Just for a fun example, this code modifies the values of all text fields.
-            // For example, if the operation is REVERSE, then {"foo":"bar"} becomes {"foo":"rab"}.
-            transformTextFields(document, textTransformer);
-
-            final Map<String, Object> resultAsMap = objectMapper.convertValue(document, new TypeReference<Map<String, Object>>() {
-            });
-
-            return record.newRecord(
-                    record.topic(), record.kafkaPartition(),
-                    record.keySchema(), record.key(),
-                    null, resultAsMap,
-                    record.timestamp());
-
-        } catch (IOException e) {
-            throw new DataException("Expected JSON Object but got something else.", e);
-        }
+      }
     }
+  }
 
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> getValueAsMap(ConnectRecord record) throws IOException {
-        return record.value() instanceof Map
-                ? (Map) record.value()
-                : objectMapper.convertValue(getValueAsJsonNode(record), Map.class);
-    }
-
-    private static JsonNode getValueAsJsonNode(ConnectRecord record) throws IOException {
-        if (record.value() instanceof Map) {
-            return objectMapper.convertValue(record.value(), JsonNode.class);
-        }
-
-        return objectMapper.readTree(getValueAsJsonBytes(record));
-    }
-
-    private static byte[] getValueAsJsonBytes(ConnectRecord record) {
-        return jsonConverter.fromConnectData(record.topic(), record.valueSchema(), record.value());
-    }
-
-    // Walk the JSON tree and modify textual fields in-place.
-    private void transformTextFields(JsonNode node, Function<String, String> transformer) {
-        if (node.isObject()) {
-            // take a snapshot of the field names to avoid concurrent modification
-            final List<String> fieldNames = new ArrayList<>(node.size());
-            node.fieldNames().forEachRemaining(fieldNames::add);
-
-            for (String fieldName : fieldNames) {
-                final JsonNode child = node.get(fieldName);
-                if (child.isContainerNode()) {
-                    transformTextFields(child, transformer);
-                } else if (child.isTextual()) {
-                    final String oldValue = child.textValue();
-                    ((ObjectNode) node).set(fieldName, new TextNode(transformer.apply(oldValue)));
-                }
-            }
-        } else if (node.isArray()) {
-            for (int i = 0; i < node.size(); i++) {
-                final JsonNode child = node.get(i);
-                if (child.isContainerNode()) {
-                    transformTextFields(child, transformer);
-                } else if (child.isTextual()) {
-                    final String oldValue = child.textValue();
-                    ((ArrayNode) node).set(i, new TextNode(transformer.apply(oldValue)));
-                }
-            }
-        }
-    }
-
-    @Override
-    public void close() {
-    }
+  @Override
+  public void close() {
+  }
 }

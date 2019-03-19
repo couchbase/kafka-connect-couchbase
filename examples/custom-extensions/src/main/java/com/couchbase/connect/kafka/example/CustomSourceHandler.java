@@ -35,23 +35,23 @@ import org.slf4j.LoggerFactory;
  * and {@link com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler}.
  */
 public class CustomSourceHandler extends RawJsonSourceHandler {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CustomSourceHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(CustomSourceHandler.class);
 
-    @Override
-    protected boolean passesFilter(SourceHandlerParams params) {
-        // Ignore deletions and expirations instead of sending message with null value.
-        // NOTE: another way to achieve this result would be to use a DropIfNullValue transform.
-        return params.documentEvent().isMutation();
+  @Override
+  protected boolean passesFilter(SourceHandlerParams params) {
+    // Ignore deletions and expirations instead of sending message with null value.
+    // NOTE: another way to achieve this result would be to use a DropIfNullValue transform.
+    return params.documentEvent().isMutation();
+  }
+
+  @Override
+  protected String getTopic(SourceHandlerParams params) {
+    // Alter the topic based on document key / content:
+    if (params.documentEvent().key().startsWith("xyzzy")) {
+      return params.topic() + "-xyzzy";
     }
 
-    @Override
-    protected String getTopic(SourceHandlerParams params) {
-        // Alter the topic based on document key / content:
-        if (params.documentEvent().key().startsWith("xyzzy")) {
-            return params.topic() + "-xyzzy";
-        }
-
-        // Or use the default topic
-        return null;
-    }
+    // Or use the default topic
+    return null;
+  }
 }

@@ -23,60 +23,60 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 public class Snapshot implements Event {
-    private final short partition;
-    private final long startSeqno;
-    private final long endSeqno;
-    private final LinkedList<ByteBuf> messages;
+  private final short partition;
+  private final long startSeqno;
+  private final long endSeqno;
+  private final LinkedList<ByteBuf> messages;
 
-    public Snapshot(short partition, long startSeqno, long endSeqno) {
-        this.partition = partition;
-        this.startSeqno = startSeqno;
-        this.endSeqno = endSeqno;
-        this.messages = new LinkedList<>();
-    }
+  public Snapshot(short partition, long startSeqno, long endSeqno) {
+    this.partition = partition;
+    this.startSeqno = startSeqno;
+    this.endSeqno = endSeqno;
+    this.messages = new LinkedList<>();
+  }
 
-    public short partition() {
-        return partition;
-    }
+  public short partition() {
+    return partition;
+  }
 
-    public long startSeqno() {
-        return startSeqno;
-    }
+  public long startSeqno() {
+    return startSeqno;
+  }
 
-    public long endSeqno() {
-        return endSeqno;
-    }
+  public long endSeqno() {
+    return endSeqno;
+  }
 
-    public boolean add(ByteBuf message) {
-        messages.add(message);
-        return completed(message);
-    }
+  public boolean add(ByteBuf message) {
+    messages.add(message);
+    return completed(message);
+  }
 
-    public boolean completed() {
-        return completed(messages.getLast());
-    }
+  public boolean completed() {
+    return completed(messages.getLast());
+  }
 
-    private boolean completed(ByteBuf message) {
-        return DcpMutationMessage.bySeqno(message) == endSeqno;
-    }
+  private boolean completed(ByteBuf message) {
+    return DcpMutationMessage.bySeqno(message) == endSeqno;
+  }
 
-    @Override
-    public String toString() {
-        return "{" +
-                "partition=" + partition +
-                ", startSeqno=" + startSeqno +
-                ", endSeqno=" + endSeqno +
-                ", received=" + messages.size() +
-                ", completed=" + completed() +
-                '}';
-    }
+  @Override
+  public String toString() {
+    return "{" +
+        "partition=" + partition +
+        ", startSeqno=" + startSeqno +
+        ", endSeqno=" + endSeqno +
+        ", received=" + messages.size() +
+        ", completed=" + completed() +
+        '}';
+  }
 
-    @Override
-    public Iterator<ByteBuf> iterator() {
-        return messages.iterator();
-    }
+  @Override
+  public Iterator<ByteBuf> iterator() {
+    return messages.iterator();
+  }
 
-    @Override
-    public void ack() {
-    }
+  @Override
+  public void ack() {
+  }
 }

@@ -24,24 +24,24 @@ import org.apache.kafka.connect.source.SourceRecord;
  */
 @SuppressWarnings("deprecation")
 public class LegacySourceHandlerAdapter extends SourceHandler {
-    private final Converter converter;
+  private final Converter converter;
 
-    public LegacySourceHandlerAdapter(Converter converter) {
-        this.converter = converter;
-    }
+  public LegacySourceHandlerAdapter(Converter converter) {
+    this.converter = converter;
+  }
 
-    @Override
-    public CouchbaseSourceRecord handle(SourceHandlerParams params) {
-        SourceRecord r = converter.convert(
-                params.documentEvent().rawDcpEvent(),
-                params.documentEvent().bucket(),
-                params.topic());
+  @Override
+  public CouchbaseSourceRecord handle(SourceHandlerParams params) {
+    SourceRecord r = converter.convert(
+        params.documentEvent().rawDcpEvent(),
+        params.documentEvent().bucket(),
+        params.topic());
 
-        return r == null ? null :
-                new CouchbaseSourceRecord(
-                        r.topic(), r.kafkaPartition(),
-                        r.keySchema(), r.key(),
-                        r.valueSchema(), r.value(),
-                        r.timestamp());
-    }
+    return r == null ? null :
+        new CouchbaseSourceRecord(
+            r.topic(), r.kafkaPartition(),
+            r.keySchema(), r.key(),
+            r.valueSchema(), r.value(),
+            r.timestamp());
+  }
 }

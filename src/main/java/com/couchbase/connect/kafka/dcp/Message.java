@@ -22,49 +22,49 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import java.util.Iterator;
 
 public class Message implements Event {
-    private final ByteBuf message;
-    private final ChannelFlowController flowController;
+  private final ByteBuf message;
+  private final ChannelFlowController flowController;
 
-    public Message(ByteBuf message, ChannelFlowController flowController) {
-        this.message = message;
-        this.flowController = flowController;
-    }
+  public Message(ByteBuf message, ChannelFlowController flowController) {
+    this.message = message;
+    this.flowController = flowController;
+  }
 
-    public ByteBuf message() {
-        return message;
+  public ByteBuf message() {
+    return message;
+  }
+
+  @Override
+  public Iterator<ByteBuf> iterator() {
+    return new SingleMessageIterator(message);
+  }
+
+  @Override
+  public void ack() {
+    flowController.ack(message);
+  }
+
+  private class SingleMessageIterator implements Iterator<ByteBuf> {
+    private ByteBuf message;
+
+    SingleMessageIterator(ByteBuf message) {
+      this.message = message;
     }
 
     @Override
-    public Iterator<ByteBuf> iterator() {
-        return new SingleMessageIterator(message);
+    public boolean hasNext() {
+      return message != null;
     }
 
     @Override
-    public void ack() {
-        flowController.ack(message);
+    public ByteBuf next() {
+      ByteBuf message = this.message;
+      this.message = null;
+      return message;
     }
 
-    private class SingleMessageIterator implements Iterator<ByteBuf> {
-        private ByteBuf message;
-
-        SingleMessageIterator(ByteBuf message) {
-            this.message = message;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return message != null;
-        }
-
-        @Override
-        public ByteBuf next() {
-            ByteBuf message = this.message;
-            this.message = null;
-            return message;
-        }
-
-        @Override
-        public void remove() {
-        }
+    @Override
+    public void remove() {
     }
+  }
 }

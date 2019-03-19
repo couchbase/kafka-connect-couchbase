@@ -24,31 +24,31 @@ import java.util.Map;
 
 public class KeyAvroSerializer implements Serializer<String> {
 
-    KafkaAvroSerializer inner;
+  KafkaAvroSerializer inner;
 
-    /**
-     * Constructor used by Kafka Streams.
-     */
-    public KeyAvroSerializer() {
-        inner = new KafkaAvroSerializer();
-    }
+  /**
+   * Constructor used by Kafka Streams.
+   */
+  public KeyAvroSerializer() {
+    inner = new KafkaAvroSerializer();
+  }
 
-    public KeyAvroSerializer(SchemaRegistryClient client) {
-        inner = new KafkaAvroSerializer(client);
-    }
+  public KeyAvroSerializer(SchemaRegistryClient client) {
+    inner = new KafkaAvroSerializer(client);
+  }
 
-    @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-        inner.configure(configs, isKey);
-    }
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    inner.configure(configs, isKey);
+  }
 
-    @Override
-    public byte[] serialize(String topic, String key) {
-        return inner.serialize(topic, key);
-    }
+  @Override
+  public byte[] serialize(String topic, String key) {
+    return inner.serialize(topic, key);
+  }
 
-    @Override
-    public void close() {
-        inner.close();
-    }
+  @Override
+  public void close() {
+    inner.close();
+  }
 }

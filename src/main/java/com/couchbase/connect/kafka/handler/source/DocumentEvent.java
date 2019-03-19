@@ -28,73 +28,75 @@ import static com.couchbase.connect.kafka.converter.ConverterUtils.bufToString;
  * A Couchbase document change event.
  */
 public class DocumentEvent {
-    private final ByteBuf rawDcpEvent;
-    private final String bucket;
-    private final long vBucketUuid;
-    private final long bySeqno;
-    private final long revisionSeqno;
-    private final String key;
+  private final ByteBuf rawDcpEvent;
+  private final String bucket;
+  private final long vBucketUuid;
+  private final long bySeqno;
+  private final long revisionSeqno;
+  private final String key;
 
-    public static DocumentEvent create(ByteBuf rawDcpEvent, String bucket, long vBucketUuid) {
-        return new DocumentEvent(rawDcpEvent, bucket, vBucketUuid);
+  public static DocumentEvent create(ByteBuf rawDcpEvent, String bucket, long vBucketUuid) {
+    return new DocumentEvent(rawDcpEvent, bucket, vBucketUuid);
+  }
+
+  private DocumentEvent(ByteBuf rawDcpEvent, String bucket, long vBucketUuid) {
+    this.rawDcpEvent = rawDcpEvent;
+    this.bucket = bucket;
+    this.vBucketUuid = vBucketUuid;
+    this.key = bufToString(MessageUtil.getKey(rawDcpEvent));
+
+    if (DcpMutationMessage.is(rawDcpEvent)) {
+      this.bySeqno = DcpMutationMessage.bySeqno(rawDcpEvent);
+      this.revisionSeqno = DcpMutationMessage.revisionSeqno(rawDcpEvent);
+    } else if (DcpDeletionMessage.is(rawDcpEvent)) {
+      this.bySeqno = DcpDeletionMessage.bySeqno(rawDcpEvent);
+      this.revisionSeqno = DcpDeletionMessage.revisionSeqno(rawDcpEvent);
+    } else if (DcpExpirationMessage.is(rawDcpEvent)) {
+      this.bySeqno = DcpExpirationMessage.bySeqno(rawDcpEvent);
+      this.revisionSeqno = DcpExpirationMessage.revisionSeqno(rawDcpEvent);
+    } else {
+      this.bySeqno = 0;
+      this.revisionSeqno = 0;
     }
+  }
 
-    private DocumentEvent(ByteBuf rawDcpEvent, String bucket, long vBucketUuid) {
-        this.rawDcpEvent = rawDcpEvent;
-        this.bucket = bucket;
-        this.vBucketUuid = vBucketUuid;
-        this.key = bufToString(MessageUtil.getKey(rawDcpEvent));
+  public ByteBuf rawDcpEvent() {
+    return rawDcpEvent;
+  }
 
-        if (DcpMutationMessage.is(rawDcpEvent)) {
-            this.bySeqno = DcpMutationMessage.bySeqno(rawDcpEvent);
-            this.revisionSeqno = DcpMutationMessage.revisionSeqno(rawDcpEvent);
-        } else if (DcpDeletionMessage.is(rawDcpEvent)) {
-            this.bySeqno = DcpDeletionMessage.bySeqno(rawDcpEvent);
-            this.revisionSeqno = DcpDeletionMessage.revisionSeqno(rawDcpEvent);
-        } else if (DcpExpirationMessage.is(rawDcpEvent)) {
-            this.bySeqno = DcpExpirationMessage.bySeqno(rawDcpEvent);
-            this.revisionSeqno = DcpExpirationMessage.revisionSeqno(rawDcpEvent);
-        } else {
-            this.bySeqno = 0;
-            this.revisionSeqno = 0;
-        }
-    }
+  public String bucket() {
+    return bucket;
+  }
 
-    public ByteBuf rawDcpEvent() {
-        return rawDcpEvent;
-    }
+  public short vBucket() {
+    return MessageUtil.getVbucket(rawDcpEvent);
+  }
 
-    public String bucket() {
-        return bucket;
-    }
+  public long vBucketUuid() {
+    return vBucketUuid;
+  }
 
-    public short vBucket() {
-        return MessageUtil.getVbucket(rawDcpEvent);
-    }
+  public String key() {
+    return key;
+  }
 
-    public long vBucketUuid() {
-        return vBucketUuid;
-    }
+  public long cas() {
+    return MessageUtil.getCas(rawDcpEvent);
+  }
 
-    public String key() {
-        return key;
-    }
+  public long bySeqno() {
+    return bySeqno;
+  }
 
-    public long cas() {
-        return MessageUtil.getCas(rawDcpEvent);
-    }
+  public long revisionSeqno() {
+    return revisionSeqno;
+  }
 
-    public long bySeqno() {
-        return bySeqno;
-    }
-
-    public long revisionSeqno() {
-        return revisionSeqno;
-    }
-
-    /**
-     * Returns true if the document was created or updated,
-     * otherwise false.
-     */
-    public boolean isMutation() { return DcpMutationMessage.is(rawDcpEvent); }
+  /**
+   * Returns true if the document was created or updated,
+   * otherwise false.
+   */
+  public boolean isMutation() {
+    return DcpMutationMessage.is(rawDcpEvent);
+  }
 }

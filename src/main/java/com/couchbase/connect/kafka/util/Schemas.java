@@ -20,25 +20,25 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 
 public enum Schemas {
-    ;
+  ;
 
-    public static final Schema KEY_SCHEMA = Schema.STRING_SCHEMA;
-    public static final Schema VALUE_DEFAULT_SCHEMA =
-            SchemaBuilder.struct().name("com.couchbase.DcpMessage")
-                    .field("event", Schema.STRING_SCHEMA)
-                    .field("partition", Schema.INT16_SCHEMA) // Couchbase "vBucket ID"
-                    .field("key", Schema.STRING_SCHEMA)
-                    .field("cas", Schema.INT64_SCHEMA)
-                    .field("bySeqno", Schema.INT64_SCHEMA)
-                    .field("revSeqno", Schema.INT64_SCHEMA)
-                    .field("expiration", Schema.OPTIONAL_INT32_SCHEMA)
-                    .field("flags", Schema.OPTIONAL_INT32_SCHEMA)
-                    .field("lockTime", Schema.OPTIONAL_INT32_SCHEMA)
-                    .field("content", Schema.OPTIONAL_BYTES_SCHEMA)
+  public static final Schema KEY_SCHEMA = Schema.STRING_SCHEMA;
+  public static final Schema VALUE_DEFAULT_SCHEMA =
+      SchemaBuilder.struct().name("com.couchbase.DcpMessage")
+          .field("event", Schema.STRING_SCHEMA)
+          .field("partition", Schema.INT16_SCHEMA) // Couchbase "vBucket ID"
+          .field("key", Schema.STRING_SCHEMA)
+          .field("cas", Schema.INT64_SCHEMA)
+          .field("bySeqno", Schema.INT64_SCHEMA)
+          .field("revSeqno", Schema.INT64_SCHEMA)
+          .field("expiration", Schema.OPTIONAL_INT32_SCHEMA)
+          .field("flags", Schema.OPTIONAL_INT32_SCHEMA)
+          .field("lockTime", Schema.OPTIONAL_INT32_SCHEMA)
+          .field("content", Schema.OPTIONAL_BYTES_SCHEMA)
 
-                    // Added in 3.2.0.  Marked as optional to support schema evolution.
-                    .field("bucket", SchemaBuilder.string().optional().build())
-                    .field("vBucketUuid", SchemaBuilder.int64().optional().build())
+          // Added in 3.2.0.  Marked as optional to support schema evolution.
+          .field("bucket", SchemaBuilder.string().optional().build())
+          .field("vBucketUuid", SchemaBuilder.int64().optional().build())
 
-                    .build();
+          .build();
 }

@@ -21,13 +21,13 @@ import org.apache.kafka.common.config.ConfigDef;
 import java.util.Map;
 
 public class CouchbaseSourceTaskConfig extends CouchbaseSourceConnectorConfig {
-    public static final String PARTITIONS_CONFIG = "partitions";
-    private static final String PARTITIONS_DOC = "List of partitions for this task to watch for changes.";
+  public static final String PARTITIONS_CONFIG = "partitions";
+  private static final String PARTITIONS_DOC = "List of partitions for this task to watch for changes.";
 
-    private static ConfigDef config = baseConfigDef()
-            .define(PARTITIONS_CONFIG, ConfigDef.Type.LIST, ConfigDef.Importance.HIGH, PARTITIONS_DOC);
+  private static ConfigDef config = baseConfigDef()
+      .define(PARTITIONS_CONFIG, ConfigDef.Type.LIST, ConfigDef.Importance.HIGH, PARTITIONS_DOC);
 
-    public CouchbaseSourceTaskConfig(Map<String, String> props) {
-        super(config, props);
-    }
+  public CouchbaseSourceTaskConfig(Map<String, String> props) {
+    super(config, props);
+  }
 }

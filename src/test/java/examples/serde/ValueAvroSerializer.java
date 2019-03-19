@@ -25,31 +25,31 @@ import java.util.Map;
 
 public class ValueAvroSerializer implements Serializer<GenericRecord> {
 
-    KafkaAvroSerializer inner;
+  KafkaAvroSerializer inner;
 
-    /**
-     * Constructor used by Kafka Streams.
-     */
-    public ValueAvroSerializer() {
-        inner = new KafkaAvroSerializer();
-    }
+  /**
+   * Constructor used by Kafka Streams.
+   */
+  public ValueAvroSerializer() {
+    inner = new KafkaAvroSerializer();
+  }
 
-    public ValueAvroSerializer(SchemaRegistryClient client) {
-        inner = new KafkaAvroSerializer(client);
-    }
+  public ValueAvroSerializer(SchemaRegistryClient client) {
+    inner = new KafkaAvroSerializer(client);
+  }
 
-    @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-        inner.configure(configs, isKey);
-    }
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    inner.configure(configs, isKey);
+  }
 
-    @Override
-    public byte[] serialize(String topic, GenericRecord value) {
-        return inner.serialize(topic, value);
-    }
+  @Override
+  public byte[] serialize(String topic, GenericRecord value) {
+    return inner.serialize(topic, value);
+  }
 
-    @Override
-    public void close() {
-        inner.close();
-    }
+  @Override
+  public void close() {
+    inner.close();
+  }
 }

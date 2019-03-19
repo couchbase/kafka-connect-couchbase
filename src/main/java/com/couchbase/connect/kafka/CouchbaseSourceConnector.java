@@ -36,67 +36,67 @@ import java.util.Map;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
 
 public class CouchbaseSourceConnector extends SourceConnector {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
-    private Map<String, String> configProperties;
-    private CouchbaseSourceConnectorConfig config;
-    private Config bucketConfig;
+  private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
+  private Map<String, String> configProperties;
+  private CouchbaseSourceConnectorConfig config;
+  private Config bucketConfig;
 
-    @Override
-    public String version() {
-        return Version.getVersion();
+  @Override
+  public String version() {
+    return Version.getVersion();
+  }
+
+  @Override
+  public void start(Map<String, String> properties) {
+    try {
+      configProperties = properties;
+      config = new CouchbaseSourceConnectorConfig(configProperties);
+
+      setForceIpv4(config.getBoolean(FORCE_IPV4_CONFIG));
+
+      bucketConfig = Cluster.fetchBucketConfig(config);
+      if (bucketConfig == null) {
+        String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        throw new ConnectException("Cannot fetch configuration for bucket " + bucket);
+      }
+    } catch (ConfigException e) {
+      throw new ConnectException("Cannot start CouchbaseSourceConnector due to configuration error", e);
     }
+  }
 
-    @Override
-    public void start(Map<String, String> properties) {
-        try {
-            configProperties = properties;
-            config = new CouchbaseSourceConnectorConfig(configProperties);
-
-            setForceIpv4(config.getBoolean(FORCE_IPV4_CONFIG));
-
-            bucketConfig = Cluster.fetchBucketConfig(config);
-            if (bucketConfig == null) {
-                String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-                throw new ConnectException("Cannot fetch configuration for bucket " + bucket);
-            }
-        } catch (ConfigException e) {
-            throw new ConnectException("Cannot start CouchbaseSourceConnector due to configuration error", e);
-        }
+  static void setForceIpv4(boolean forceIpv4) {
+    // Can't use constant NetworkAddress.FORCE_IPV4_PROPERTY because that would trigger static init
+    System.setProperty("com.couchbase.forceIPv4", String.valueOf(forceIpv4));
+    if (NetworkAddress.FORCE_IPV4 != forceIpv4) {
+      throw new IllegalStateException("Too late to set 'com.couchbase.forceIPv4' system property; static init for NetworkAddress already done.");
     }
+  }
 
-    static void setForceIpv4(boolean forceIpv4) {
-        // Can't use constant NetworkAddress.FORCE_IPV4_PROPERTY because that would trigger static init
-        System.setProperty("com.couchbase.forceIPv4", String.valueOf(forceIpv4));
-        if (NetworkAddress.FORCE_IPV4 != forceIpv4) {
-            throw new IllegalStateException("Too late to set 'com.couchbase.forceIPv4' system property; static init for NetworkAddress already done.");
-        }
+  @Override
+  public Class<? extends Task> taskClass() {
+    return CouchbaseSourceTask.class;
+  }
+
+  @Override
+  public List<Map<String, String>> taskConfigs(int maxTasks) {
+    List<List<String>> partitionsGrouped = bucketConfig.groupGreedyToString(maxTasks);
+    List<Map<String, String>> taskConfigs = new ArrayList<>(partitionsGrouped.size());
+    for (List<String> taskPartitions : partitionsGrouped) {
+      Map<String, String> taskProps = new HashMap<>(configProperties);
+      taskProps.put(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG,
+          String.join(",", taskPartitions));
+      taskConfigs.add(taskProps);
     }
-
-    @Override
-    public Class<? extends Task> taskClass() {
-        return CouchbaseSourceTask.class;
-    }
-
-    @Override
-    public List<Map<String, String>> taskConfigs(int maxTasks) {
-        List<List<String>> partitionsGrouped = bucketConfig.groupGreedyToString(maxTasks);
-        List<Map<String, String>> taskConfigs = new ArrayList<>(partitionsGrouped.size());
-        for (List<String> taskPartitions : partitionsGrouped) {
-            Map<String, String> taskProps = new HashMap<>(configProperties);
-            taskProps.put(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG,
-                    String.join(",", taskPartitions));
-            taskConfigs.add(taskProps);
-        }
-        return taskConfigs;
-    }
+    return taskConfigs;
+  }
 
 
-    @Override
-    public void stop() {
-    }
+  @Override
+  public void stop() {
+  }
 
-    @Override
-    public ConfigDef config() {
-        return CouchbaseSourceConnectorConfig.config;
-    }
+  @Override
+  public ConfigDef config() {
+    return CouchbaseSourceConnectorConfig.config;
+  }
 }

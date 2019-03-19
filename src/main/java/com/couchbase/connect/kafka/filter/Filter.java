@@ -26,12 +26,12 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
  */
 public interface Filter {
 
-    /**
-     * Decides whether <code>message</code> should be sent to Kafka.
-     *
-     * @param message DCP event message from Couchbase.
-     * @return true if event should be sent to Kafka.
-     */
-    boolean pass(ByteBuf message);
+  /**
+   * Decides whether <code>message</code> should be sent to Kafka.
+   *
+   * @param message DCP event message from Couchbase.
+   * @return true if event should be sent to Kafka.
+   */
+  boolean pass(ByteBuf message);
 
 }

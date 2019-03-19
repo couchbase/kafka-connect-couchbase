@@ -60,107 +60,107 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.couchbase.client.core.logging.RedactableArgument.system;
 
 public class Cluster {
-    static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
-        @Override
-        public MemcachedHashingStrategy memcachedHashingStrategy() {
-            return DefaultMemcachedHashingStrategy.INSTANCE;
-        }
-    };
-    private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
-
-    public static Config fetchBucketConfig(final CouchbaseSourceConnectorConfig config) {
-        final List<String> nodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
-        final String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-        final String username = config.getUsername();
-        final String password = Password.CONNECTION.get(config);
-        final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
-        final int port = sslEnabled ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
-        final SSLEngineFactory sslEngineFactory =
-                new SSLEngineFactory(new SecureEnvironment() {
-                    @Override
-                    public boolean sslEnabled() {
-                        return sslEnabled;
-                    }
-
-                    @Override
-                    public String sslKeystoreFile() {
-                        return config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
-                    }
-
-                    @Override
-                    public String sslKeystorePassword() {
-                        return Password.SSL_KEYSTORE.get(config);
-                    }
-
-                    @Override
-                    public KeyStore sslKeystore() {
-                        return null;
-                    }
-                });
-
-        final AtomicReference<CouchbaseBucketConfig> result = new AtomicReference<>(null);
-        NioEventLoopGroup group = new NioEventLoopGroup();
-        try {
-            for (final String hostname : nodes) {
-                try {
-                    final CountDownLatch latch = new CountDownLatch(1);
-                    Bootstrap bootstrap = new Bootstrap();
-                    bootstrap.group(group)
-                            .channel(NioSocketChannel.class)
-                            .handler(new ChannelInitializer<Channel>() {
-                                @Override
-                                protected void initChannel(Channel channel) throws Exception {
-                                    ChannelPipeline pipeline = channel.pipeline();
-                                    if (sslEnabled) {
-                                        pipeline.addLast(new SslHandler(sslEngineFactory.get()));
-                                    }
-
-                                    pipeline.addLast(new HttpClientCodec())
-                                            .addLast(new HttpObjectAggregator(1048576))
-                                            .addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
-                                                @Override
-                                                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-                                                    try {
-                                                        if (msg.getStatus().equals(HttpResponseStatus.OK)) {
-                                                            String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
-                                                            result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv, NetworkAddress.create(hostname)));
-                                                        }
-                                                    } finally {
-                                                        latch.countDown();
-                                                    }
-                                                }
-                                            });
-                                }
-                            });
-
-
-                    Channel channel = bootstrap.connect(hostname, port).sync().channel();
-                    HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                            "/pools/default/b/" + bucket);
-                    request.headers().set(HttpHeaders.Names.HOST, hostname);
-                    request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-
-                    ByteBuf raw = Unpooled.buffer(bucket.length() + password.length() + 1);
-                    raw.writeBytes((username + ":" + password).getBytes(CharsetUtil.UTF_8));
-                    ByteBuf encoded = Base64.encode(raw, false);
-                    request.headers().add(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded.toString(CharsetUtil.UTF_8));
-                    encoded.release();
-                    raw.release();
-
-                    channel.writeAndFlush(request);
-                    latch.await();
-                    channel.closeFuture().sync();
-                    CouchbaseBucketConfig bucketConfig = result.get();
-                    if (bucketConfig != null) {
-                        return new Config(bucketConfig);
-                    }
-                } catch (Exception e) {
-                    LOGGER.warn("Ignoring error for node {} when getting number of partitions", system(hostname), e);
-                }
-            }
-        } finally {
-            group.shutdownGracefully();
-        }
-        return null;
+  static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
+    @Override
+    public MemcachedHashingStrategy memcachedHashingStrategy() {
+      return DefaultMemcachedHashingStrategy.INSTANCE;
     }
+  };
+  private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
+
+  public static Config fetchBucketConfig(final CouchbaseSourceConnectorConfig config) {
+    final List<String> nodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+    final String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+    final String username = config.getUsername();
+    final String password = Password.CONNECTION.get(config);
+    final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
+    final int port = sslEnabled ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
+    final SSLEngineFactory sslEngineFactory =
+        new SSLEngineFactory(new SecureEnvironment() {
+          @Override
+          public boolean sslEnabled() {
+            return sslEnabled;
+          }
+
+          @Override
+          public String sslKeystoreFile() {
+            return config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
+          }
+
+          @Override
+          public String sslKeystorePassword() {
+            return Password.SSL_KEYSTORE.get(config);
+          }
+
+          @Override
+          public KeyStore sslKeystore() {
+            return null;
+          }
+        });
+
+    final AtomicReference<CouchbaseBucketConfig> result = new AtomicReference<>(null);
+    NioEventLoopGroup group = new NioEventLoopGroup();
+    try {
+      for (final String hostname : nodes) {
+        try {
+          final CountDownLatch latch = new CountDownLatch(1);
+          Bootstrap bootstrap = new Bootstrap();
+          bootstrap.group(group)
+              .channel(NioSocketChannel.class)
+              .handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel channel) throws Exception {
+                  ChannelPipeline pipeline = channel.pipeline();
+                  if (sslEnabled) {
+                    pipeline.addLast(new SslHandler(sslEngineFactory.get()));
+                  }
+
+                  pipeline.addLast(new HttpClientCodec())
+                      .addLast(new HttpObjectAggregator(1048576))
+                      .addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
+                        @Override
+                        protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+                          try {
+                            if (msg.getStatus().equals(HttpResponseStatus.OK)) {
+                              String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
+                              result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv, NetworkAddress.create(hostname)));
+                            }
+                          } finally {
+                            latch.countDown();
+                          }
+                        }
+                      });
+                }
+              });
+
+
+          Channel channel = bootstrap.connect(hostname, port).sync().channel();
+          HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+              "/pools/default/b/" + bucket);
+          request.headers().set(HttpHeaders.Names.HOST, hostname);
+          request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+
+          ByteBuf raw = Unpooled.buffer(bucket.length() + password.length() + 1);
+          raw.writeBytes((username + ":" + password).getBytes(CharsetUtil.UTF_8));
+          ByteBuf encoded = Base64.encode(raw, false);
+          request.headers().add(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded.toString(CharsetUtil.UTF_8));
+          encoded.release();
+          raw.release();
+
+          channel.writeAndFlush(request);
+          latch.await();
+          channel.closeFuture().sync();
+          CouchbaseBucketConfig bucketConfig = result.get();
+          if (bucketConfig != null) {
+            return new Config(bucketConfig);
+          }
+        } catch (Exception e) {
+          LOGGER.warn("Ignoring error for node {} when getting number of partitions", system(hostname), e);
+        }
+      }
+    } finally {
+      group.shutdownGracefully();
+    }
+    return null;
+  }
 }

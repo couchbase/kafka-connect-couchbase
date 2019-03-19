@@ -28,42 +28,42 @@ import java.util.Map;
 
 public class ValueAvroSerde implements Serde<GenericRecord> {
 
-    private final Serde<GenericRecord> inner;
+  private final Serde<GenericRecord> inner;
 
-    /**
-     * Constructor used by Kafka Streams.
-     */
-    public ValueAvroSerde() {
-        inner = Serdes.serdeFrom(new ValueAvroSerializer(), new ValueAvroDeserializer());
-    }
+  /**
+   * Constructor used by Kafka Streams.
+   */
+  public ValueAvroSerde() {
+    inner = Serdes.serdeFrom(new ValueAvroSerializer(), new ValueAvroDeserializer());
+  }
 
-    public ValueAvroSerde(SchemaRegistryClient client) {
-        this(client, Collections.emptyMap());
-    }
+  public ValueAvroSerde(SchemaRegistryClient client) {
+    this(client, Collections.emptyMap());
+  }
 
-    public ValueAvroSerde(SchemaRegistryClient client, Map<String, ?> props) {
-        inner = Serdes.serdeFrom(new ValueAvroSerializer(client), new ValueAvroDeserializer(client, props));
-    }
+  public ValueAvroSerde(SchemaRegistryClient client, Map<String, ?> props) {
+    inner = Serdes.serdeFrom(new ValueAvroSerializer(client), new ValueAvroDeserializer(client, props));
+  }
 
-    @Override
-    public Serializer<GenericRecord> serializer() {
-        return inner.serializer();
-    }
+  @Override
+  public Serializer<GenericRecord> serializer() {
+    return inner.serializer();
+  }
 
-    @Override
-    public Deserializer<GenericRecord> deserializer() {
-        return inner.deserializer();
-    }
+  @Override
+  public Deserializer<GenericRecord> deserializer() {
+    return inner.deserializer();
+  }
 
-    @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-        inner.serializer().configure(configs, isKey);
-        inner.deserializer().configure(configs, isKey);
-    }
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    inner.serializer().configure(configs, isKey);
+    inner.deserializer().configure(configs, isKey);
+  }
 
-    @Override
-    public void close() {
-        inner.serializer().close();
-        inner.deserializer().close();
-    }
+  @Override
+  public void close() {
+    inner.serializer().close();
+    inner.deserializer().close();
+  }
 }

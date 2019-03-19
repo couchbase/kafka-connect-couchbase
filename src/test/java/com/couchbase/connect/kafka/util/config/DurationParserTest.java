@@ -23,33 +23,33 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 
 public class DurationParserTest {
-    @Test
-    public void parseDuration() throws Exception {
-        assertEquals(0, DurationParser.parseDuration("0", MILLISECONDS));
-        assertEquals(0, DurationParser.parseDuration("0s", MILLISECONDS));
+  @Test
+  public void parseDuration() throws Exception {
+    assertEquals(0, DurationParser.parseDuration("0", MILLISECONDS));
+    assertEquals(0, DurationParser.parseDuration("0s", MILLISECONDS));
 
-        assertEquals(12345, DurationParser.parseDuration("12345ms", MILLISECONDS));
+    assertEquals(12345, DurationParser.parseDuration("12345ms", MILLISECONDS));
 
-        // should round up to nearest second
-        assertEquals(1, DurationParser.parseDuration("1ms", SECONDS));
+    // should round up to nearest second
+    assertEquals(1, DurationParser.parseDuration("1ms", SECONDS));
 
-        assertEquals(1, DurationParser.parseDuration("1s", SECONDS));
-        assertEquals(2, DurationParser.parseDuration("2s", SECONDS));
-        assertEquals(60, DurationParser.parseDuration("1m", SECONDS));
-        assertEquals(60 * 60, DurationParser.parseDuration("1h", SECONDS));
-        assertEquals(60 * 60 * 24, DurationParser.parseDuration("1d", SECONDS));
+    assertEquals(1, DurationParser.parseDuration("1s", SECONDS));
+    assertEquals(2, DurationParser.parseDuration("2s", SECONDS));
+    assertEquals(60, DurationParser.parseDuration("1m", SECONDS));
+    assertEquals(60 * 60, DurationParser.parseDuration("1h", SECONDS));
+    assertEquals(60 * 60 * 24, DurationParser.parseDuration("1d", SECONDS));
 
-        assertEquals(0, DurationParser.parseDuration("0ms", MILLISECONDS));
-        assertEquals(0, DurationParser.parseDuration("0ms", SECONDS));
-    }
+    assertEquals(0, DurationParser.parseDuration("0ms", MILLISECONDS));
+    assertEquals(0, DurationParser.parseDuration("0ms", SECONDS));
+  }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void missingNumber() throws Exception {
-        DurationParser.parseDuration("ms", MILLISECONDS);
-    }
+  @Test(expected = IllegalArgumentException.class)
+  public void missingNumber() throws Exception {
+    DurationParser.parseDuration("ms", MILLISECONDS);
+  }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void missingUnit() throws Exception {
-        DurationParser.parseDuration("300", MILLISECONDS);
-    }
+  @Test(expected = IllegalArgumentException.class)
+  public void missingUnit() throws Exception {
+    DurationParser.parseDuration("300", MILLISECONDS);
+  }
 }

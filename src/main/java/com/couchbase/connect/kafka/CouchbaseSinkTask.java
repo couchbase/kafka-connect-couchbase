@@ -35,7 +35,11 @@ import com.couchbase.connect.kafka.sink.N1qlMode;
 import com.couchbase.connect.kafka.sink.N1qlWriter;
 import com.couchbase.connect.kafka.sink.SubDocumentMode;
 import com.couchbase.connect.kafka.sink.SubDocumentWriter;
-import com.couchbase.connect.kafka.util.*;
+import com.couchbase.connect.kafka.util.DocumentIdExtractor;
+import com.couchbase.connect.kafka.util.DocumentPathExtractor;
+import com.couchbase.connect.kafka.util.JsonBinaryDocument;
+import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
+import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.DurationParser;
 import com.couchbase.connect.kafka.util.config.Password;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -75,237 +79,237 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class CouchbaseSinkTask extends SinkTask {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
 
-    private Map<String, String> configProperties;
-    private CouchbaseSinkTaskConfig config;
-    private Bucket bucket;
-    private CouchbaseCluster cluster;
-    private JsonConverter converter;
-    private DocumentIdExtractor documentIdExtractor;
-    private String path;
-    private DocumentMode documentMode;
+  private Map<String, String> configProperties;
+  private CouchbaseSinkTaskConfig config;
+  private Bucket bucket;
+  private CouchbaseCluster cluster;
+  private JsonConverter converter;
+  private DocumentIdExtractor documentIdExtractor;
+  private String path;
+  private DocumentMode documentMode;
 
-    private SubDocumentWriter subDocumentWriter;
-    private SubDocumentMode subDocumentMode;
+  private SubDocumentWriter subDocumentWriter;
+  private SubDocumentMode subDocumentMode;
 
-    private N1qlWriter n1qlWriter;
-    private N1qlMode n1qlMode;
-    private List<String> n1qlWhereFields;
+  private N1qlWriter n1qlWriter;
+  private N1qlMode n1qlMode;
+  private List<String> n1qlWhereFields;
 
-    private boolean createPaths;
-    private boolean createDocuments;
+  private boolean createPaths;
+  private boolean createDocuments;
 
-    private PersistTo persistTo;
-    private ReplicateTo replicateTo;
+  private PersistTo persistTo;
+  private ReplicateTo replicateTo;
 
-    private long expiryOffsetSeconds;
+  private long expiryOffsetSeconds;
 
-    @Override
-    public String version() {
-        return Version.getVersion();
+  @Override
+  public String version() {
+    return Version.getVersion();
+  }
+
+  @Override
+  public void start(Map<String, String> properties) {
+    try {
+      configProperties = properties;
+      config = new CouchbaseSinkTaskConfig(configProperties);
+    } catch (ConfigException e) {
+      throw new ConnectException("Couldn't start CouchbaseSinkTask due to configuration error", e);
     }
 
-    @Override
-    public void start(Map<String, String> properties) {
-        try {
-            configProperties = properties;
-            config = new CouchbaseSinkTaskConfig(configProperties);
-        } catch (ConfigException e) {
-            throw new ConnectException("Couldn't start CouchbaseSinkTask due to configuration error", e);
-        }
+    setForceIpv4(config.getBoolean(FORCE_IPV4_CONFIG));
 
-        setForceIpv4(config.getBoolean(FORCE_IPV4_CONFIG));
+    RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
+    CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
 
-        RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
-        CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
+    List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+    String bucketName = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+    String username = config.getUsername();
+    String password = Password.CONNECTION.get(config);
 
-        List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
-        String bucketName = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-        String username = config.getUsername();
-        String password = Password.CONNECTION.get(config);
+    boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
+    String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
+    String sslKeystorePassword = Password.SSL_KEYSTORE.get(config);
+    Long connectTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
+    CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
+        .sslEnabled(sslEnabled)
+        .sslKeystoreFile(sslKeystoreLocation)
+        .sslKeystorePassword(sslKeystorePassword)
+        .connectTimeout(connectTimeout)
+        .build();
+    cluster = CouchbaseCluster.create(env, clusterAddress);
+    cluster.authenticate(username, password);
 
-        boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
-        String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
-        String sslKeystorePassword = Password.SSL_KEYSTORE.get(config);
-        Long connectTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
-        CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
-                .sslEnabled(sslEnabled)
-                .sslKeystoreFile(sslKeystoreLocation)
-                .sslKeystorePassword(sslKeystorePassword)
-                .connectTimeout(connectTimeout)
-                .build();
-        cluster = CouchbaseCluster.create(env, clusterAddress);
-        cluster.authenticate(username, password);
+    List<Transcoder<? extends Document, ?>> transcoders =
+        Collections.singletonList(new JsonBinaryTranscoder());
+    bucket = cluster.openBucket(bucketName, transcoders);
 
-        List<Transcoder<? extends Document, ?>> transcoders =
-                Collections.singletonList(new JsonBinaryTranscoder());
-        bucket = cluster.openBucket(bucketName, transcoders);
+    converter = new JsonConverter();
+    converter.configure(Collections.singletonMap("schemas.enable", false), false);
 
-        converter = new JsonConverter();
-        converter.configure(Collections.singletonMap("schemas.enable", false), false);
-
-        String docIdPointer = config.getString(DOCUMENT_ID_POINTER_CONFIG);
-        if (docIdPointer != null && !docIdPointer.isEmpty()) {
-            documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
-        }
-
-        documentMode = config.getEnum(DocumentMode.class, DOCUMENT_MODE_CONFIG);
-        persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
-        replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
-
-        final String expiryDuration = config.getString(EXPIRY_CONFIG);
-        expiryOffsetSeconds = expiryDuration.isEmpty() ? 0 : DurationParser.parseDuration(expiryDuration, SECONDS);
-
-        switch (documentMode) {
-            case SUBDOCUMENT: {
-                subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
-                path = config.getString(CouchbaseSinkConnectorConfig.SUBDOCUMENT_PATH_CONFIG);
-                createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
-                createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
-
-                subDocumentWriter = new SubDocumentWriter(subDocumentMode, path, path.startsWith("/"), createPaths, createDocuments);
-                break;
-            }
-            case N1QL: {
-                n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
-                createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
-                n1qlWhereFields = config.getList(N1QL_WHERE_FIELDS_CONFIG);
-
-                n1qlWriter = new N1qlWriter(n1qlMode, n1qlWhereFields, createDocuments);
-                break;
-            }
-        }
+    String docIdPointer = config.getString(DOCUMENT_ID_POINTER_CONFIG);
+    if (docIdPointer != null && !docIdPointer.isEmpty()) {
+      documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.getBoolean(REMOVE_DOCUMENT_ID_CONFIG));
     }
 
-    @Override
-    public void put(Collection<SinkRecord> records) {
-        if (records.isEmpty()) {
-            return;
-        }
-        final SinkRecord first = records.iterator().next();
-        final int recordsCount = records.size();
-        LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
-                recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
+    documentMode = config.getEnum(DocumentMode.class, DOCUMENT_MODE_CONFIG);
+    persistTo = config.getEnum(PersistTo.class, PERSIST_TO_CONFIG);
+    replicateTo = config.getEnum(ReplicateTo.class, REPLICATE_TO_CONFIG);
 
-        //noinspection unchecked
-        Observable.from(records)
-                .flatMapCompletable(new Func1<SinkRecord, Completable>() {
-                    @Override
-                    public Completable call(SinkRecord record) {
-                        if (record.value() == null) {
-                            String documentId = documentIdFromKafkaMetadata(record);
-                            return removeIfExists(documentId);
-                        }
+    final String expiryDuration = config.getString(EXPIRY_CONFIG);
+    expiryOffsetSeconds = expiryDuration.isEmpty() ? 0 : DurationParser.parseDuration(expiryDuration, SECONDS);
 
-                        JsonBinaryDocument doc = convert(record);
+    switch (documentMode) {
+      case SUBDOCUMENT: {
+        subDocumentMode = config.getEnum(SubDocumentMode.class, SUBDOCUMENT_MODE_CONFIG);
+        path = config.getString(CouchbaseSinkConnectorConfig.SUBDOCUMENT_PATH_CONFIG);
+        createPaths = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEPATH_CONFIG);
+        createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
 
-                        switch (documentMode) {
-                            case N1QL: {
-                                return n1qlWriter.write(bucket.async(), doc, persistTo, replicateTo);
-                            }
-                            case SUBDOCUMENT: {
-                                return subDocumentWriter.write(bucket.async(), doc, persistTo, replicateTo);
-                            }
-                            default: {
-                                return bucket.async()
-                                        .upsert(doc, persistTo, replicateTo)
-                                        .toCompletable();
-                            }
-                        }
-                    }
-                })
-                .retryWhen(
-                        // TODO: make it configurable
-                        RetryBuilder
-                                .anyOf(RuntimeException.class)
-                                .delay(Delay.exponential(TimeUnit.SECONDS, 5))
-                                .max(5)
-                                .build())
+        subDocumentWriter = new SubDocumentWriter(subDocumentMode, path, path.startsWith("/"), createPaths, createDocuments);
+        break;
+      }
+      case N1QL: {
+        n1qlMode = config.getEnum(N1qlMode.class, N1QL_MODE_CONFIG);
+        createDocuments = config.getBoolean(CouchbaseSinkConnectorConfig.SUBDOCUMENT_CREATEDOCUMENT_CONFIG);
+        n1qlWhereFields = config.getList(N1QL_WHERE_FIELDS_CONFIG);
 
-                .toCompletable().await();
+        n1qlWriter = new N1qlWriter(n1qlMode, n1qlWhereFields, createDocuments);
+        break;
+      }
     }
+  }
 
-    private Completable removeIfExists(String documentId) {
-        return bucket.async().remove(documentId, persistTo, replicateTo)
-                .onErrorResumeNext(new Func1<Throwable, Observable<JsonDocument>>() {
-                    @Override
-                    public Observable<JsonDocument> call(Throwable throwable) {
-                        return (throwable instanceof DocumentDoesNotExistException)
-                                ? Observable.empty()
-                                : Observable.error(throwable);
-                    }
-                }).toCompletable();
+  @Override
+  public void put(Collection<SinkRecord> records) {
+    if (records.isEmpty()) {
+      return;
     }
+    final SinkRecord first = records.iterator().next();
+    final int recordsCount = records.size();
+    LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
+        recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
 
-    private static String toString(ByteBuffer byteBuffer) {
-        final ByteBuffer sliced = byteBuffer.slice();
-        byte[] bytes = new byte[sliced.remaining()];
-        sliced.get(bytes);
-        return new String(bytes, UTF_8);
-    }
-
-    private static String documentIdFromKafkaMetadata(SinkRecord record) {
-        Object key = record.key();
-
-        if (key instanceof String
-                || key instanceof Number
-                || key instanceof Boolean) {
-            return key.toString();
-        }
-
-        if (key instanceof byte[]) {
-            return new String((byte[]) key, UTF_8);
-        }
-
-        if (key instanceof ByteBuffer) {
-            return toString((ByteBuffer) key);
-        }
-
-        return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
-    }
-
-
-    private JsonBinaryDocument convert(SinkRecord record) {
-
-        byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
-        String defaultId = null;
-
-        try {
-            if (documentIdExtractor != null) {
-                return documentIdExtractor.extractDocumentId(valueAsJsonBytes, getAbsoluteExpirySeconds());
+    //noinspection unchecked
+    Observable.from(records)
+        .flatMapCompletable(new Func1<SinkRecord, Completable>() {
+          @Override
+          public Completable call(SinkRecord record) {
+            if (record.value() == null) {
+              String documentId = documentIdFromKafkaMetadata(record);
+              return removeIfExists(documentId);
             }
 
-        } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
-            defaultId = documentIdFromKafkaMetadata(record);
-            LOGGER.warn(e.getMessage() + "; using fallback ID '{}'", defaultId);
+            JsonBinaryDocument doc = convert(record);
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+            switch (documentMode) {
+              case N1QL: {
+                return n1qlWriter.write(bucket.async(), doc, persistTo, replicateTo);
+              }
+              case SUBDOCUMENT: {
+                return subDocumentWriter.write(bucket.async(), doc, persistTo, replicateTo);
+              }
+              default: {
+                return bucket.async()
+                    .upsert(doc, persistTo, replicateTo)
+                    .toCompletable();
+              }
+            }
+          }
+        })
+        .retryWhen(
+            // TODO: make it configurable
+            RetryBuilder
+                .anyOf(RuntimeException.class)
+                .delay(Delay.exponential(TimeUnit.SECONDS, 5))
+                .max(5)
+                .build())
 
-        if (defaultId == null) {
-            defaultId = documentIdFromKafkaMetadata(record);
-        }
+        .toCompletable().await();
+  }
 
-        return JsonBinaryDocument.create(defaultId, getAbsoluteExpirySeconds(), valueAsJsonBytes);
+  private Completable removeIfExists(String documentId) {
+    return bucket.async().remove(documentId, persistTo, replicateTo)
+        .onErrorResumeNext(new Func1<Throwable, Observable<JsonDocument>>() {
+          @Override
+          public Observable<JsonDocument> call(Throwable throwable) {
+            return (throwable instanceof DocumentDoesNotExistException)
+                ? Observable.empty()
+                : Observable.error(throwable);
+          }
+        }).toCompletable();
+  }
+
+  private static String toString(ByteBuffer byteBuffer) {
+    final ByteBuffer sliced = byteBuffer.slice();
+    byte[] bytes = new byte[sliced.remaining()];
+    sliced.get(bytes);
+    return new String(bytes, UTF_8);
+  }
+
+  private static String documentIdFromKafkaMetadata(SinkRecord record) {
+    Object key = record.key();
+
+    if (key instanceof String
+        || key instanceof Number
+        || key instanceof Boolean) {
+      return key.toString();
     }
 
-    private int getAbsoluteExpirySeconds() {
-        if (expiryOffsetSeconds == 0) {
-            return 0; // no expiration
-        }
-
-        return (int) (MILLISECONDS.toSeconds(System.currentTimeMillis()) + expiryOffsetSeconds);
+    if (key instanceof byte[]) {
+      return new String((byte[]) key, UTF_8);
     }
 
-
-    @Override
-    public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
+    if (key instanceof ByteBuffer) {
+      return toString((ByteBuffer) key);
     }
 
-    @Override
-    public void stop() {
-        cluster.disconnect();
+    return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
+  }
+
+
+  private JsonBinaryDocument convert(SinkRecord record) {
+
+    byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
+    String defaultId = null;
+
+    try {
+      if (documentIdExtractor != null) {
+        return documentIdExtractor.extractDocumentId(valueAsJsonBytes, getAbsoluteExpirySeconds());
+      }
+
+    } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
+      defaultId = documentIdFromKafkaMetadata(record);
+      LOGGER.warn(e.getMessage() + "; using fallback ID '{}'", defaultId);
+
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
+
+    if (defaultId == null) {
+      defaultId = documentIdFromKafkaMetadata(record);
+    }
+
+    return JsonBinaryDocument.create(defaultId, getAbsoluteExpirySeconds(), valueAsJsonBytes);
+  }
+
+  private int getAbsoluteExpirySeconds() {
+    if (expiryOffsetSeconds == 0) {
+      return 0; // no expiration
+    }
+
+    return (int) (MILLISECONDS.toSeconds(System.currentTimeMillis()) + expiryOffsetSeconds);
+  }
+
+
+  @Override
+  public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
+  }
+
+  @Override
+  public void stop() {
+    cluster.disconnect();
+  }
 }

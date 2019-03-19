@@ -25,35 +25,35 @@ import static org.junit.Assert.assertTrue;
 
 public class RawJsonSourceHandlerTest {
 
-    @Test
-    public void jsonValidation() throws Exception {
-        assertValid("true");
-        assertValid("0");
-        assertValid("1.0");
-        assertValid("null");
-        assertValid("\"foo\"");
-        assertValid("{}");
-        assertValid("[]");
-        assertValid("{\"foo\":{}}");
-        assertValid("[[],[],[]]");
+  @Test
+  public void jsonValidation() throws Exception {
+    assertValid("true");
+    assertValid("0");
+    assertValid("1.0");
+    assertValid("null");
+    assertValid("\"foo\"");
+    assertValid("{}");
+    assertValid("[]");
+    assertValid("{\"foo\":{}}");
+    assertValid("[[],[],[]]");
 
-        assertInvalid("");
-        assertInvalid("foo");
-        assertInvalid("{}{}");
-        assertInvalid("[][]");
-        assertInvalid("{}true");
-        assertInvalid("[]true");
-        assertInvalid("{}}");
-        assertInvalid("[]]");
-        assertInvalid("{\"foo\":true");
-        assertInvalid("[1,2,3");
-    }
+    assertInvalid("");
+    assertInvalid("foo");
+    assertInvalid("{}{}");
+    assertInvalid("[][]");
+    assertInvalid("{}true");
+    assertInvalid("[]true");
+    assertInvalid("{}}");
+    assertInvalid("[]]");
+    assertInvalid("{\"foo\":true");
+    assertInvalid("[1,2,3");
+  }
 
-    private static void assertValid(String input) {
-        assertTrue("should be valid: " + input, isValidJson(input.getBytes(UTF_8)));
-    }
+  private static void assertValid(String input) {
+    assertTrue("should be valid: " + input, isValidJson(input.getBytes(UTF_8)));
+  }
 
-    private static void assertInvalid(String input) {
-        assertFalse("should be invalid: " + input, isValidJson(input.getBytes(UTF_8)));
-    }
+  private static void assertInvalid(String input) {
+    assertFalse("should be invalid: " + input, isValidJson(input.getBytes(UTF_8)));
+  }
 }

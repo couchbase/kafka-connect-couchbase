@@ -25,35 +25,35 @@ import java.util.Map;
 
 public class ValueAvroDeserializer implements Deserializer<GenericRecord> {
 
-    KafkaAvroDeserializer inner;
+  KafkaAvroDeserializer inner;
 
-    /**
-     * Constructor used by Kafka Streams.
-     */
-    public ValueAvroDeserializer() {
-        inner = new KafkaAvroDeserializer();
-    }
+  /**
+   * Constructor used by Kafka Streams.
+   */
+  public ValueAvroDeserializer() {
+    inner = new KafkaAvroDeserializer();
+  }
 
-    public ValueAvroDeserializer(SchemaRegistryClient client) {
-        inner = new KafkaAvroDeserializer(client);
-    }
+  public ValueAvroDeserializer(SchemaRegistryClient client) {
+    inner = new KafkaAvroDeserializer(client);
+  }
 
-    public ValueAvroDeserializer(SchemaRegistryClient client, Map<String, ?> props) {
-        inner = new KafkaAvroDeserializer(client, props);
-    }
+  public ValueAvroDeserializer(SchemaRegistryClient client, Map<String, ?> props) {
+    inner = new KafkaAvroDeserializer(client, props);
+  }
 
-    @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-        inner.configure(configs, isKey);
-    }
+  @Override
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    inner.configure(configs, isKey);
+  }
 
-    @Override
-    public GenericRecord deserialize(String s, byte[] bytes) {
-        return (GenericRecord) inner.deserialize(s, bytes);
-    }
+  @Override
+  public GenericRecord deserialize(String s, byte[] bytes) {
+    return (GenericRecord) inner.deserialize(s, bytes);
+  }
 
-    @Override
-    public void close() {
-        inner.close();
-    }
+  @Override
+  public void close() {
+    inner.close();
+  }
 }

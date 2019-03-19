@@ -21,7 +21,7 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import java.util.Iterator;
 
 public interface Event extends Iterable<ByteBuf> {
-    Iterator<ByteBuf> iterator();
+  Iterator<ByteBuf> iterator();
 
-    void ack();
+  void ack();
 }

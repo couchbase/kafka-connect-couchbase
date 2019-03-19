@@ -22,29 +22,29 @@ import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 
 public enum EventType {
-    MUTATION("mutation"),
-    DELETION("deletion"),
-    EXPIRATION("expiration"),
-    SNAPSHOT("snapshot");
+  MUTATION("mutation"),
+  DELETION("deletion"),
+  EXPIRATION("expiration"),
+  SNAPSHOT("snapshot");
 
-    private final String schemaName;
+  private final String schemaName;
 
-    EventType(String schemaName) {
-        this.schemaName = schemaName;
+  EventType(String schemaName) {
+    this.schemaName = schemaName;
+  }
+
+  public static EventType of(ByteBuf message) {
+    if (DcpMutationMessage.is(message)) {
+      return EventType.MUTATION;
+    } else if (DcpDeletionMessage.is(message)) {
+      return EventType.DELETION;
+    } else if (DcpExpirationMessage.is(message)) {
+      return EventType.EXPIRATION;
     }
+    return null;
+  }
 
-    public static EventType of(ByteBuf message) {
-        if (DcpMutationMessage.is(message)) {
-            return EventType.MUTATION;
-        } else if (DcpDeletionMessage.is(message)) {
-            return EventType.DELETION;
-        } else if (DcpExpirationMessage.is(message)) {
-            return EventType.EXPIRATION;
-        }
-        return null;
-    }
-
-    public String schemaName() {
-        return schemaName;
-    }
+  public String schemaName() {
+    return schemaName;
+  }
 }

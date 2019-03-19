@@ -26,19 +26,19 @@ import com.couchbase.client.java.document.AbstractDocument;
  * does not require copying the bytes into String.
  */
 public class JsonBinaryDocument extends AbstractDocument<ByteBuf> {
-    public static JsonBinaryDocument create(String id, int expiry, ByteBuf content) {
-        return new JsonBinaryDocument(id, expiry, content, 0L, null);
-    }
+  public static JsonBinaryDocument create(String id, int expiry, ByteBuf content) {
+    return new JsonBinaryDocument(id, expiry, content, 0L, null);
+  }
 
-    public static JsonBinaryDocument create(String id, byte[] content) {
-        return create(id, 0, content);
-    }
+  public static JsonBinaryDocument create(String id, byte[] content) {
+    return create(id, 0, content);
+  }
 
-    public static JsonBinaryDocument create(String id, int expiry, byte[] content) {
-        return create(id, expiry, content == null ? null : Unpooled.wrappedBuffer(content));
-    }
+  public static JsonBinaryDocument create(String id, int expiry, byte[] content) {
+    return create(id, expiry, content == null ? null : Unpooled.wrappedBuffer(content));
+  }
 
-    public JsonBinaryDocument(String id, int expiry, ByteBuf content, long cas, MutationToken mutationToken) {
-        super(id, expiry, content, cas, mutationToken);
-    }
+  public JsonBinaryDocument(String id, int expiry, ByteBuf content, long cas, MutationToken mutationToken) {
+    super(id, expiry, content, cas, mutationToken);
+  }
 }

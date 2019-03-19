@@ -54,261 +54,261 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class CouchbaseSourceTask extends SourceTask {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
 
-    private static final long MAX_TIMEOUT = 10000L;
+  private static final long MAX_TIMEOUT = 10000L;
 
-    private CouchbaseSourceConnectorConfig config;
-    private Map<String, String> configProperties;
-    private CouchbaseReader couchbaseReader;
-    private BlockingQueue<Event> queue;
-    private BlockingQueue<Throwable> errorQueue;
-    private String topic;
-    private String bucket;
-    private volatile boolean running;
-    private Filter filter;
-    private SourceHandler sourceHandler;
-    private int batchSizeMax;
-    private boolean connectorNameInOffsets;
+  private CouchbaseSourceConnectorConfig config;
+  private Map<String, String> configProperties;
+  private CouchbaseReader couchbaseReader;
+  private BlockingQueue<Event> queue;
+  private BlockingQueue<Throwable> errorQueue;
+  private String topic;
+  private String bucket;
+  private volatile boolean running;
+  private Filter filter;
+  private SourceHandler sourceHandler;
+  private int batchSizeMax;
+  private boolean connectorNameInOffsets;
 
-    @Override
-    public String version() {
-        return Version.getVersion();
+  @Override
+  public String version() {
+    return Version.getVersion();
+  }
+
+  @Override
+  public void start(Map<String, String> properties) {
+    try {
+      configProperties = properties;
+      config = new CouchbaseSourceTaskConfig(configProperties);
+    } catch (ConfigException e) {
+      throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
     }
 
-    @Override
-    public void start(Map<String, String> properties) {
+    RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
+    CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
+
+    filter = createFilter(config.getString(CouchbaseSourceConnectorConfig.EVENT_FILTER_CLASS_CONFIG));
+    sourceHandler = createHandler(
+        config.getString(CouchbaseSourceConnectorConfig.DCP_MESSAGE_CONVERTER_CLASS_CONFIG));
+
+    topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
+    bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+    connectorNameInOffsets = config.getBoolean(CouchbaseSourceConnectorConfig.COMPAT_NAMES_CONFIG);
+    String username = config.getUsername();
+    String password = Password.CONNECTION.get(config);
+    List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+    boolean useSnapshots = config.getBoolean(CouchbaseSourceConnectorConfig.USE_SNAPSHOTS_CONFIG);
+    boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
+    String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
+    String sslKeystorePassword = Password.SSL_KEYSTORE.get(config);
+    batchSizeMax = config.getInt(CouchbaseSourceConnectorConfig.BATCH_SIZE_MAX_CONFIG);
+    StreamFrom streamFrom = config.getEnum(StreamFrom.class, CouchbaseSourceConnectorConfig.STREAM_FROM_CONFIG);
+    CompressionMode compressionMode = config.getEnum(CompressionMode.class, CouchbaseSourceConnectorConfig.COMPRESSION_CONFIG);
+    String connectorName = config.getConnectorName();
+
+    final long persistencePollingIntervalMillis = DurationParser.parseDuration(
+        config.getString(CouchbaseSourceConnectorConfig.PERSISTENCE_POLLING_INTERVAL_CONFIG),
+        TimeUnit.MILLISECONDS);
+    final int flowControlBufferBytes = (int) Math.min(Integer.MAX_VALUE,
+        SizeParser.parseSizeBytes(config.getString(CouchbaseSourceConnectorConfig.FLOW_CONTROL_BUFFER_CONFIG)));
+
+    long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
+    Short[] partitions = toBoxedShortArray(config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG));
+
+    Map<Short, Long> partitionToSavedSeqno = readSourceOffsets(partitions);
+
+    running = true;
+    queue = new LinkedBlockingQueue<>();
+    errorQueue = new LinkedBlockingQueue<>(1);
+    couchbaseReader = new CouchbaseReader(connectorName, clusterAddress, bucket, username, password, connectionTimeout,
+        queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
+        compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes);
+    couchbaseReader.start();
+  }
+
+  @SuppressWarnings("deprecation")
+  private SourceHandler createHandler(final String className) {
+    try {
+      try {
+        return Utils.newInstance(className, SourceHandler.class);
+      } catch (ClassCastException e) {
+        SourceHandler adapter = new LegacySourceHandlerAdapter(Utils.newInstance(className, Converter.class));
+        LOGGER.warn("Converter class {} implements deprecated {}. Please update the converter to extend {} instead.",
+            className, Converter.class, SourceHandler.class);
+        return adapter;
+      }
+    } catch (ClassNotFoundException e) {
+      throw new ConnectException("Couldn't create message handler", e);
+    }
+  }
+
+  private Filter createFilter(final String className) {
+    if (className != null && !"".equals(className)) {
+      try {
+        return Utils.newInstance(className, Filter.class);
+      } catch (ClassNotFoundException e) {
+        throw new ConnectException("Couldn't create filter in CouchbaseSourceTask due to an error", e);
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public List<SourceRecord> poll()
+      throws InterruptedException {
+    List<SourceRecord> results = new LinkedList<>();
+    int batchSize = batchSizeMax;
+
+    while (running) {
+      Event event = queue.poll(100, TimeUnit.MILLISECONDS);
+      if (event != null) {
         try {
-            configProperties = properties;
-            config = new CouchbaseSourceTaskConfig(configProperties);
-        } catch (ConfigException e) {
-            throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
+          for (ByteBuf message : event) {
+            if (filter == null || filter.pass(message)) {
+              SourceRecord record = convert(message);
+              if (record != null) {
+                results.add(record);
+              }
+            }
+          }
+
+          event.ack();
+          batchSize--;
+        } finally {
+          releaseAll(event);
         }
-
-        RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
-        CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
-
-        filter = createFilter(config.getString(CouchbaseSourceConnectorConfig.EVENT_FILTER_CLASS_CONFIG));
-        sourceHandler = createHandler(
-                config.getString(CouchbaseSourceConnectorConfig.DCP_MESSAGE_CONVERTER_CLASS_CONFIG));
-
-        topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
-        bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-        connectorNameInOffsets = config.getBoolean(CouchbaseSourceConnectorConfig.COMPAT_NAMES_CONFIG);
-        String username = config.getUsername();
-        String password = Password.CONNECTION.get(config);
-        List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
-        boolean useSnapshots = config.getBoolean(CouchbaseSourceConnectorConfig.USE_SNAPSHOTS_CONFIG);
-        boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
-        String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
-        String sslKeystorePassword = Password.SSL_KEYSTORE.get(config);
-        batchSizeMax = config.getInt(CouchbaseSourceConnectorConfig.BATCH_SIZE_MAX_CONFIG);
-        StreamFrom streamFrom = config.getEnum(StreamFrom.class, CouchbaseSourceConnectorConfig.STREAM_FROM_CONFIG);
-        CompressionMode compressionMode = config.getEnum(CompressionMode.class, CouchbaseSourceConnectorConfig.COMPRESSION_CONFIG);
-        String connectorName = config.getConnectorName();
-
-        final long persistencePollingIntervalMillis = DurationParser.parseDuration(
-                config.getString(CouchbaseSourceConnectorConfig.PERSISTENCE_POLLING_INTERVAL_CONFIG),
-                TimeUnit.MILLISECONDS);
-        final int flowControlBufferBytes = (int) Math.min(Integer.MAX_VALUE,
-                SizeParser.parseSizeBytes(config.getString(CouchbaseSourceConnectorConfig.FLOW_CONTROL_BUFFER_CONFIG)));
-
-        long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
-        Short[] partitions = toBoxedShortArray(config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG));
-
-        Map<Short, Long> partitionToSavedSeqno = readSourceOffsets(partitions);
-
-        running = true;
-        queue = new LinkedBlockingQueue<>();
-        errorQueue = new LinkedBlockingQueue<>(1);
-        couchbaseReader = new CouchbaseReader(connectorName, clusterAddress, bucket, username, password, connectionTimeout,
-                queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
-                compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes);
-        couchbaseReader.start();
-    }
-
-    @SuppressWarnings("deprecation")
-    private SourceHandler createHandler(final String className) {
-        try {
-            try {
-                return Utils.newInstance(className, SourceHandler.class);
-            } catch (ClassCastException e) {
-                SourceHandler adapter = new LegacySourceHandlerAdapter(Utils.newInstance(className, Converter.class));
-                LOGGER.warn("Converter class {} implements deprecated {}. Please update the converter to extend {} instead.",
-                        className, Converter.class, SourceHandler.class);
-                return adapter;
-            }
-        } catch (ClassNotFoundException e) {
-            throw new ConnectException("Couldn't create message handler", e);
-        }
-    }
-
-    private Filter createFilter(final String className) {
-        if (className != null && !"".equals(className)) {
-            try {
-                return Utils.newInstance(className, Filter.class);
-            } catch (ClassNotFoundException e) {
-                throw new ConnectException("Couldn't create filter in CouchbaseSourceTask due to an error", e);
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public List<SourceRecord> poll()
-            throws InterruptedException {
-        List<SourceRecord> results = new LinkedList<>();
-        int batchSize = batchSizeMax;
-
-        while (running) {
-            Event event = queue.poll(100, TimeUnit.MILLISECONDS);
-            if (event != null) {
-                try {
-                    for (ByteBuf message : event) {
-                        if (filter == null || filter.pass(message)) {
-                            SourceRecord record = convert(message);
-                            if (record != null) {
-                                results.add(record);
-                            }
-                        }
-                    }
-
-                    event.ack();
-                    batchSize--;
-                } finally {
-                    releaseAll(event);
-                }
-            }
-            if (!results.isEmpty() &&
-                    (batchSize == 0 || event == null || event instanceof Snapshot)) {
-                LOGGER.info("Poll returns {} result(s)", results.size());
-                return results;
-            }
-
-            final Throwable fatalError = errorQueue.poll();
-            if (fatalError != null) {
-                throw new ConnectException(fatalError);
-            }
-        }
+      }
+      if (!results.isEmpty() &&
+          (batchSize == 0 || event == null || event instanceof Snapshot)) {
+        LOGGER.info("Poll returns {} result(s)", results.size());
         return results;
+      }
+
+      final Throwable fatalError = errorQueue.poll();
+      if (fatalError != null) {
+        throw new ConnectException(fatalError);
+      }
+    }
+    return results;
+  }
+
+  @SuppressWarnings("unchecked")
+  public SourceRecord convert(ByteBuf event) {
+    final long vBucketUuid = couchbaseReader.getVBucketUuid(MessageUtil.getVbucket(event));
+    final DocumentEvent docEvent = DocumentEvent.create(event, bucket, vBucketUuid);
+
+    CouchbaseSourceRecord r = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
+    if (r == null) {
+      return null;
     }
 
-    @SuppressWarnings("unchecked")
-    public SourceRecord convert(ByteBuf event) {
-        final long vBucketUuid = couchbaseReader.getVBucketUuid(MessageUtil.getVbucket(event));
-        final DocumentEvent docEvent = DocumentEvent.create(event, bucket, vBucketUuid);
+    return new SourceRecord(
+        sourcePartition(docEvent.vBucket()),
+        sourceOffset(docEvent.bySeqno()),
+        r.topic() == null ? topic : r.topic(),
+        r.kafkaPartition(),
+        r.keySchema(), r.key(),
+        r.valueSchema(), r.value(),
+        r.timestamp());
+  }
 
-        CouchbaseSourceRecord r = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
-        if (r == null) {
-            return null;
-        }
-
-        return new SourceRecord(
-                sourcePartition(docEvent.vBucket()),
-                sourceOffset(docEvent.bySeqno()),
-                r.topic() == null ? topic : r.topic(),
-                r.kafkaPartition(),
-                r.keySchema(), r.key(),
-                r.valueSchema(), r.value(),
-                r.timestamp());
+  @Override
+  public void stop() {
+    running = false;
+    couchbaseReader.shutdown();
+    try {
+      couchbaseReader.join(MAX_TIMEOUT);
+      if (couchbaseReader.isAlive()) {
+        LOGGER.error("Reader thread is still alive after shutdown request.");
+      }
+    } catch (InterruptedException e) {
+      LOGGER.error("Interrupted while joining reader thread.", e);
     }
 
-    @Override
-    public void stop() {
-        running = false;
-        couchbaseReader.shutdown();
-        try {
-            couchbaseReader.join(MAX_TIMEOUT);
-            if (couchbaseReader.isAlive()) {
-                LOGGER.error("Reader thread is still alive after shutdown request.");
-            }
-        } catch (InterruptedException e) {
-            LOGGER.error("Interrupted while joining reader thread.", e);
-        }
+    LOGGER.info("Releasing unconsumed events: {}", queue.size());
+    for (Event event : queue) {
+      // Don't need to ACK, since DCP connection is already closed.
+      releaseAll(event);
+    }
+  }
 
-        LOGGER.info("Releasing unconsumed events: {}", queue.size());
-        for (Event event : queue) {
-            // Don't need to ACK, since DCP connection is already closed.
-            releaseAll(event);
-        }
+  private void releaseAll(Iterable<ByteBuf> buffers) {
+    RuntimeException deferredException = null;
+
+    for (ByteBuf buffer : buffers) {
+      try {
+        buffer.release();
+      } catch (RuntimeException t) {
+        LOGGER.warn("Failed to release buffer {}", buffer, t);
+        deferredException = t;
+      }
+    }
+    if (deferredException != null) {
+      throw deferredException;
+    }
+  }
+
+  /**
+   * Loads as many of the requested source offsets as possible.
+   * See the caveats for {@link org.apache.kafka.connect.storage.OffsetStorageReader#offsets(Collection)}.
+   *
+   * @return a map of partitions to sequence numbers.
+   */
+  private Map<Short, Long> readSourceOffsets(Short[] partitions) {
+    Map<Short, Long> partitionToSequenceNumber = new HashMap<>();
+
+    Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
+        sourcePartitions(partitions));
+
+    LOGGER.debug("Raw source offsets: {}", offsets);
+
+    for (Map.Entry<Map<String, Object>, Map<String, Object>> entry : offsets.entrySet()) {
+      Map<String, Object> partitionIdentifier = entry.getKey();
+      Map<String, Object> offset = entry.getValue();
+      if (offset == null) {
+        continue;
+      }
+      Short partition = Short.valueOf((String) partitionIdentifier.get("partition"));
+      partitionToSequenceNumber.put(partition, (Long) offset.get("bySeqno"));
     }
 
-    private void releaseAll(Iterable<ByteBuf> buffers) {
-        RuntimeException deferredException = null;
+    LOGGER.debug("Partition to saved seqno: {}", partitionToSequenceNumber);
 
-        for (ByteBuf buffer : buffers) {
-            try {
-                buffer.release();
-            } catch (RuntimeException t) {
-                LOGGER.warn("Failed to release buffer {}", buffer, t);
-                deferredException = t;
-            }
-        }
-        if (deferredException != null) {
-            throw deferredException;
-        }
+    return partitionToSequenceNumber;
+  }
+
+  private List<Map<String, Object>> sourcePartitions(Short[] partitions) {
+    List<Map<String, Object>> sourcePartitions = new ArrayList<>();
+    for (Short partition : partitions) {
+      sourcePartitions.add(sourcePartition(partition));
     }
+    return sourcePartitions;
+  }
 
-    /**
-     * Loads as many of the requested source offsets as possible.
-     * See the caveats for {@link org.apache.kafka.connect.storage.OffsetStorageReader#offsets(Collection)}.
-     *
-     * @return a map of partitions to sequence numbers.
-     */
-    private Map<Short, Long> readSourceOffsets(Short[] partitions) {
-        Map<Short, Long> partitionToSequenceNumber = new HashMap<>();
-
-        Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
-                sourcePartitions(partitions));
-
-        LOGGER.debug("Raw source offsets: {}", offsets);
-
-        for (Map.Entry<Map<String, Object>, Map<String, Object>> entry : offsets.entrySet()) {
-            Map<String, Object> partitionIdentifier = entry.getKey();
-            Map<String, Object> offset = entry.getValue();
-            if (offset == null) {
-                continue;
-            }
-            Short partition = Short.valueOf((String) partitionIdentifier.get("partition"));
-            partitionToSequenceNumber.put(partition, (Long) offset.get("bySeqno"));
-        }
-
-        LOGGER.debug("Partition to saved seqno: {}", partitionToSequenceNumber);
-
-        return partitionToSequenceNumber;
+  /**
+   * Converts a Couchbase DCP partition (also known as a vBucket) into the Map format required by Kafka Connect.
+   */
+  private Map<String, Object> sourcePartition(short partition) {
+    final Map<String, Object> sourcePartition = new HashMap<>(3);
+    sourcePartition.put("bucket", bucket);
+    sourcePartition.put("partition", String.valueOf(partition)); // Stringify for robust round-tripping across Kafka [de]serialization
+    if (connectorNameInOffsets) {
+      sourcePartition.put("connector", config.getConnectorName());
     }
+    return sourcePartition;
+  }
 
-    private List<Map<String, Object>> sourcePartitions(Short[] partitions) {
-        List<Map<String, Object>> sourcePartitions = new ArrayList<>();
-        for (Short partition : partitions) {
-            sourcePartitions.add(sourcePartition(partition));
-        }
-        return sourcePartitions;
-    }
+  /**
+   * Converts a Couchbase DCP sequence number into the Map format required by Kafka Connect.
+   */
+  private static Map<String, Object> sourceOffset(long sequenceNumber) {
+    return Collections.singletonMap("bySeqno", sequenceNumber);
+  }
 
-    /**
-     * Converts a Couchbase DCP partition (also known as a vBucket) into the Map format required by Kafka Connect.
-     */
-    private Map<String, Object> sourcePartition(short partition) {
-        final Map<String, Object> sourcePartition = new HashMap<>(3);
-        sourcePartition.put("bucket", bucket);
-        sourcePartition.put("partition", String.valueOf(partition)); // Stringify for robust round-tripping across Kafka [de]serialization
-        if (connectorNameInOffsets) {
-            sourcePartition.put("connector", config.getConnectorName());
-        }
-        return sourcePartition;
-    }
-
-    /**
-     * Converts a Couchbase DCP sequence number into the Map format required by Kafka Connect.
-     */
-    private static Map<String, Object> sourceOffset(long sequenceNumber) {
-        return Collections.singletonMap("bySeqno", sequenceNumber);
-    }
-
-    private static Short[] toBoxedShortArray(Collection<String> stringifiedShorts) {
-        return stringifiedShorts.stream()
-                .map(Short::valueOf)
-                .toArray(Short[]::new);
-    }
+  private static Short[] toBoxedShortArray(Collection<String> stringifiedShorts) {
+    return stringifiedShorts.stream()
+        .map(Short::valueOf)
+        .toArray(Short[]::new);
+  }
 }

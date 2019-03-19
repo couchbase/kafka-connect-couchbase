@@ -22,14 +22,14 @@ import org.apache.kafka.common.config.ConfigException;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DurationValidator implements ConfigDef.Validator {
-    @Override
-    public void ensureValid(String name, Object value) {
-        try {
-            if (value != null && !((String) value).isEmpty()) {
-                DurationParser.parseDuration((String) value, MILLISECONDS);
-            }
-        } catch (IllegalArgumentException e) {
-            throw new ConfigException("Failed to parse config property '" + name + "' -- " + e.getMessage());
-        }
+  @Override
+  public void ensureValid(String name, Object value) {
+    try {
+      if (value != null && !((String) value).isEmpty()) {
+        DurationParser.parseDuration((String) value, MILLISECONDS);
+      }
+    } catch (IllegalArgumentException e) {
+      throw new ConfigException("Failed to parse config property '" + name + "' -- " + e.getMessage());
     }
+  }
 }

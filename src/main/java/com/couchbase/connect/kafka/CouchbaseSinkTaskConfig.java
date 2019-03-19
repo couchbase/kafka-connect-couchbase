@@ -20,7 +20,7 @@ import java.util.Map;
 
 public class CouchbaseSinkTaskConfig extends CouchbaseSinkConnectorConfig {
 
-    public CouchbaseSinkTaskConfig(Map<String, String> props) {
-        super(props);
-    }
+  public CouchbaseSinkTaskConfig(Map<String, String> props) {
+    super(props);
+  }
 }

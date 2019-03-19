@@ -19,14 +19,14 @@ package com.couchbase.connect.kafka.util;
 import java.util.List;
 
 public enum StringUtils {
-    ;
+  ;
 
-    /**
-     * @deprecated In favor of {@link String#join(CharSequence, Iterable)}
-     */
-    @Deprecated
-    public static String join(final List<String> list, final String separator) {
-        return String.join(separator, list);
-    }
+  /**
+   * @deprecated In favor of {@link String#join(CharSequence, Iterable)}
+   */
+  @Deprecated
+  public static String join(final List<String> list, final String separator) {
+    return String.join(separator, list);
+  }
 
 }

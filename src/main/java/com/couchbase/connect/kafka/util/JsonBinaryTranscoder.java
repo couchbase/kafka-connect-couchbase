@@ -29,23 +29,23 @@ import com.couchbase.client.java.transcoder.TranscoderUtils;
  * (because that's all the Kafka sink connector needs).
  */
 public class JsonBinaryTranscoder extends AbstractTranscoder<JsonBinaryDocument, ByteBuf> {
-    protected JsonBinaryDocument doDecode(String id, ByteBuf content, long cas, int expiry, int flags, ResponseStatus status) throws Exception {
-        throw new UnsupportedOperationException();
-    }
+  protected JsonBinaryDocument doDecode(String id, ByteBuf content, long cas, int expiry, int flags, ResponseStatus status) throws Exception {
+    throw new UnsupportedOperationException();
+  }
 
-    protected Tuple2<ByteBuf, Integer> doEncode(JsonBinaryDocument document) throws Exception {
-        return Tuple.create(document.content(), TranscoderUtils.JSON_COMPAT_FLAGS);
-    }
+  protected Tuple2<ByteBuf, Integer> doEncode(JsonBinaryDocument document) throws Exception {
+    return Tuple.create(document.content(), TranscoderUtils.JSON_COMPAT_FLAGS);
+  }
 
-    public JsonBinaryDocument newDocument(String id, int expiry, ByteBuf content, long cas) {
-        return new JsonBinaryDocument(id, expiry, content, cas, null);
-    }
+  public JsonBinaryDocument newDocument(String id, int expiry, ByteBuf content, long cas) {
+    return new JsonBinaryDocument(id, expiry, content, cas, null);
+  }
 
-    public JsonBinaryDocument newDocument(String id, int expiry, ByteBuf content, long cas, MutationToken mutationToken) {
-        return new JsonBinaryDocument(id, expiry, content, cas, mutationToken);
-    }
+  public JsonBinaryDocument newDocument(String id, int expiry, ByteBuf content, long cas, MutationToken mutationToken) {
+    return new JsonBinaryDocument(id, expiry, content, cas, mutationToken);
+  }
 
-    public Class<JsonBinaryDocument> documentType() {
-        return JsonBinaryDocument.class;
-    }
+  public Class<JsonBinaryDocument> documentType() {
+    return JsonBinaryDocument.class;
+  }
 }
