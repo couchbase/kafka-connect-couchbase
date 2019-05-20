@@ -2,6 +2,25 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 3.4.4 (2019-05-21)
+
+https://packages.couchbase.com/clients/kafka/3.4.4/kafka-connect-couchbase-3.4.4.zip[kafka-connect-couchbase-3.4.4.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.4.4</version>
+</dependency>
+----
+
+This maintenance release fixes a bug that could prevent some versions of Couchbase Server from rebalancing when the connector is running.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-148[KAFKAC-148] KAFKAC-148 Couchbase Server fails to rebalance if Kafka connector is running
+
 == Couchbase Kafka Connector 3.4.3 (2019-03-19)
 
 https://packages.couchbase.com/clients/kafka/3.4.3/kafka-connect-couchbase-3.4.3.zip[kafka-connect-couchbase-3.4.3.zip]
