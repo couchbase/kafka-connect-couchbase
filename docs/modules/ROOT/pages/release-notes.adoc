@@ -19,7 +19,7 @@ This maintenance release fixes a bug that could prevent some versions of Couchba
 
 === Bug Fixes
 
-* https://issues.couchbase.com/browse/KAFKAC-148[KAFKAC-148] KAFKAC-148 Couchbase Server fails to rebalance if Kafka connector is running
+* https://issues.couchbase.com/browse/KAFKAC-148[KAFKAC-148] Couchbase Server fails to rebalance if Kafka connector is running
 
 == Couchbase Kafka Connector 3.4.3 (2019-03-19)
 
