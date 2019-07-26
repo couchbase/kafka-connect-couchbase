@@ -15,6 +15,8 @@ When copying data from a bucket, the connector loads only new or modified docume
 
 Because the Kafka connector relies heavily on DCP, it is only compatible with Couchbase Server 3.0 and later.
 
+The Kafka connector implements the https://kafka.apache.org/documentation.html#connect[Kafka Connect] plug-in standard.
+
 == Contributing
 
 Couchbase welcomes community contributions to the Kafka connector.
