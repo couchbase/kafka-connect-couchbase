@@ -268,12 +268,14 @@ The "Continue" button will lead to the next step where the form values are conve
 $ curl -X POST -H "Content-Type: application/json" http://localhost:8083/connectors \
      --data '{
                "name": "sample",
-               "connector.class": "com.couchbase.connect.kafka.CouchbaseSourceConnector",
-               "tasks.max": 2,
-               "connection.cluster_address": "localhost",
-               "connection.bucket": "beer-sample",
-               "topic.name": "streaming-topic-beer-sample"
-             }'
+               "config": {
+                 "connector.class": "com.couchbase.connect.kafka.CouchbaseSourceConnector",
+                 "tasks.max": 2,
+                 "connection.cluster_address": "localhost",
+                 "connection.bucket": "beer-sample",
+                 "topic.name": "streaming-topic-beer-sample"
+               }
+            }'
 ----
 
 Submitting the form (or using a REST call) will register the new Connector link and start it immediately.
