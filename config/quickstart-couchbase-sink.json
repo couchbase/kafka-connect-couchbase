@@ -1,0 +1,19 @@
+{
+  "name": "test-couchbase-sink",
+  "config": {
+    "name": "test-couchbase-sink",
+    "connector.class": "com.couchbase.connect.kafka.CouchbaseSinkConnector",
+    "tasks.max": "2",
+    "topics": "couchbase-sink-example",
+    "connection.cluster_address": "127.0.0.1",
+    "connection.timeout.ms": "2000",
+    "connection.bucket": "default",
+    "connection.username": "Administrator",
+    "connection.password": "password",
+    "couchbase.durability.persist_to": "NONE",
+    "couchbase.durability.replicate_to": "NONE",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false"
+  }
+}
