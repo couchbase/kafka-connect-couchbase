@@ -123,7 +123,7 @@ public class Cluster {
                           try {
                             if (msg.getStatus().equals(HttpResponseStatus.OK)) {
                               String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
-                              result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv, NetworkAddress.create(hostname)));
+                              result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv, hostname));
                             }
                           } finally {
                             latch.countDown();

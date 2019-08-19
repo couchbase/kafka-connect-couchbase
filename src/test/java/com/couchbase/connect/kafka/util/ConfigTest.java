@@ -39,7 +39,7 @@ public class ConfigTest {
 
   private CouchbaseBucketConfig loadConfig(String resource) {
     String body = Resources.read(resource, getClass());
-    return (CouchbaseBucketConfig) BucketConfigParser.parse(body, Cluster.dummyBootstrapEnv, NetworkAddress.localhost());
+    return (CouchbaseBucketConfig) BucketConfigParser.parse(body, Cluster.dummyBootstrapEnv, null);
   }
 
   private int numberOfConnections(CouchbaseBucketConfig bucketConfig, List<List<Short>> groups) {
