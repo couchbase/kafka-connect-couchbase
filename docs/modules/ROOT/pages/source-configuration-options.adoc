@@ -11,6 +11,23 @@ Couchbase Cluster addresses to listen (use comma to specify several).
 * Type: list
 * Importance: high
 
+=== `couchbase.network`
+
+The network selection strategy for connecting to a Couchbase Server cluster that advertises alternate addresses.
+A Couchbase node running inside a container environment (like Docker or Kubernetes) might be configured to advertise both its address within the container environment (known as its "default" address) as well as an "external" address for use by clients connecting from outside the environment.
+Setting the `couchbase.network` config property to `default` or `external` forces the selection of the respective addresses.
+Setting the value to `auto` tells the connector to select whichever network contains the addresses specified in the `connection.cluster_address` config property; this heuristic works well in most environments and is the recommended mode.
+
+* Possible values:
+** `auto`
+** `default`
+** `external`
+
+* Since: 3.4.5 (uncommitted)
+* Type: string
+* Importance: low
+* Default: `"auto"`
+
 === `connection.bucket`
 
 Couchbase bucket name.

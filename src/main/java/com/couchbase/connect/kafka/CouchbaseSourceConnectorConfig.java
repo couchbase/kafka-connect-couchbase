@@ -46,6 +46,14 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
   static final String CONNECTION_CLUSTER_ADDRESS_DOC = "Couchbase Cluster addresses to listen (use comma to specify several).";
   static final String CONNECTION_CLUSTER_ADDRESS_DISPLAY = "Couchbase Cluster Address";
 
+  public static final String COUCHBASE_NETWORK_CONFIG = "couchbase.network";
+  static final String COUCHBASE_NETWORK_DOC = "The network selection strategy for connecting to a Couchbase Server cluster that advertises alternate addresses." +
+      " A Couchbase node running inside a container environment (like Docker or Kubernetes) might be configured to advertise both its address within the container environment (known as its \"default\" address) as well as an \"external\" address for use by clients connecting from outside the environment." +
+      " Setting the 'couchbase.network' config property to 'default' or 'external' forces the selection of the respective addresses." +
+      " Setting the value to 'auto' tells the connector to select whichever network contains the addresses specified in the 'connection.cluster_address' config property; this heuristic works well in most environments and is the recommended mode.";
+  static final String COUCHBASE_NETWORK_DISPLAY = "Couchbase Network Selection";
+  static final String COUCHBASE_NETWORK_DEFAULT = "auto";
+
   public static final String CONNECTION_BUCKET_CONFIG = "connection.bucket";
   static final String CONNECTION_BUCKET_DOC = "Couchbase bucket name.";
   static final String CONNECTION_BUCKET_DISPLAY = "Couchbase Bucket";
@@ -170,11 +178,20 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             ConfigDef.Width.LONG,
             CONNECTION_CLUSTER_ADDRESS_DISPLAY)
 
+        .define(COUCHBASE_NETWORK_CONFIG,
+            ConfigDef.Type.STRING,
+            COUCHBASE_NETWORK_DEFAULT,
+            ConfigDef.Importance.LOW,
+            COUCHBASE_NETWORK_DOC,
+            DATABASE_GROUP, 2,
+            ConfigDef.Width.LONG,
+            COUCHBASE_NETWORK_DISPLAY)
+
         .define(CONNECTION_BUCKET_CONFIG,
             ConfigDef.Type.STRING,
             ConfigDef.Importance.HIGH,
             CONNECTION_BUCKET_DOC,
-            DATABASE_GROUP, 2,
+            DATABASE_GROUP, 3,
             ConfigDef.Width.LONG,
             CONNECTION_BUCKET_DISPLAY)
 
@@ -183,7 +200,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             CONNECTION_USERNAME_DEFAULT,
             ConfigDef.Importance.HIGH,
             CONNECTION_USERNAME_DOC,
-            DATABASE_GROUP, 3,
+            DATABASE_GROUP, 4,
             ConfigDef.Width.LONG,
             CONNECTION_USERNAME_DISPLAY)
 
@@ -192,7 +209,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             CONNECTION_PASSWORD_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_PASSWORD_DOC,
-            DATABASE_GROUP, 4,
+            DATABASE_GROUP, 5,
             ConfigDef.Width.LONG,
             CONNECTION_PASSWORD_DISPLAY)
 
@@ -201,7 +218,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             CONNECTION_TIMEOUT_MS_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_TIMEOUT_MS_DOC,
-            DATABASE_GROUP, 5,
+            DATABASE_GROUP, 6,
             ConfigDef.Width.LONG,
             CONNECTION_TIMEOUT_MS_DISPLAY)
 
@@ -210,7 +227,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             CONNECTION_SSL_ENABLED_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_SSL_ENABLED_DOC,
-            DATABASE_GROUP, 6,
+            DATABASE_GROUP, 7,
             ConfigDef.Width.SHORT,
             CONNECTION_SSL_ENABLED_DISPLAY,
             Arrays.asList(CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG, CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG))
@@ -220,7 +237,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_SSL_KEYSTORE_PASSWORD_DOC,
-            DATABASE_GROUP, 7,
+            DATABASE_GROUP, 8,
             ConfigDef.Width.LONG,
             CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY,
             sslDependentsRecommender)
@@ -230,7 +247,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_SSL_KEYSTORE_LOCATION_DOC,
-            DATABASE_GROUP, 8,
+            DATABASE_GROUP, 9,
             ConfigDef.Width.LONG,
             CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY,
             sslDependentsRecommender)

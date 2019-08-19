@@ -66,6 +66,10 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECT
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DISPLAY;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_USERNAME_DOC;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTOR_GROUP;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_CONFIG;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_DEFAULT;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_DISPLAY;
+import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_DOC;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.DATABASE_GROUP;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_DEFAULT;
@@ -164,11 +168,20 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             ConfigDef.Width.LONG,
             CONNECTION_CLUSTER_ADDRESS_DISPLAY)
 
+        .define(COUCHBASE_NETWORK_CONFIG,
+            ConfigDef.Type.STRING,
+            COUCHBASE_NETWORK_DEFAULT,
+            ConfigDef.Importance.LOW,
+            COUCHBASE_NETWORK_DOC,
+            DATABASE_GROUP, 2,
+            ConfigDef.Width.LONG,
+            COUCHBASE_NETWORK_DISPLAY)
+
         .define(CONNECTION_BUCKET_CONFIG,
             ConfigDef.Type.STRING,
             ConfigDef.Importance.HIGH,
             CONNECTION_BUCKET_DOC,
-            DATABASE_GROUP, 2,
+            DATABASE_GROUP, 3,
             ConfigDef.Width.LONG,
             CONNECTION_BUCKET_DISPLAY)
 
@@ -177,7 +190,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             CONNECTION_USERNAME_DEFAULT,
             ConfigDef.Importance.HIGH,
             CONNECTION_USERNAME_DOC,
-            DATABASE_GROUP, 3,
+            DATABASE_GROUP, 4,
             ConfigDef.Width.LONG,
             CONNECTION_USERNAME_DISPLAY)
 
@@ -186,7 +199,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             CONNECTION_PASSWORD_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_PASSWORD_DOC,
-            DATABASE_GROUP, 4,
+            DATABASE_GROUP, 5,
             ConfigDef.Width.LONG,
             CONNECTION_PASSWORD_DISPLAY)
 
@@ -195,7 +208,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             CONNECTION_TIMEOUT_MS_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_TIMEOUT_MS_DOC,
-            DATABASE_GROUP, 5,
+            DATABASE_GROUP, 6,
             ConfigDef.Width.LONG,
             CONNECTION_TIMEOUT_MS_DISPLAY)
 
@@ -204,7 +217,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             CONNECTION_SSL_ENABLED_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_SSL_ENABLED_DOC,
-            DATABASE_GROUP, 6,
+            DATABASE_GROUP, 7,
             ConfigDef.Width.SHORT,
             CONNECTION_SSL_ENABLED_DISPLAY,
             Arrays.asList(CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG, CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG))
@@ -214,7 +227,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             CONNECTION_SSL_KEYSTORE_PASSWORD_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_SSL_KEYSTORE_PASSWORD_DOC,
-            DATABASE_GROUP, 7,
+            DATABASE_GROUP, 8,
             ConfigDef.Width.LONG,
             CONNECTION_SSL_KEYSTORE_PASSWORD_DISPLAY,
             sslDependentsRecommender)
@@ -224,7 +237,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             CONNECTION_SSL_KEYSTORE_LOCATION_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_SSL_KEYSTORE_LOCATION_DOC,
-            DATABASE_GROUP, 8,
+            DATABASE_GROUP, 9,
             ConfigDef.Width.LONG,
             CONNECTION_SSL_KEYSTORE_LOCATION_DISPLAY,
             sslDependentsRecommender)
@@ -234,7 +247,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             DOCUMENT_ID_POINTER_DEFAULT,
             ConfigDef.Importance.LOW,
             DOCUMENT_ID_POINTER_DOC,
-            DATABASE_GROUP, 9,
+            DATABASE_GROUP, 10,
             ConfigDef.Width.LONG,
             DOCUMENT_ID_POINTER_DISPLAY,
             Collections.singletonList(REMOVE_DOCUMENT_ID_CONFIG))
@@ -244,7 +257,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             REMOVE_DOCUMENT_ID_DEFAULT,
             ConfigDef.Importance.LOW,
             REMOVE_DOCUMENT_ID_DOC,
-            DATABASE_GROUP, 10,
+            DATABASE_GROUP, 11,
             ConfigDef.Width.LONG,
             REMOVE_DOCUMENT_ID_DISPLAY,
             new ConfigDef.Recommender() {
@@ -265,7 +278,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             new EnumValidator(PersistTo.class),
             ConfigDef.Importance.LOW,
             PERSIST_TO_DOC,
-            DATABASE_GROUP, 11,
+            DATABASE_GROUP, 12,
             ConfigDef.Width.LONG,
             PERSIST_TO_DISPLAY,
             new EnumRecommender(PersistTo.class))
@@ -276,7 +289,7 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
             new EnumValidator(ReplicateTo.class),
             ConfigDef.Importance.LOW,
             REPLICATE_TO_DOC,
-            DATABASE_GROUP, 12,
+            DATABASE_GROUP, 13,
             ConfigDef.Width.LONG,
             REPLICATE_TO_DISPLAY,
             new EnumRecommender(ReplicateTo.class))

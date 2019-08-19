@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.config.CompressionMode;
@@ -52,6 +53,8 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import static com.couchbase.connect.kafka.CouchbaseSinkTask.parseNetworkResolution;
 
 public class CouchbaseSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
@@ -98,6 +101,7 @@ public class CouchbaseSourceTask extends SourceTask {
     String username = config.getUsername();
     String password = Password.CONNECTION.get(config);
     List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+    NetworkResolution networkResolution = parseNetworkResolution(config.getString(CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_CONFIG));
     boolean useSnapshots = config.getBoolean(CouchbaseSourceConnectorConfig.USE_SNAPSHOTS_CONFIG);
     boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
     String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
@@ -123,7 +127,7 @@ public class CouchbaseSourceTask extends SourceTask {
     errorQueue = new LinkedBlockingQueue<>(1);
     couchbaseReader = new CouchbaseReader(connectorName, clusterAddress, bucket, username, password, connectionTimeout,
         queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
-        compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes);
+        compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes, networkResolution);
     couchbaseReader.start();
   }
 

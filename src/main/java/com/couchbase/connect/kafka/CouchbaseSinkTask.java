@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.core.time.Delay;
@@ -110,6 +111,10 @@ public class CouchbaseSinkTask extends SinkTask {
     return Version.getVersion();
   }
 
+  static NetworkResolution parseNetworkResolution(String s) {
+    return s.isEmpty() ? NetworkResolution.AUTO : NetworkResolution.custom(s);
+  }
+
   @Override
   public void start(Map<String, String> properties) {
     try {
@@ -125,6 +130,8 @@ public class CouchbaseSinkTask extends SinkTask {
     CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
 
     List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+    NetworkResolution networkResolution = parseNetworkResolution(config.getString(CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_CONFIG));
+
     String bucketName = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
     String username = config.getUsername();
     String password = Password.CONNECTION.get(config);
@@ -135,6 +142,7 @@ public class CouchbaseSinkTask extends SinkTask {
     Long connectTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
     CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
         .sslEnabled(sslEnabled)
+        .networkResolution(networkResolution)
         .sslKeystoreFile(sslKeystoreLocation)
         .sslKeystorePassword(sslKeystorePassword)
         .connectTimeout(connectTimeout)

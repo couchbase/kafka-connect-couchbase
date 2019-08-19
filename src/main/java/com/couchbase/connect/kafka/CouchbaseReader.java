@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
@@ -61,7 +62,7 @@ public class CouchbaseReader extends Thread {
                          final Map<Short, Long> partitionToSavedSeqno, final StreamFrom streamFrom,
                          final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
                          final String sslKeystorePassword, final CompressionMode compressionMode,
-                         long persistencePollingIntervalMillis, int flowControlBufferBytes) {
+                         long persistencePollingIntervalMillis, int flowControlBufferBytes, NetworkResolution networkResolution) {
     this.snapshots = new ConcurrentHashMap<>(partitions.length);
     this.partitions = partitions;
     this.partitionToSavedSeqno = partitionToSavedSeqno;
@@ -71,6 +72,7 @@ public class CouchbaseReader extends Thread {
         .connectionNameGenerator(DefaultConnectionNameGenerator.forProduct("kafka-connector", Version.getVersion(), connectorName))
         .connectTimeout(connectionTimeout)
         .hostnames(clusterAddress)
+        .networkResolution(networkResolution)
         .bucket(bucket)
         .username(username)
         .password(password)
