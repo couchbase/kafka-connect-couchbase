@@ -93,10 +93,6 @@ NOTE: For Couchbase Server versions prior to 5.0, leave the username blank.
 Set the password property to the bucket password, or leave it blank if the bucket does not have a password.
 The sample buckets do not have passwords.
 
-You might also want to set `use_snapshots` to `true`, in which case the source connector will buffer events until it receives a complete snapshot before committing messages to the Kafka topic.
-It doesn't matter for this exercise;
-just be aware the option exists and defaults to `false`.
-
 === Run the Source Connector
 
 Kafka connectors can be run in https://kafka.apache.org/documentation/#connect_running[standalone or distributed] mode.
