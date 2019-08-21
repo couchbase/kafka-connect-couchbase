@@ -2,6 +2,30 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 3.4.5 (2019-08-21)
+
+https://packages.couchbase.com/clients/kafka/3.4.5/kafka-connect-couchbase-3.4.5.zip[kafka-connect-couchbase-3.4.5.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.4.5</version>
+</dependency>
+----
+
+This maintenance release brings the connector up to date with the latest versions of the Couchbase Client SDK and DCP client.
+As a result of this upgrade, the connector is now able to connect to Couchbase Server clusters that advertise alternate addresses.
+This behavior is controlled by the new `couchbase.network` configuration property which defaults to automatic network selection.
+
+NOTE: The alternate address selection feature introduced in this patch version is an "uncommitted" feature, meaning it may change without advance notice in a future patch version.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-154[KAFKAC-154] Expose multi-network config options
+* https://issues.couchbase.com/browse/KAFKAC-155[KAFKAC-155] Upgrade to Couchbase client 2.7.9 and DCP client 0.24.0
+
 == Couchbase Kafka Connector 3.4.4 (2019-05-21)
 
 https://packages.couchbase.com/clients/kafka/3.4.4/kafka-connect-couchbase-3.4.4.zip[kafka-connect-couchbase-3.4.4.zip]
