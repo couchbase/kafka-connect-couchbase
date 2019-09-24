@@ -283,7 +283,7 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   private List<Map<String, Object>> sourcePartitions(Short[] partitions) {
-    List<Map<String, Object>> sourcePartitions = new ArrayList<>();
+    List<Map<String, Object>> sourcePartitions = new ArrayList<>(partitions.length);
     for (Short partition : partitions) {
       sourcePartitions.add(sourcePartition(partition));
     }
