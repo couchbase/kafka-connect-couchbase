@@ -16,12 +16,31 @@
 
 package com.couchbase.connect.kafka.dcp;
 
+import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 
-import java.util.Iterator;
+import static java.util.Objects.requireNonNull;
 
-public interface Event extends Iterable<ByteBuf> {
-  Iterator<ByteBuf> iterator();
+public class Event {
+  private final ByteBuf message;
+  private final ChannelFlowController flowController;
+  private final long vbucketUuid;
 
-  void ack();
+  public Event(ByteBuf message, long vbucketUuid, ChannelFlowController flowController) {
+    this.message = requireNonNull(message);
+    this.flowController = requireNonNull(flowController);
+    this.vbucketUuid = vbucketUuid;
+  }
+
+  public ByteBuf message() {
+    return message;
+  }
+
+  public long vbucketUuid() {
+    return vbucketUuid;
+  }
+
+  public void ack() {
+    flowController.ack(message);
+  }
 }

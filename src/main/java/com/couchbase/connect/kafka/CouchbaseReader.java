@@ -25,16 +25,14 @@ import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.client.dcp.config.DcpControl;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
-import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.dcp.message.DcpSnapshotMarkerRequest;
+import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.message.RollbackMessage;
+import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.util.IllegalReferenceCountException;
 import com.couchbase.connect.kafka.dcp.Event;
-import com.couchbase.connect.kafka.dcp.Message;
-import com.couchbase.connect.kafka.dcp.Snapshot;
 import com.couchbase.connect.kafka.util.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,26 +42,25 @@ import rx.Subscription;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Collections.singletonList;
 
 public class CouchbaseReader extends Thread {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseReader.class);
 
   private final Client client;
   private final Short[] partitions;
-  private final Map<Short, Long> partitionToSavedSeqno;
+  private final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno;
   private final StreamFrom streamFrom;
-  private final Map<Short, Snapshot> snapshots;
   private final BlockingQueue<Throwable> errorQueue;
 
   public CouchbaseReader(final String connectorName, List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
                          final BlockingQueue<Event> queue, final BlockingQueue<Throwable> errorQueue, Short[] partitions,
-                         final Map<Short, Long> partitionToSavedSeqno, final StreamFrom streamFrom,
-                         final boolean useSnapshots, final boolean sslEnabled, final String sslKeystoreLocation,
+                         final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno, final StreamFrom streamFrom,
+                         final boolean sslEnabled, final String sslKeystoreLocation,
                          final String sslKeystorePassword, final CompressionMode compressionMode,
                          long persistencePollingIntervalMillis, int flowControlBufferBytes, NetworkResolution networkResolution) {
-    this.snapshots = new ConcurrentHashMap<>(partitions.length);
     this.partitions = partitions;
     this.partitionToSavedSeqno = partitionToSavedSeqno;
     this.streamFrom = streamFrom;
@@ -89,18 +86,6 @@ public class CouchbaseReader extends Thread {
       @Override
       public void onEvent(ChannelFlowController flowController, ByteBuf event) {
         try {
-          if (useSnapshots && DcpSnapshotMarkerRequest.is(event)) {
-            Snapshot snapshot = new Snapshot(
-                DcpSnapshotMarkerRequest.partition(event),
-                DcpSnapshotMarkerRequest.startSeqno(event),
-                DcpSnapshotMarkerRequest.endSeqno(event)
-            );
-            Snapshot prev = snapshots.put(snapshot.partition(), snapshot);
-            if (prev != null) {
-              LOGGER.warn("Incomplete snapshot detected: {}", prev);
-            }
-          }
-
           if (RollbackMessage.is(event)) {
             final short partition = RollbackMessage.vbucket(event);
             final long seqno = RollbackMessage.seqno(event);
@@ -118,6 +103,7 @@ public class CouchbaseReader extends Thread {
                   @Override
                   public void onError(Throwable e) {
                     LOGGER.error("Failed to roll back partition {} to seqno {}", partition, seqno, e);
+                    errorQueue.offer(e);
                   }
 
                   @Override
@@ -137,42 +123,13 @@ public class CouchbaseReader extends Thread {
     client.dataEventHandler(new DataEventHandler() {
       @Override
       public void onEvent(ChannelFlowController flowController, ByteBuf event) {
-        if (useSnapshots) {
-          try {
-            short partition = DcpMutationMessage.partition(event);
-            long seqno = DcpMutationMessage.bySeqno(event);
-
-            Snapshot snapshot = snapshots.get(partition);
-            if (snapshot == null) {
-              LOGGER.warn("Event with seqno {} for partition {} ignored, because missing snapshot", seqno, partition);
-            } else if (seqno < snapshot.startSeqno()) {
-              LOGGER.warn("Event with seqno {} for partition {} ignored, because current snapshot has higher seqno {}",
-                  seqno, partition, snapshot.startSeqno());
-            } else {
-              event.retain();
-              boolean completed = snapshot.add(event);
-              if (completed) {
-                Snapshot oldSnapshot = snapshots.remove(partition);
-                if (snapshot != oldSnapshot) {
-                  LOGGER.warn("Conflict of snapshots detected, expected to remove {}, but removed {}", snapshot, oldSnapshot);
-                }
-                queue.add(snapshot);
-              }
-            }
-          } catch (Throwable t) {
-            LOGGER.error("Exception in data event handler", t);
-            errorQueue.offer(t);
-          } finally {
-            ackAndRelease(flowController, event);
-          }
-        } else {
-          try {
-            queue.put(new Message(event, flowController));
-          } catch (Throwable t) {
-            LOGGER.error("Unable to put DCP request into the queue", t);
-            ackAndRelease(flowController, event);
-            errorQueue.offer(t);
-          }
+        try {
+          long vbucketUuid = getVBucketUuid(MessageUtil.getVbucket(event));
+          queue.put(new Event(event, vbucketUuid, flowController));
+        } catch (Throwable t) {
+          LOGGER.error("Unable to put DCP request into the queue", t);
+          ackAndRelease(flowController, event);
+          errorQueue.offer(t);
         }
       }
     });
@@ -190,11 +147,12 @@ public class CouchbaseReader extends Thread {
 
       // Overlay any saved offsets (might have saved offsets for only some partitions).
       if (streamFrom.isSavedOffset()) {
-        restoreSavedOffsets();
-
         // As of DCP client version 0.12.0, Client.initializeState(BEGINNING, INFINITY)
         // doesn't fetch the failover logs. Do it ourselves to avoid a spurious rollback :-/
         initFailoverLogs();
+
+        // Then restore the partition state and use saved vBucket UUIDs to overlay synthetic failover log entries.
+        restoreSavedOffsets();
       }
 
       client.startStreaming(partitions).await();
@@ -208,13 +166,33 @@ public class CouchbaseReader extends Thread {
     LOGGER.info("Resuming from saved offsets for {} of {} partitions",
         partitionToSavedSeqno.size(), partitions.length);
 
-    for (Map.Entry<Short, Long> entry : partitionToSavedSeqno.entrySet()) {
+    for (Map.Entry<Short, SeqnoAndVbucketUuid> entry : partitionToSavedSeqno.entrySet()) {
       final short partition = entry.getKey();
-      final long savedSeqno = entry.getValue();
+      final SeqnoAndVbucketUuid offset = entry.getValue();
+      final long savedSeqno = offset.seqno();
+
       PartitionState ps = client.sessionState().get(partition);
       ps.setStartSeqno(savedSeqno);
       ps.setSnapshotStartSeqno(savedSeqno);
       ps.setSnapshotEndSeqno(savedSeqno);
+
+      if (offset.vbucketUuid().isPresent()) {
+        long vbuuid = offset.vbucketUuid().getAsLong();
+        LOGGER.debug("Initializing failover log for partition {} using stored vbuuid {} ", partition, vbuuid);
+        // Use seqno -1 (max unsigned) so this synthetic failover log entry will always be pruned
+        // if the initial streamOpen request gets a rollback response. If there's no rollback
+        // on initial request, then the seqno used here doesn't matter, because the failover log
+        // gets reset when the stream is opened.
+        ps.setFailoverLog(singletonList(new FailoverLogEntry(-1L, vbuuid)));
+      } else {
+        // If we get here, we're probably restoring the stream offset from a previous version of the connector
+        // which didn't save vbucket UUIDs. Hope the current vbuuid in the failover log is the correct one.
+        // CAVEAT: This doesn't always work, and sometimes triggers a rollback to zero.
+        LOGGER.warn("No vBucket UUID is associated with stream offset for partition {}." +
+            " This is normal if you're upgrading from connector version 3.4.5 or earlier," +
+            " and should stop happening once the Kafka Connect framework asks the connector" +
+            " to save its offsets (see connector worker config property 'offset.flush.interval.ms').", partition);
+      }
       client.sessionState().set(partition, ps);
     }
   }
@@ -228,7 +206,7 @@ public class CouchbaseReader extends Thread {
     });
   }
 
-  long getVBucketUuid(int vBucketId) {
+  private long getVBucketUuid(int vBucketId) {
     return client.sessionState().get(vBucketId).getLastUuid();
   }
 

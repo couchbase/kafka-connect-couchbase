@@ -95,7 +95,7 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
   private static final String TOPIC_NAME_DISPLAY = "Topic Name";
 
   public static final String USE_SNAPSHOTS_CONFIG = "use_snapshots";
-  private static final String USE_SNAPSHOTS_DOC = "If true, it will only commit into Kafka when full snapshot from Couchbase received.";
+  private static final String USE_SNAPSHOTS_DOC = "(DEPRECATED) Has no effect. Will be removed in a future release.";
   private static final String USE_SNAPSHOTS_DISPLAY = "Use snapshots";
   public static final boolean USE_SNAPSHOTS_DEFAULT = false;
 

@@ -20,11 +20,8 @@ import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.config.CompressionMode;
-import com.couchbase.client.dcp.message.MessageUtil;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.converter.Converter;
 import com.couchbase.connect.kafka.dcp.Event;
-import com.couchbase.connect.kafka.dcp.Snapshot;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
@@ -45,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -102,7 +98,6 @@ public class CouchbaseSourceTask extends SourceTask {
     String password = Password.CONNECTION.get(config);
     List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
     NetworkResolution networkResolution = parseNetworkResolution(config.getString(CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_CONFIG));
-    boolean useSnapshots = config.getBoolean(CouchbaseSourceConnectorConfig.USE_SNAPSHOTS_CONFIG);
     boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
     String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
     String sslKeystorePassword = Password.SSL_KEYSTORE.get(config);
@@ -120,13 +115,13 @@ public class CouchbaseSourceTask extends SourceTask {
     long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
     Short[] partitions = toBoxedShortArray(config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG));
 
-    Map<Short, Long> partitionToSavedSeqno = readSourceOffsets(partitions);
+    Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno = readSourceOffsets(partitions);
 
     running = true;
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
     couchbaseReader = new CouchbaseReader(connectorName, clusterAddress, bucket, username, password, connectionTimeout,
-        queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, useSnapshots, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
+        queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
         compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes, networkResolution);
     couchbaseReader.start();
   }
@@ -168,23 +163,21 @@ public class CouchbaseSourceTask extends SourceTask {
       Event event = queue.poll(100, TimeUnit.MILLISECONDS);
       if (event != null) {
         try {
-          for (ByteBuf message : event) {
-            if (filter == null || filter.pass(message)) {
-              SourceRecord record = convert(message);
-              if (record != null) {
-                results.add(record);
-              }
+          if (filter == null || filter.pass(event.message())) {
+            SourceRecord record = convert(event);
+            if (record != null) {
+              results.add(record);
             }
           }
 
           event.ack();
           batchSize--;
         } finally {
-          releaseAll(event);
+          event.message().release();
         }
       }
       if (!results.isEmpty() &&
-          (batchSize == 0 || event == null || event instanceof Snapshot)) {
+          (batchSize == 0 || event == null)) {
         LOGGER.info("Poll returns {} result(s)", results.size());
         return results;
       }
@@ -197,10 +190,8 @@ public class CouchbaseSourceTask extends SourceTask {
     return results;
   }
 
-  @SuppressWarnings("unchecked")
-  public SourceRecord convert(ByteBuf event) {
-    final long vBucketUuid = couchbaseReader.getVBucketUuid(MessageUtil.getVbucket(event));
-    final DocumentEvent docEvent = DocumentEvent.create(event, bucket, vBucketUuid);
+  public SourceRecord convert(Event event) {
+    final DocumentEvent docEvent = DocumentEvent.create(event.message(), bucket, event.vbucketUuid());
 
     CouchbaseSourceRecord r = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
     if (r == null) {
@@ -209,7 +200,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
     return new SourceRecord(
         sourcePartition(docEvent.vBucket()),
-        sourceOffset(docEvent.bySeqno()),
+        sourceOffset(docEvent),
         r.topic() == null ? topic : r.topic(),
         r.kafkaPartition(),
         r.keySchema(), r.key(),
@@ -231,20 +222,18 @@ public class CouchbaseSourceTask extends SourceTask {
     }
 
     LOGGER.info("Releasing unconsumed events: {}", queue.size());
-    for (Event event : queue) {
-      // Don't need to ACK, since DCP connection is already closed.
-      releaseAll(event);
-    }
+    // Don't need to ACK, since DCP connection is already closed.
+    releaseAll(queue);
   }
 
-  private void releaseAll(Iterable<ByteBuf> buffers) {
+  private void releaseAll(Iterable<Event> events) {
     RuntimeException deferredException = null;
 
-    for (ByteBuf buffer : buffers) {
+    for (Event event : events) {
       try {
-        buffer.release();
+        event.message().release();
       } catch (RuntimeException t) {
-        LOGGER.warn("Failed to release buffer {}", buffer, t);
+        LOGGER.warn("Failed to release buffer {}", event, t);
         deferredException = t;
       }
     }
@@ -259,8 +248,8 @@ public class CouchbaseSourceTask extends SourceTask {
    *
    * @return a map of partitions to sequence numbers.
    */
-  private Map<Short, Long> readSourceOffsets(Short[] partitions) {
-    Map<Short, Long> partitionToSequenceNumber = new HashMap<>();
+  private Map<Short, SeqnoAndVbucketUuid> readSourceOffsets(Short[] partitions) {
+    Map<Short, SeqnoAndVbucketUuid> partitionToSequenceNumber = new HashMap<>();
 
     Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
         sourcePartitions(partitions));
@@ -273,8 +262,10 @@ public class CouchbaseSourceTask extends SourceTask {
       if (offset == null) {
         continue;
       }
-      Short partition = Short.valueOf((String) partitionIdentifier.get("partition"));
-      partitionToSequenceNumber.put(partition, (Long) offset.get("bySeqno"));
+      short partition = Short.parseShort((String) partitionIdentifier.get("partition"));
+      long seqno = (Long) offset.get("bySeqno");
+      Long vbuuid = (Long) offset.get("vbuuid"); // might be absent if upgrading from older version
+      partitionToSequenceNumber.put(partition, new SeqnoAndVbucketUuid(seqno, vbuuid));
     }
 
     LOGGER.debug("Partition to saved seqno: {}", partitionToSequenceNumber);
@@ -304,10 +295,13 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   /**
-   * Converts a Couchbase DCP sequence number into the Map format required by Kafka Connect.
+   * Converts a Couchbase DCP sequence number + vBucket UUID into the Map format required by Kafka Connect.
    */
-  private static Map<String, Object> sourceOffset(long sequenceNumber) {
-    return Collections.singletonMap("bySeqno", sequenceNumber);
+  private static Map<String, Object> sourceOffset(DocumentEvent event) {
+    Map<String, Object> offset = new HashMap<>();
+    offset.put("bySeqno", event.bySeqno());
+    offset.put("vbuuid", event.vBucketUuid());
+    return offset;
   }
 
   private static Short[] toBoxedShortArray(Collection<String> stringifiedShorts) {
