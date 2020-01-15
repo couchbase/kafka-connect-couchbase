@@ -140,6 +140,8 @@ kafka-avro-console-consumer --bootstrap-server localhost:9092 \
                             --topic test-default --from-beginning
 ----
 
+TIP: When a topic contains JSON messages, Confluent users should view the messages by running `kafka-console-consumer` instead of `kafka-avro-console-consumer`.
+
 Or for Apache Kafka:
 
 [source,bash]
@@ -274,8 +276,6 @@ transforms=deserializeJson,someOtherTransform
 transforms.deserializeJson.type=com.couchbase.connect.kafka.transform.DeserializeJson
 transforms.someOtherTransform.type=...
 ----
-
-TIP: When a topic contains JSON messages, Confluent users should view the messages by running `kafka-console-consumer` instead of `kafka-avro-console-consumer`.
 
 [[sink]]
 == Couchbase Sink Connector
