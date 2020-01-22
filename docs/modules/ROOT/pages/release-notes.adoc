@@ -2,6 +2,31 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 3.4.6 (2020-01-21)
+
+https://packages.couchbase.com/clients/kafka/3.4.6/kafka-connect-couchbase-3.4.6.zip[kafka-connect-couchbase-3.4.6.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>3.4.6</version>
+</dependency>
+----
+
+The connector is now more careful about tracking virtual bucket UUIDs.
+This makes it much less likely that a rollback to zero will occur when restarting the connector after a Couchbase Server rebalance.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-118[KAFKAC-118] Source: vBucketUuid may be incorrect
+* https://issues.couchbase.com/browse/KAFKAC-161[KAFKAC-161] Source: Should include vBucket UUID in saved offset
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-162[KAFKAC-162] Upgrade to Couchbase client 2.7.11 and DCP client 0.25.0
+
 == Couchbase Kafka Connector 3.4.5 (2019-08-21)
 
 https://packages.couchbase.com/clients/kafka/3.4.5/kafka-connect-couchbase-3.4.5.zip[kafka-connect-couchbase-3.4.5.zip]
