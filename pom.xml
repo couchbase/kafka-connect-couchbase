@@ -263,24 +263,6 @@
                     <autoReleaseAfterClose>${autoReleaseAfterClose}</autoReleaseAfterClose>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>com.bazaarvoice.maven.plugins</groupId>
-                <artifactId>s3-upload-maven-plugin</artifactId>
-                <version>1.4</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>s3-upload</goal>
-                        </goals>
-                        <phase>deploy</phase>
-                    </execution>
-                </executions>
-                <configuration>
-                    <bucketName>packages.couchbase.com</bucketName>
-                    <source>${project.build.directory}/${dist-archive-name}</source>
-                    <destination>clients/kafka/${project.version}/${dist-archive-name}</destination>
-                </configuration>
-            </plugin>
         </plugins>
 
         <resources>
