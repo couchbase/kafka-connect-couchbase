@@ -49,6 +49,11 @@ Couchbase password. For Couchbase Server versions prior to 5.0 this is
 the bucket password. For versions 5.0 and later, this is the password
 associated with `connection.username`.
 
+Two options are available for protecting the password.
+If you set the environment variable `KAFKA_COUCHBASE_PASSWORD`, its value will override the password in the connector configuration.
+Alternatively, you can take advantage of the Kafka Connect framework's support for https://docs.confluent.io/current/connect/security.html#externalizing-secrets[externalized secrets].
+
+* Environment Variable: `KAFKA_COUCHBASE_PASSWORD`
 * Type: password
 * Importance: low
 * Default: `""`
@@ -82,6 +87,11 @@ The location of the key store file.
 
 The password of the private key in the key store file.
 
+Two options are available for protecting the password.
+If you set the environment variable `KAFKA_COUCHBASE_SSL_KEYSTORE_PASSWORD`, its value will override the password in the connector configuration.
+Alternatively, you can take advantage of the Kafka Connect framework's support for https://docs.confluent.io/current/connect/security.html#externalizing-secrets[externalized secrets].
+
+* Environment Variable: `KAFKA_COUCHBASE_SSL_KEYSTORE_PASSWORD`
 * Type: password
 * Importance: low
 * Default: `""`
