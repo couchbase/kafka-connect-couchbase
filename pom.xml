@@ -27,9 +27,9 @@
     <name>Kafka Connector for Couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
-        <url>http://couchbase.com</url>
+        <url>https://couchbase.com</url>
     </organization>
-    <url>http://couchbase.com</url>
+    <url>https://couchbase.com</url>
     <description>
         A Kafka Connect Couchbase connector for copying data between Kafka and Couchbase Server.
     </description>
@@ -37,7 +37,7 @@
     <licenses>
         <license>
             <name>Apache License 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.html</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -51,7 +51,7 @@
 
     <issueManagement>
         <system>Couchbase JIRA</system>
-        <url>http://www.couchbase.com/issues/browse/KAFKAC</url>
+        <url>https://www.couchbase.com/issues/browse/KAFKAC</url>
     </issueManagement>
 
     <developers>
@@ -74,7 +74,7 @@
         <dcp-client.version>0.25.0</dcp-client.version>
         <java-client.version>2.7.11</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
+        <confluent.maven.repo>https://packages.confluent.io/maven/</confluent.maven.repo>
         <junit.version>4.12</junit.version>
         <mysql.version>5.1.6</mysql.version>
         <mockito.version>1.10.19</mockito.version>
