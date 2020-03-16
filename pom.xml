@@ -71,7 +71,7 @@
         <java-compat.version>1.8</java-compat.version>
         <confluent.version>4.0.2</confluent.version>
         <kafka.version>1.0.2</kafka.version>
-        <dcp-client.version>0.25.0</dcp-client.version>
+        <dcp-client.version>0.26.0</dcp-client.version>
         <java-client.version>2.7.11</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.12</junit.version>
@@ -118,6 +118,13 @@
             <groupId>com.couchbase.client</groupId>
             <artifactId>dcp-client</artifactId>
             <version>${dcp-client.version}</version>
+            <exclusions>
+                <!-- SLF4J is provided by Kafka; don't want it in uber jar -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.couchbase.client</groupId>
