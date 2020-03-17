@@ -20,10 +20,10 @@ import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
-import com.couchbase.client.dcp.DefaultConnectionNameGenerator;
 import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.client.dcp.config.DcpControl;
+import com.couchbase.client.dcp.highlevel.SnapshotMarker;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.message.RollbackMessage;
@@ -65,14 +65,13 @@ public class CouchbaseReader extends Thread {
     this.partitionToSavedSeqno = partitionToSavedSeqno;
     this.streamFrom = streamFrom;
     this.errorQueue = errorQueue;
-    client = Client.configure()
-        .connectionNameGenerator(DefaultConnectionNameGenerator.forProduct("kafka-connector", Version.getVersion(), connectorName))
+    client = Client.builder()
+        .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .connectTimeout(connectionTimeout)
         .hostnames(clusterAddress)
         .networkResolution(networkResolution)
         .bucket(bucket)
-        .username(username)
-        .password(password)
+        .credentials(username, password)
         .controlParam(DcpControl.Names.ENABLE_NOOP, "true")
         .compression(compressionMode)
         .mitigateRollbacks(persistencePollingIntervalMillis, TimeUnit.MILLISECONDS)
@@ -173,8 +172,7 @@ public class CouchbaseReader extends Thread {
 
       PartitionState ps = client.sessionState().get(partition);
       ps.setStartSeqno(savedSeqno);
-      ps.setSnapshotStartSeqno(savedSeqno);
-      ps.setSnapshotEndSeqno(savedSeqno);
+      ps.setSnapshot(new SnapshotMarker(savedSeqno, savedSeqno));
 
       if (offset.vbucketUuid().isPresent()) {
         long vbuuid = offset.vbucketUuid().getAsLong();
