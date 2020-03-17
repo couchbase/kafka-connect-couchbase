@@ -21,8 +21,9 @@ import com.couchbase.client.core.config.parser.BucketConfigParser;
 import com.couchbase.client.core.env.ConfigParserEnvironment;
 import com.couchbase.client.core.node.DefaultMemcachedHashingStrategy;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
-import com.couchbase.client.core.utils.NetworkAddress;
+import com.couchbase.client.core.utils.ConnectionString;
 import com.couchbase.client.dcp.config.ClientEnvironment;
+import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.dcp.config.SSLEngineFactory;
 import com.couchbase.client.dcp.config.SecureEnvironment;
 import com.couchbase.client.deps.io.netty.bootstrap.Bootstrap;
@@ -58,6 +59,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.couchbase.client.core.logging.RedactableArgument.system;
+import static java.util.stream.Collectors.toList;
 
 public class Cluster {
   static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
@@ -68,13 +70,28 @@ public class Cluster {
   };
   private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
 
+  private static List<HostAndPort> parseSeedNodes(List<String> rawSeedNodes, boolean ssl) {
+    return ConnectionString.fromHostnames(rawSeedNodes)
+        .hosts()
+        .stream()
+        .map(n -> {
+          int port = n.port();
+          if (port == 0) {
+            port = ssl ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
+          }
+          return new HostAndPort(n.hostname(), port);
+        })
+        .collect(toList());
+  }
+
   public static Config fetchBucketConfig(final CouchbaseSourceConnectorConfig config) {
-    final List<String> nodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+    final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
+    final List<String> rawSeedNodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+    final List<HostAndPort> seedNodes = parseSeedNodes(rawSeedNodes, sslEnabled);
     final String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
     final String username = config.getUsername();
     final String password = Password.CONNECTION.get(config);
-    final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
-    final int port = sslEnabled ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
+
     final SSLEngineFactory sslEngineFactory =
         new SSLEngineFactory(new SecureEnvironment() {
           @Override
@@ -101,7 +118,7 @@ public class Cluster {
     final AtomicReference<CouchbaseBucketConfig> result = new AtomicReference<>(null);
     NioEventLoopGroup group = new NioEventLoopGroup();
     try {
-      for (final String hostname : nodes) {
+      for (final HostAndPort node : seedNodes) {
         try {
           final CountDownLatch latch = new CountDownLatch(1);
           Bootstrap bootstrap = new Bootstrap();
@@ -122,8 +139,8 @@ public class Cluster {
                         protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                           try {
                             if (msg.getStatus().equals(HttpResponseStatus.OK)) {
-                              String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", hostname);
-                              result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv, hostname));
+                              String body = msg.content().toString(CharsetUtil.UTF_8).replace("$HOST", node.host());
+                              result.set((CouchbaseBucketConfig) BucketConfigParser.parse(body, dummyBootstrapEnv, node.host()));
                             }
                           } finally {
                             latch.countDown();
@@ -134,10 +151,10 @@ public class Cluster {
               });
 
 
-          Channel channel = bootstrap.connect(hostname, port).sync().channel();
+          Channel channel = bootstrap.connect(node.host(), node.port()).sync().channel();
           HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
               "/pools/default/b/" + bucket);
-          request.headers().set(HttpHeaders.Names.HOST, hostname);
+          request.headers().set(HttpHeaders.Names.HOST, node.host());
           request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
 
           ByteBuf raw = Unpooled.buffer(bucket.length() + password.length() + 1);
@@ -155,7 +172,7 @@ public class Cluster {
             return new Config(bucketConfig);
           }
         } catch (Exception e) {
-          LOGGER.warn("Ignoring error for node {} when getting number of partitions", system(hostname), e);
+          LOGGER.warn("Ignoring error for node {} when getting number of partitions", system(node.host()), e);
         }
       }
     } finally {
