@@ -28,6 +28,13 @@ The Couchbase libraries are also updated to the latest versions.
 * https://issues.couchbase.com/browse/KAFKAC-164[KAFKAC-164] Upgrade DCP client from 0.25.0 to 0.26.0
 * https://issues.couchbase.com/browse/KAFKAC-184[KAFKAC-168] Upgrade Couchbase client from 2.7.11 to 2.7.13
 
+=== Known Issues
+
+Unlike the Source connector, the Sink connector still can't use custom ports.
+We're hoping to address this in a future release.
+
+* https://issues.couchbase.com/browse/KAFKAC-167[KAFKAC-167] Sink: Cannot connect to Couchbase on custom port
+
 == Couchbase Kafka Connector 3.4.6 (2020-01-21)
 
 https://packages.couchbase.com/clients/kafka/3.4.6/kafka-connect-couchbase-3.4.6.zip[kafka-connect-couchbase-3.4.6.zip]
