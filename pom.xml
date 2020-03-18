@@ -72,7 +72,7 @@
         <confluent.version>4.0.2</confluent.version>
         <kafka.version>1.0.2</kafka.version>
         <dcp-client.version>0.26.0</dcp-client.version>
-        <java-client.version>2.7.11</java-client.version>
+        <java-client.version>2.7.13</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.12</junit.version>
         <mysql.version>5.1.6</mysql.version>
