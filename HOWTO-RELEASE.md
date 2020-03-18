@@ -44,8 +44,7 @@ All set? In that case...
 ## Let's do this!
 
 Start by running `mvn clean verify -Prelease` to make sure the project builds successfully,
-artifact signing works, and the unit tests pass. To run the integration tests, go to the
-`integration-test/aggregator` directory and run `mvn clean verify`.
+artifact signing works, and the unit tests pass.
 When you're satisfied with the test results, it's time to...
 
 
