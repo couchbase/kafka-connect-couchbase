@@ -146,6 +146,7 @@ public class CouchbaseSinkTask extends SinkTask {
         .sslKeystoreFile(sslKeystoreLocation)
         .sslKeystorePassword(sslKeystorePassword)
         .connectTimeout(connectTimeout)
+        .mutationTokensEnabled(true)
         .build();
     cluster = CouchbaseCluster.create(env, clusterAddress);
     cluster.authenticate(username, password);
