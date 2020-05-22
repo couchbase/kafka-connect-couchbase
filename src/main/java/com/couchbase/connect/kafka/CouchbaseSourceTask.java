@@ -20,12 +20,10 @@ import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.config.CompressionMode;
-import com.couchbase.connect.kafka.converter.Converter;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
-import com.couchbase.connect.kafka.handler.source.LegacySourceHandlerAdapter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.util.Version;
@@ -126,17 +124,9 @@ public class CouchbaseSourceTask extends SourceTask {
     couchbaseReader.start();
   }
 
-  @SuppressWarnings("deprecation")
   private SourceHandler createHandler(final String className) {
     try {
-      try {
         return Utils.newInstance(className, SourceHandler.class);
-      } catch (ClassCastException e) {
-        SourceHandler adapter = new LegacySourceHandlerAdapter(Utils.newInstance(className, Converter.class));
-        LOGGER.warn("Converter class {} implements deprecated {}. Please update the converter to extend {} instead.",
-            className, Converter.class, SourceHandler.class);
-        return adapter;
-      }
     } catch (ClassNotFoundException e) {
       throw new ConnectException("Couldn't create message handler", e);
     }

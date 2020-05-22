@@ -105,19 +105,6 @@ Name of the Kafka topic to publish data to.
 * Type: string
 * Importance: high
 
-=== `use_snapshots` (Deprecated)
-
-If true, it will only commit into Kafka when full snapshot from
-Couchbase received.
-
-* *Deprecated*.
-Prior to version 3.4.6, enabling this feature can cause `OutOfMemoryError` during initial backfill, since snapshot contents are buffered in memory and the first snapshot contains the entire contents of the database.
-In version 3.4.6 and later, enabling this feature has no effect.
-This configuration property will be removed entirely in a future release.
-* Type: boolean
-* Importance: low
-* Default: `false`
-
 === `dcp.message.converter.class`
 
 The class name of the message converter to use.

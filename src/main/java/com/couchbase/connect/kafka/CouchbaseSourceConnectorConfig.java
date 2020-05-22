@@ -94,11 +94,6 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
   private static final String TOPIC_NAME_DOC = "Name of the Kafka topic to publish data to.";
   private static final String TOPIC_NAME_DISPLAY = "Topic Name";
 
-  public static final String USE_SNAPSHOTS_CONFIG = "use_snapshots";
-  private static final String USE_SNAPSHOTS_DOC = "(DEPRECATED) Has no effect. Will be removed in a future release.";
-  private static final String USE_SNAPSHOTS_DISPLAY = "Use snapshots";
-  public static final boolean USE_SNAPSHOTS_DEFAULT = false;
-
   public static final String DCP_MESSAGE_CONVERTER_CLASS_CONFIG = "dcp.message.converter.class";
   private static final String DCP_MESSAGE_CONVERTER_CLASS_DOC = "The class name of the message converter to use.";
   private static final String DCP_MESSAGE_CONVERTER_CLASS_DISPLAY = "Message converter";
@@ -259,15 +254,6 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
             CONNECTOR_GROUP, 1,
             ConfigDef.Width.LONG,
             TOPIC_NAME_DISPLAY)
-
-        .define(USE_SNAPSHOTS_CONFIG,
-            ConfigDef.Type.BOOLEAN,
-            USE_SNAPSHOTS_DEFAULT,
-            ConfigDef.Importance.LOW,
-            USE_SNAPSHOTS_DOC,
-            CONNECTOR_GROUP, 2,
-            ConfigDef.Width.LONG,
-            USE_SNAPSHOTS_DISPLAY)
 
         .define(DCP_MESSAGE_CONVERTER_CLASS_CONFIG,
             ConfigDef.Type.STRING,

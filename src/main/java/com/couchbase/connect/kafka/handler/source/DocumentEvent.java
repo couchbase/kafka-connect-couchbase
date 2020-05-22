@@ -22,8 +22,6 @@ import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 
-import static com.couchbase.connect.kafka.converter.ConverterUtils.bufToString;
-
 /**
  * A Couchbase document change event.
  */
@@ -43,7 +41,7 @@ public class DocumentEvent {
     this.rawDcpEvent = rawDcpEvent;
     this.bucket = bucket;
     this.vBucketUuid = vBucketUuid;
-    this.key = bufToString(MessageUtil.getKey(rawDcpEvent));
+    this.key = MessageUtil.getKeyAsString(rawDcpEvent);
 
     if (DcpMutationMessage.is(rawDcpEvent)) {
       this.bySeqno = DcpMutationMessage.bySeqno(rawDcpEvent);

@@ -24,8 +24,6 @@ import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.couchbase.connect.kafka.converter.ConverterUtils.bufToBytes;
-
 /**
  * The standard handler. Publishes metadata along with document content.
  *
@@ -88,7 +86,7 @@ public class DefaultSchemaSourceHandler extends SourceHandler {
       record.put("expiration", DcpMutationMessage.expiry(event));
       record.put("flags", DcpMutationMessage.flags(event));
       record.put("lockTime", DcpMutationMessage.lockTime(event));
-      record.put("content", bufToBytes(DcpMutationMessage.content(event)));
+      record.put("content", DcpMutationMessage.contentBytes(event));
     } else if (type == EventType.DELETION) {
       record.put("event", "deletion");
     } else if (type == EventType.EXPIRATION) {
