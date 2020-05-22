@@ -67,7 +67,6 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
   static final String CONNECTION_PASSWORD_DOC = "Couchbase password for the bucket. May be overridden with the "
       + Password.CONNECTION.getEnvironmentVariableName() + " environment variable.";
   static final String CONNECTION_PASSWORD_DISPLAY = "Couchbase Password";
-  public static final String CONNECTION_PASSWORD_DEFAULT = "";
 
   public static final String CONNECTION_SSL_ENABLED_CONFIG = "connection.ssl.enabled";
   static final String CONNECTION_SSL_ENABLED_DOC = "Use SSL to connect to Couchbase. This feature only available in Couchbase Enterprise.";
@@ -201,7 +200,6 @@ public class CouchbaseSourceConnectorConfig extends AbstractConfig {
 
         .define(CONNECTION_PASSWORD_CONFIG,
             ConfigDef.Type.PASSWORD,
-            CONNECTION_PASSWORD_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_PASSWORD_DOC,
             DATABASE_GROUP, 5,

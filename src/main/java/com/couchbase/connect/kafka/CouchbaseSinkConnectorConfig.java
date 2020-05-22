@@ -42,7 +42,6 @@ import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECT
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_DISPLAY;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_DOC;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG;
-import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_DEFAULT;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_DISPLAY;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_PASSWORD_DOC;
 import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG;
@@ -196,7 +195,6 @@ public class CouchbaseSinkConnectorConfig extends AbstractConfig {
 
         .define(CONNECTION_PASSWORD_CONFIG,
             ConfigDef.Type.PASSWORD,
-            CONNECTION_PASSWORD_DEFAULT,
             ConfigDef.Importance.LOW,
             CONNECTION_PASSWORD_DOC,
             DATABASE_GROUP, 5,
