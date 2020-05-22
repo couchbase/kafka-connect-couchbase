@@ -19,7 +19,7 @@ package com.couchbase.connect.kafka.dcp;
 import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 
 public enum EventType {
   MUTATION("mutation"),

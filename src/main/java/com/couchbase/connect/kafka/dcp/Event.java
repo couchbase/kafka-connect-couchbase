@@ -17,7 +17,7 @@
 package com.couchbase.connect.kafka.dcp;
 
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 
 import static java.util.Objects.requireNonNull;
 

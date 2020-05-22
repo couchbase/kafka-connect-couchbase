@@ -16,7 +16,7 @@
 
 package com.couchbase.connect.kafka.filter;
 
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 
 public class AllPassFilter implements Filter {
 

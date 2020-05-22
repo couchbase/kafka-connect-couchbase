@@ -22,7 +22,8 @@ import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
 import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.config.CompressionMode;
-import com.couchbase.client.dcp.config.DcpControl;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.util.IllegalReferenceCountException;
 import com.couchbase.client.dcp.highlevel.SnapshotMarker;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.message.MessageUtil;
@@ -30,8 +31,6 @@ import com.couchbase.client.dcp.message.RollbackMessage;
 import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.deps.io.netty.util.IllegalReferenceCountException;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.util.Version;
 import org.slf4j.Logger;
@@ -68,11 +67,10 @@ public class CouchbaseReader extends Thread {
     client = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .connectTimeout(connectionTimeout)
-        .hostnames(clusterAddress)
-        .networkResolution(networkResolution)
+        .seedNodes(clusterAddress)
+        .networkResolution(com.couchbase.client.dcp.core.env.NetworkResolution.valueOf(networkResolution.name()))
         .bucket(bucket)
         .credentials(username, password)
-        .controlParam(DcpControl.Names.ENABLE_NOOP, "true")
         .compression(compressionMode)
         .mitigateRollbacks(persistencePollingIntervalMillis, TimeUnit.MILLISECONDS)
         .flowControl(flowControlBufferBytes)

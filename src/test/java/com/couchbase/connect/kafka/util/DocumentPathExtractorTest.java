@@ -48,12 +48,12 @@ public class DocumentPathExtractorTest {
 
     DocumentPathExtractor.DocumentExtraction result = new DocumentPathExtractor(pointer, true).extractDocumentPath(document.getBytes(UTF_8));
     assertEquals(expectedDocumentId, result.getPathValue());
-    assertJsonEquals(expectedResultDocument, result.getData().toString(UTF_8));
+    assertJsonEquals(expectedResultDocument, asString(result));
 
     // and again without removing the document id
     result = new DocumentPathExtractor(pointer, false).extractDocumentPath(document.getBytes(UTF_8));
     assertEquals(expectedDocumentId, result.getPathValue());
-    assertEquals(document, result.getData().toString(UTF_8));
+    assertEquals(document, asString(result));
 
     // and one last time with lots of extra whitespace
     for (char c : ",:[]{}".toCharArray()) {
@@ -61,7 +61,7 @@ public class DocumentPathExtractorTest {
     }
     result = new DocumentPathExtractor(pointer, true).extractDocumentPath(document.getBytes(UTF_8));
     assertEquals(expectedDocumentId, result.getPathValue());
-    assertJsonEquals(expectedResultDocument, result.getData().toString(UTF_8));
+    assertJsonEquals(expectedResultDocument, asString(result));
   }
 
   private static void checkNotFound(String pointer, String document) throws IOException {
@@ -94,13 +94,17 @@ public class DocumentPathExtractorTest {
     return lenientObjectMapper.readTree(json).toString();
   }
 
+  private static String asString(DocumentPathExtractor.DocumentExtraction r) {
+    return new String(r.getData(), UTF_8);
+  }
+
   @Test
   public void extractorIsReusable() throws Exception {
     DocumentPathExtractor extractor = new DocumentPathExtractor("/id", true);
     for (int i = 0; i < 2; i++) {
       DocumentPathExtractor.DocumentExtraction result = extract(extractor, "{'id':1}");
       assertEquals("1", result.getPathValue());
-      assertJsonEquals("{}", result.getData().toString(UTF_8));
+      assertJsonEquals("{}", asString(result));
     }
   }
 

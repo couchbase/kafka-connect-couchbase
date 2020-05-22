@@ -16,13 +16,11 @@
 
 package com.couchbase.connect.kafka.util;
 
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonFactory;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonPointer;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.filter.FilteringParserDelegate;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.filter.JsonPointerBasedFilter;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonFactory;
+import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonPointer;
+import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.FilteringParserDelegate;
+import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.JsonPointerBasedFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Locates a document ID using a JSON pointer, optionally removing the ID from the document.
@@ -46,20 +46,20 @@ public class DocumentPathExtractor {
     }
   }
 
-  public class DocumentExtraction {
-    private String pathValue;
-    private ByteBuf data;
+  public static class DocumentExtraction {
+    private final String pathValue;
+    private final byte[] data;
 
     DocumentExtraction(String pathValue, byte[] data) {
       this.pathValue = pathValue;
-      this.data = Unpooled.wrappedBuffer(data);
+      this.data = requireNonNull(data);
     }
 
     public String getPathValue() {
       return pathValue;
     }
 
-    public ByteBuf getData() {
+    public byte[] getData() {
       return data;
     }
   }

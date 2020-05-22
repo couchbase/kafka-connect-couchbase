@@ -20,7 +20,7 @@ import com.couchbase.client.dcp.message.DcpDeletionMessage;
 import com.couchbase.client.dcp.message.DcpExpirationMessage;
 import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.dcp.message.MessageUtil;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 
 /**
  * A Couchbase document change event.

@@ -17,7 +17,7 @@
 package com.couchbase.connect.kafka.filter;
 
 
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 
 /**
  * General interface to select Couchbase events, which has to be sent to Kafka.

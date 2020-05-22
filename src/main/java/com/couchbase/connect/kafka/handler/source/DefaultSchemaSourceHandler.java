@@ -17,7 +17,7 @@
 package com.couchbase.connect.kafka.handler.source;
 
 import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.util.Schemas;
 import org.apache.kafka.connect.data.Struct;

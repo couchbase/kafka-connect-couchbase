@@ -1,6 +1,7 @@
 package com.couchbase.connect.kafka.sink;
 
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
@@ -139,10 +140,8 @@ public class SubDocumentWriter {
       try {
         DocumentPathExtractor.DocumentExtraction extraction = extractor.extractDocumentPath(getBytes(doc.content()));
         documentPath = extraction.getPathValue();
-        data = extraction.getData();
-      } catch (IOException e) {
-        LOGGER.error(e.getMessage(), e);
-      } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
+        data = Unpooled.wrappedBuffer(extraction.getData());
+      } catch (IOException | DocumentPathExtractor.DocumentPathNotFoundException e) {
         LOGGER.error(e.getMessage(), e);
       }
     } else {

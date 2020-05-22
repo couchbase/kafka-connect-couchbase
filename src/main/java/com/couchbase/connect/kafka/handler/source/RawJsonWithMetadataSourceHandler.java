@@ -17,9 +17,9 @@
 package com.couchbase.connect.kafka.handler.source;
 
 import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonProcessingException;
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.dcp.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.dcp.EventType;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
@@ -79,7 +79,7 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
 
     final EventType type = EventType.of(event);
 
-    Map<String, Object> metadata = new HashMap<String, Object>();
+    Map<String, Object> metadata = new HashMap<>();
 
     metadata.put("bucket", docEvent.bucket());
     metadata.put("partition", docEvent.vBucket());

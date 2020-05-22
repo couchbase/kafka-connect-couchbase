@@ -22,32 +22,31 @@ import com.couchbase.client.core.env.ConfigParserEnvironment;
 import com.couchbase.client.core.node.DefaultMemcachedHashingStrategy;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.utils.ConnectionString;
-import com.couchbase.client.dcp.config.ClientEnvironment;
 import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.dcp.config.SSLEngineFactory;
 import com.couchbase.client.dcp.config.SecureEnvironment;
-import com.couchbase.client.deps.io.netty.bootstrap.Bootstrap;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.deps.io.netty.channel.Channel;
-import com.couchbase.client.deps.io.netty.channel.ChannelHandlerContext;
-import com.couchbase.client.deps.io.netty.channel.ChannelInitializer;
-import com.couchbase.client.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.deps.io.netty.channel.SimpleChannelInboundHandler;
-import com.couchbase.client.deps.io.netty.channel.nio.NioEventLoopGroup;
-import com.couchbase.client.deps.io.netty.channel.socket.nio.NioSocketChannel;
-import com.couchbase.client.deps.io.netty.handler.codec.base64.Base64;
-import com.couchbase.client.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.deps.io.netty.handler.codec.http.FullHttpResponse;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpClientCodec;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpHeaders;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpObjectAggregator;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpRequest;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpResponseStatus;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.deps.io.netty.handler.ssl.SslHandler;
-import com.couchbase.client.deps.io.netty.util.CharsetUtil;
+import com.couchbase.client.dcp.deps.io.netty.bootstrap.Bootstrap;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.dcp.deps.io.netty.channel.Channel;
+import com.couchbase.client.dcp.deps.io.netty.channel.ChannelHandlerContext;
+import com.couchbase.client.dcp.deps.io.netty.channel.ChannelInitializer;
+import com.couchbase.client.dcp.deps.io.netty.channel.ChannelPipeline;
+import com.couchbase.client.dcp.deps.io.netty.channel.SimpleChannelInboundHandler;
+import com.couchbase.client.dcp.deps.io.netty.channel.nio.NioEventLoopGroup;
+import com.couchbase.client.dcp.deps.io.netty.channel.socket.nio.NioSocketChannel;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.base64.Base64;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.FullHttpResponse;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpClientCodec;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpHeaders;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpObjectAggregator;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpRequest;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.dcp.deps.io.netty.handler.ssl.SslHandler;
+import com.couchbase.client.dcp.deps.io.netty.util.CharsetUtil;
 import com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig;
 import com.couchbase.connect.kafka.util.config.Password;
 import org.slf4j.Logger;
@@ -62,6 +61,9 @@ import static com.couchbase.client.core.logging.RedactableArgument.system;
 import static java.util.stream.Collectors.toList;
 
 public class Cluster {
+  private static final int DEFAULT_MANAGER_PORT = 8091;
+  private static final int DEFAULT_MANAGER_TLS_PORT = 18091;
+
   static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
     @Override
     public MemcachedHashingStrategy memcachedHashingStrategy() {
@@ -77,7 +79,7 @@ public class Cluster {
         .map(n -> {
           int port = n.port();
           if (port == 0) {
-            port = ssl ? ClientEnvironment.BOOTSTRAP_HTTP_SSL_PORT : ClientEnvironment.BOOTSTRAP_HTTP_DIRECT_PORT;
+            port = ssl ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
           }
           return new HostAndPort(n.hostname(), port);
         })

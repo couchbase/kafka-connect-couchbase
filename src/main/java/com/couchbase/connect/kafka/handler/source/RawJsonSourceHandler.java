@@ -17,7 +17,7 @@
 package com.couchbase.connect.kafka.handler.source;
 
 import com.couchbase.client.dcp.message.MessageUtil;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.transform.DeserializeJson;
 import com.fasterxml.jackson.core.JsonFactory;
