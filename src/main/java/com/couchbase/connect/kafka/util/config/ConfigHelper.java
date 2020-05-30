@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Couchbase, Inc.
+ * Copyright 2020 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,22 @@
 package com.couchbase.connect.kafka.util.config;
 
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 
-public class SizeValidator implements ConfigDef.Validator {
-  @Override
-  public void ensureValid(String name, Object value) {
-    try {
-      if (value != null && !((String) value).isEmpty()) {
-        SizeParser.parseSizeBytes((String) value);
-      }
-    } catch (IllegalArgumentException e) {
-      throw new ConfigException("Failed to parse config property '" + name + "' -- " + e.getMessage());
-    }
+import java.util.Map;
+
+public class ConfigHelper {
+  private static final KafkaConfigProxyFactory factory =
+      new KafkaConfigProxyFactory("couchbase");
+
+  private ConfigHelper() {
+    throw new AssertionError("not instantiable");
+  }
+
+  public static ConfigDef define(Class<?> configClass) {
+    return factory.define(configClass);
+  }
+
+  public static <T> T parse(Class<T> configClass, Map<String, String> props) {
+    return factory.newProxy(configClass, props);
   }
 }

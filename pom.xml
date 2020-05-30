@@ -72,6 +72,7 @@
         <kafka.version>2.5.0</kafka.version>
         <dcp-client.version>0.28.0</dcp-client.version>
         <java-client.version>2.7.13</java-client.version>
+        <runtime.javadoc.version>0.9.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.12</junit.version>
         <mysql.version>5.1.6</mysql.version>
@@ -133,6 +134,16 @@
             <version>${java-client.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.github.therapi</groupId>
+            <artifactId>therapi-runtime-javadoc</artifactId>
+            <version>${runtime.javadoc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.13.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams</artifactId>
             <version>${kafka.version}</version>
@@ -168,6 +179,14 @@
                 <configuration>
                     <source>${java-compat.version}</source>
                     <target>${java-compat.version}</target>
+                    <annotationProcessorPaths>
+                        <!-- Save Javadoc for use in Kafka config definitions. -->
+                        <annotationProcessorPath>
+                            <groupId>com.github.therapi</groupId>
+                            <artifactId>therapi-runtime-javadoc-scribe</artifactId>
+                            <version>${runtime.javadoc.version}</version>
+                        </annotationProcessorPath>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

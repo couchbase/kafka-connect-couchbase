@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Couchbase, Inc.
+ * Copyright 2020 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SizeParser {
-  private SizeParser() {
+public class DataSizeParser {
+  private DataSizeParser() {
     throw new AssertionError("not instantiable");
   }
 
@@ -41,11 +41,11 @@ public class SizeParser {
     qualifierToScale = Collections.unmodifiableMap(temp);
   }
 
-  public static long parseSizeBytes(String s) {
+  public static DataSize parseDataSize(String s) {
     s = s.trim().toLowerCase(Locale.ROOT);
 
     if (s.equals("0")) {
-      return 0;
+      return DataSize.ofBytes(0);
     }
 
     final Matcher m = PATTERN.matcher(s);
@@ -57,6 +57,6 @@ public class SizeParser {
 
     final long value = Long.parseLong(m.group(1));
     final Integer unit = qualifierToScale.get(m.group(2));
-    return value * unit;
+    return DataSize.ofBytes(value * unit);
   }
 }

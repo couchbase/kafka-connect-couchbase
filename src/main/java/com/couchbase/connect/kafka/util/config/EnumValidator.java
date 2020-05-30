@@ -34,8 +34,13 @@ public class EnumValidator implements ConfigDef.Validator {
       //noinspection unchecked
       Enum.valueOf(enumClass, (String) value);
     } catch (IllegalArgumentException e) {
-      throw new ConfigException("Bad value '" + value + "' for config key '" + name + "'" +
+      throw new ConfigException("Invalid value '" + value + "' for config key '" + name + "'" +
           "; must be one of " + Arrays.toString(enumClass.getEnumConstants()));
     }
+  }
+
+  @Override
+  public String toString() {
+    return "One of " + Arrays.toString(enumClass.getEnumConstants());
   }
 }

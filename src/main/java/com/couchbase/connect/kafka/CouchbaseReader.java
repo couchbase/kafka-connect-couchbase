@@ -16,12 +16,11 @@
 
 package com.couchbase.connect.kafka;
 
-import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.dcp.Client;
 import com.couchbase.client.dcp.ControlEventHandler;
 import com.couchbase.client.dcp.DataEventHandler;
 import com.couchbase.client.dcp.StreamTo;
-import com.couchbase.client.dcp.config.CompressionMode;
+import com.couchbase.client.dcp.core.env.NetworkResolution;
 import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.dcp.deps.io.netty.util.IllegalReferenceCountException;
 import com.couchbase.client.dcp.highlevel.SnapshotMarker;
@@ -31,6 +30,7 @@ import com.couchbase.client.dcp.message.RollbackMessage;
 import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
+import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.util.Version;
 import org.slf4j.Logger;
@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import rx.CompletableSubscriber;
 import rx.Subscription;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -54,30 +53,27 @@ public class CouchbaseReader extends Thread {
   private final StreamFrom streamFrom;
   private final BlockingQueue<Throwable> errorQueue;
 
-  public CouchbaseReader(final String connectorName, List<String> clusterAddress, String bucket, String username, String password, long connectionTimeout,
-                         final BlockingQueue<Event> queue, final BlockingQueue<Throwable> errorQueue, Short[] partitions,
-                         final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno, final StreamFrom streamFrom,
-                         final boolean sslEnabled, final String sslKeystoreLocation,
-                         final String sslKeystorePassword, final CompressionMode compressionMode,
-                         long persistencePollingIntervalMillis, int flowControlBufferBytes, NetworkResolution networkResolution) {
+  public CouchbaseReader(CouchbaseSourceConfig config, final String connectorName,
+                         final BlockingQueue<Event> queue, final BlockingQueue<Throwable> errorQueue,
+                         final Short[] partitions, final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno) {
     this.partitions = partitions;
     this.partitionToSavedSeqno = partitionToSavedSeqno;
-    this.streamFrom = streamFrom;
+    this.streamFrom = config.streamFrom();
     this.errorQueue = errorQueue;
     client = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
-        .connectTimeout(connectionTimeout)
-        .seedNodes(clusterAddress)
-        .networkResolution(com.couchbase.client.dcp.core.env.NetworkResolution.valueOf(networkResolution.name()))
-        .bucket(bucket)
-        .credentials(username, password)
-        .compression(compressionMode)
-        .mitigateRollbacks(persistencePollingIntervalMillis, TimeUnit.MILLISECONDS)
-        .flowControl(flowControlBufferBytes)
+        .connectTimeout(config.bootstrapTimeout().toMillis())
+        .seedNodes(config.seedNodes())
+        .networkResolution(NetworkResolution.valueOf(config.network()))
+        .bucket(config.bucket())
+        .credentials(config.username(), config.password().value())
+        .compression(config.compression())
+        .mitigateRollbacks(config.persistencePollingInterval().toMillis(), TimeUnit.MILLISECONDS)
+        .flowControl(config.flowControlBufferSize().getByteCountAsSaturatedInt())
         .bufferAckWatermark(60)
-        .sslEnabled(sslEnabled)
-        .sslKeystoreFile(sslKeystoreLocation)
-        .sslKeystorePassword(sslKeystorePassword)
+        .sslEnabled(config.enableTls())
+        .sslKeystoreFile(config.trustStorePath())
+        .sslKeystorePassword(config.trustStorePassword().value())
         .build();
     client.controlEventHandler(new ControlEventHandler() {
       @Override

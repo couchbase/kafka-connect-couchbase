@@ -5,16 +5,16 @@
     "connector.class": "com.couchbase.connect.kafka.CouchbaseSourceConnector",
     "tasks.max": "2",
     "topic.name": "test-default",
-    "connection.cluster_address": "127.0.0.1",
-    "connection.timeout.ms": "2000",
-    "connection.bucket": "default",
-    "connection.username": "Administrator",
-    "connection.password": "password",
-    "dcp.message.converter.class": "com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler",
-    "event.filter.class": "com.couchbase.connect.kafka.filter.AllPassFilter",
-    "couchbase.stream_from": "SAVED_OFFSET_OR_BEGINNING",
+    "couchbase.seedNodes": "127.0.0.1",
+    "couchbase.bootstrapTimeout": "2000",
+    "couchbase.bucket": "default",
+    "couchbase.username": "Administrator",
+    "couchbase.password": "password",
+    "couchbase.sourceHandler": "com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler",
+    "couchbase.eventFilter": "com.couchbase.connect.kafka.filter.AllPassFilter",
+    "couchbase.streamFrom": "SAVED_OFFSET_OR_BEGINNING",
     "couchbase.compression": "ENABLED",
-    "couchbase.flow_control_buffer": "128m",
-    "couchbase.persistence_polling_interval": "100ms"
+    "couchbase.flowControlBuffer": "128m",
+    "couchbase.persistencePollingInterval": "100ms"
   }
 }

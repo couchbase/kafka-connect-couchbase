@@ -17,9 +17,11 @@ package com.couchbase.connect.kafka;
 
 
 import com.couchbase.client.core.utils.NetworkAddress;
+import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import com.couchbase.connect.kafka.util.Cluster;
 import com.couchbase.connect.kafka.util.Config;
 import com.couchbase.connect.kafka.util.Version;
+import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.Task;
@@ -33,12 +35,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig.FORCE_IPV4_CONFIG;
-
 public class CouchbaseSourceConnector extends SourceConnector {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
   private Map<String, String> configProperties;
-  private CouchbaseSourceConnectorConfig config;
   private Config bucketConfig;
 
   @Override
@@ -50,13 +49,13 @@ public class CouchbaseSourceConnector extends SourceConnector {
   public void start(Map<String, String> properties) {
     try {
       configProperties = properties;
-      config = new CouchbaseSourceConnectorConfig(configProperties);
+      CouchbaseSourceConfig config = ConfigHelper.parse(CouchbaseSourceConfig.class, properties);
 
-      setForceIpv4(config.getBoolean(FORCE_IPV4_CONFIG));
+      setForceIpv4(config.forceIPv4());
 
       bucketConfig = Cluster.fetchBucketConfig(config);
       if (bucketConfig == null) {
-        String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
+        String bucket = config.bucket();
         throw new ConnectException("Cannot fetch configuration for bucket " + bucket);
       }
     } catch (ConfigException e) {
@@ -83,13 +82,12 @@ public class CouchbaseSourceConnector extends SourceConnector {
     List<Map<String, String>> taskConfigs = new ArrayList<>(partitionsGrouped.size());
     for (List<String> taskPartitions : partitionsGrouped) {
       Map<String, String> taskProps = new HashMap<>(configProperties);
-      taskProps.put(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG,
-          String.join(",", taskPartitions));
+      // property name matches CouchbaseSourceTaskConfig.partitions()
+      taskProps.put("couchbase.partitions", String.join(",", taskPartitions));
       taskConfigs.add(taskProps);
     }
     return taskConfigs;
   }
-
 
   @Override
   public void stop() {
@@ -97,6 +95,6 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
   @Override
   public ConfigDef config() {
-    return CouchbaseSourceConnectorConfig.config;
+    return ConfigHelper.define(CouchbaseSourceConfig.class);
   }
 }

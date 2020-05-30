@@ -19,11 +19,12 @@ import java.io.IOException;
 import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
 
 public class SubDocumentWriter {
+  private static final Logger LOGGER = LoggerFactory.getLogger(SubDocumentWriter.class);
 
   private static class SubdocOperation {
-    private String id;
-    private String path;
-    private JsonObject data;
+    private final String id;
+    private final String path;
+    private final JsonObject data;
 
     public SubdocOperation(String id, String path, ByteBuf data) {
       this.id = id;
@@ -45,20 +46,13 @@ public class SubDocumentWriter {
     }
   }
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SubDocumentWriter.class);
-
-  private SubDocumentMode mode;
-
-  private String path;
-
-  private boolean createPaths;
-
-  private boolean extractPath;
-
-  private boolean createDocuments;
+  private final SubDocumentMode mode;
+  private final String path;
+  private final boolean createPaths;
+  private final boolean extractPath;
+  private final boolean createDocuments;
 
   public SubDocumentWriter(SubDocumentMode mode, String path, boolean extractPath, boolean createPaths, boolean createDocuments) {
-
     this.mode = mode;
     this.path = path;
     this.extractPath = extractPath;

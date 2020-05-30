@@ -16,7 +16,9 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.util.Version;
+import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
@@ -44,7 +46,7 @@ public class CouchbaseSinkConnector extends SinkConnector {
 
   @Override
   public ConfigDef config() {
-    return CouchbaseSinkConnectorConfig.config;
+    return ConfigHelper.define(CouchbaseSinkConfig.class);
   }
 
   @Override

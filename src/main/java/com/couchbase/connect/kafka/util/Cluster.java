@@ -20,7 +20,6 @@ import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.parser.BucketConfigParser;
 import com.couchbase.client.core.env.ConfigParserEnvironment;
 import com.couchbase.client.core.node.DefaultMemcachedHashingStrategy;
-import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.utils.ConnectionString;
 import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.dcp.config.SSLEngineFactory;
@@ -47,8 +46,7 @@ import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpResponseSta
 import com.couchbase.client.dcp.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.dcp.deps.io.netty.handler.ssl.SslHandler;
 import com.couchbase.client.dcp.deps.io.netty.util.CharsetUtil;
-import com.couchbase.connect.kafka.CouchbaseSourceConnectorConfig;
-import com.couchbase.connect.kafka.util.config.Password;
+import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,16 +59,12 @@ import static com.couchbase.client.core.logging.RedactableArgument.system;
 import static java.util.stream.Collectors.toList;
 
 public class Cluster {
+  private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
+
   private static final int DEFAULT_MANAGER_PORT = 8091;
   private static final int DEFAULT_MANAGER_TLS_PORT = 18091;
 
-  static final ConfigParserEnvironment dummyBootstrapEnv = new ConfigParserEnvironment() {
-    @Override
-    public MemcachedHashingStrategy memcachedHashingStrategy() {
-      return DefaultMemcachedHashingStrategy.INSTANCE;
-    }
-  };
-  private static final Logger LOGGER = LoggerFactory.getLogger(Cluster.class);
+  static final ConfigParserEnvironment dummyBootstrapEnv = () -> DefaultMemcachedHashingStrategy.INSTANCE;
 
   private static List<HostAndPort> parseSeedNodes(List<String> rawSeedNodes, boolean ssl) {
     return ConnectionString.fromHostnames(rawSeedNodes)
@@ -86,13 +80,13 @@ public class Cluster {
         .collect(toList());
   }
 
-  public static Config fetchBucketConfig(final CouchbaseSourceConnectorConfig config) {
-    final boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
-    final List<String> rawSeedNodes = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
+  public static Config fetchBucketConfig(final CouchbaseSourceConfig config) {
+    final boolean sslEnabled = config.enableTls();
+    final List<String> rawSeedNodes = config.seedNodes();
     final List<HostAndPort> seedNodes = parseSeedNodes(rawSeedNodes, sslEnabled);
-    final String bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-    final String username = config.getUsername();
-    final String password = Password.CONNECTION.get(config);
+    final String bucket = config.bucket();
+    final String username = config.username();
+    final String password = config.password().value();
 
     final SSLEngineFactory sslEngineFactory =
         new SSLEngineFactory(new SecureEnvironment() {
@@ -103,12 +97,12 @@ public class Cluster {
 
           @Override
           public String sslKeystoreFile() {
-            return config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
+            return config.trustStorePath();
           }
 
           @Override
           public String sslKeystorePassword() {
-            return Password.SSL_KEYSTORE.get(config);
+            return config.trustStorePassword().value();
           }
 
           @Override

@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.util.config;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
@@ -41,6 +42,10 @@ public class DurationParser {
     temp.put("h", TimeUnit.HOURS);
     temp.put("d", TimeUnit.DAYS);
     qualifierToTimeUnit = Collections.unmodifiableMap(temp);
+  }
+
+  public static Duration parseDuration(String s) {
+    return Duration.ofMillis(parseDuration(s, TimeUnit.MILLISECONDS));
   }
 
   public static long parseDuration(String s, TimeUnit resultUnit) {

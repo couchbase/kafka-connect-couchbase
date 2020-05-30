@@ -23,26 +23,30 @@ import static org.junit.Assert.assertEquals;
 public class SizeParserTest {
   @Test
   public void parseSize() throws Exception {
-    assertEquals(0, SizeParser.parseSizeBytes("0"));
-    assertEquals(0, SizeParser.parseSizeBytes("0k"));
-    assertEquals(3, SizeParser.parseSizeBytes("3b"));
-    assertEquals(3 * 1024, SizeParser.parseSizeBytes("3k"));
-    assertEquals(3 * 1024 * 1024, SizeParser.parseSizeBytes("3m"));
-    assertEquals(3L * 1024 * 1024 * 1024, SizeParser.parseSizeBytes("3g"));
+    assertEquals(0, parseBytes("0"));
+    assertEquals(0, parseBytes("0k"));
+    assertEquals(3, parseBytes("3b"));
+    assertEquals(3 * 1024, parseBytes("3k"));
+    assertEquals(3 * 1024 * 1024, parseBytes("3m"));
+    assertEquals(3L * 1024 * 1024 * 1024, parseBytes("3g"));
 
-    assertEquals(0, SizeParser.parseSizeBytes("0b"));
-    assertEquals(0, SizeParser.parseSizeBytes("0k"));
-    assertEquals(0, SizeParser.parseSizeBytes("0m"));
-    assertEquals(0, SizeParser.parseSizeBytes("0g"));
+    assertEquals(0, parseBytes("0b"));
+    assertEquals(0, parseBytes("0k"));
+    assertEquals(0, parseBytes("0m"));
+    assertEquals(0, parseBytes("0g"));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void missingNumber() throws Exception {
-    SizeParser.parseSizeBytes("k");
+    parseBytes("k");
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void missingUnit() throws Exception {
-    SizeParser.parseSizeBytes("300");
+    parseBytes("300");
+  }
+
+  private static long parseBytes(String s) {
+    return DataSizeParser.parseDataSize(s).getByteCount();
   }
 }

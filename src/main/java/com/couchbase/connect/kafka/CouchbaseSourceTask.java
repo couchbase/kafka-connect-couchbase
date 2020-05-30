@@ -18,8 +18,8 @@ package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.config.CompressionMode;
+import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
@@ -27,9 +27,7 @@ import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.util.Version;
-import com.couchbase.connect.kafka.util.config.DurationParser;
-import com.couchbase.connect.kafka.util.config.Password;
-import com.couchbase.connect.kafka.util.config.SizeParser;
+import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -55,8 +53,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
   private static final long MAX_TIMEOUT = 10000L;
 
-  private CouchbaseSourceConnectorConfig config;
-  private Map<String, String> configProperties;
+  private String connectorName;
   private CouchbaseReader couchbaseReader;
   private BlockingQueue<Event> queue;
   private BlockingQueue<Throwable> errorQueue;
@@ -75,72 +72,36 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @Override
   public void start(Map<String, String> properties) {
+    this.connectorName = properties.get("name");
+
+    CouchbaseSourceTaskConfig config;
     try {
-      configProperties = properties;
-      config = new CouchbaseSourceTaskConfig(configProperties);
+      config = ConfigHelper.parse(CouchbaseSourceTaskConfig.class, properties);
+      if (connectorName == null || connectorName.isEmpty()) {
+        throw new ConfigException("Connector must have a non-blank 'name' config property.");
+      }
     } catch (ConfigException e) {
       throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
     }
 
-    RedactionLevel redactionLevel = config.getEnum(RedactionLevel.class, CouchbaseSourceConnectorConfig.LOG_REDACTION_CONFIG);
-    CouchbaseLoggerFactory.setRedactionLevel(redactionLevel);
+    CouchbaseLoggerFactory.setRedactionLevel(config.logRedaction());
 
-    filter = createFilter(config.getString(CouchbaseSourceConnectorConfig.EVENT_FILTER_CLASS_CONFIG));
-    sourceHandler = createHandler(
-        config.getString(CouchbaseSourceConnectorConfig.DCP_MESSAGE_CONVERTER_CLASS_CONFIG));
+    filter = Utils.newInstance(config.eventFilter());
+    sourceHandler = Utils.newInstance(config.sourceHandler());
 
-    topic = config.getString(CouchbaseSourceConnectorConfig.TOPIC_NAME_CONFIG);
-    bucket = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_BUCKET_CONFIG);
-    connectorNameInOffsets = config.getBoolean(CouchbaseSourceConnectorConfig.COMPAT_NAMES_CONFIG);
-    String username = config.getUsername();
-    String password = Password.CONNECTION.get(config);
-    List<String> clusterAddress = config.getList(CouchbaseSourceConnectorConfig.CONNECTION_CLUSTER_ADDRESS_CONFIG);
-    NetworkResolution networkResolution = parseNetworkResolution(config.getString(CouchbaseSourceConnectorConfig.COUCHBASE_NETWORK_CONFIG));
-    boolean sslEnabled = config.getBoolean(CouchbaseSourceConnectorConfig.CONNECTION_SSL_ENABLED_CONFIG);
-    String sslKeystoreLocation = config.getString(CouchbaseSourceConnectorConfig.CONNECTION_SSL_KEYSTORE_LOCATION_CONFIG);
-    String sslKeystorePassword = Password.SSL_KEYSTORE.get(config);
-    batchSizeMax = config.getInt(CouchbaseSourceConnectorConfig.BATCH_SIZE_MAX_CONFIG);
-    StreamFrom streamFrom = config.getEnum(StreamFrom.class, CouchbaseSourceConnectorConfig.STREAM_FROM_CONFIG);
-    CompressionMode compressionMode = config.getEnum(CompressionMode.class, CouchbaseSourceConnectorConfig.COMPRESSION_CONFIG);
-    String connectorName = config.getConnectorName();
+    topic = config.topic();
+    bucket = config.bucket();
+    connectorNameInOffsets = config.connectorNameInOffsets();
+    batchSizeMax = config.batchSizeMax();
 
-    final long persistencePollingIntervalMillis = DurationParser.parseDuration(
-        config.getString(CouchbaseSourceConnectorConfig.PERSISTENCE_POLLING_INTERVAL_CONFIG),
-        TimeUnit.MILLISECONDS);
-    final int flowControlBufferBytes = (int) Math.min(Integer.MAX_VALUE,
-        SizeParser.parseSizeBytes(config.getString(CouchbaseSourceConnectorConfig.FLOW_CONTROL_BUFFER_CONFIG)));
-
-    long connectionTimeout = config.getLong(CouchbaseSourceConnectorConfig.CONNECTION_TIMEOUT_MS_CONFIG);
-    Short[] partitions = toBoxedShortArray(config.getList(CouchbaseSourceTaskConfig.PARTITIONS_CONFIG));
-
+    Short[] partitions = toBoxedShortArray(config.partitions());
     Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno = readSourceOffsets(partitions);
 
     running = true;
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
-    couchbaseReader = new CouchbaseReader(connectorName, clusterAddress, bucket, username, password, connectionTimeout,
-        queue, errorQueue, partitions, partitionToSavedSeqno, streamFrom, sslEnabled, sslKeystoreLocation, sslKeystorePassword,
-        compressionMode, persistencePollingIntervalMillis, flowControlBufferBytes, networkResolution);
+    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno);
     couchbaseReader.start();
-  }
-
-  private SourceHandler createHandler(final String className) {
-    try {
-        return Utils.newInstance(className, SourceHandler.class);
-    } catch (ClassNotFoundException e) {
-      throw new ConnectException("Couldn't create message handler", e);
-    }
-  }
-
-  private Filter createFilter(final String className) {
-    if (className != null && !"".equals(className)) {
-      try {
-        return Utils.newInstance(className, Filter.class);
-      } catch (ClassNotFoundException e) {
-        throw new ConnectException("Couldn't create filter in CouchbaseSourceTask due to an error", e);
-      }
-    }
-    return null;
   }
 
   @Override
@@ -201,19 +162,23 @@ public class CouchbaseSourceTask extends SourceTask {
   @Override
   public void stop() {
     running = false;
-    couchbaseReader.shutdown();
-    try {
-      couchbaseReader.join(MAX_TIMEOUT);
-      if (couchbaseReader.isAlive()) {
-        LOGGER.error("Reader thread is still alive after shutdown request.");
+    if (couchbaseReader != null) {
+      couchbaseReader.shutdown();
+      try {
+        couchbaseReader.join(MAX_TIMEOUT);
+        if (couchbaseReader.isAlive()) {
+          LOGGER.error("Reader thread is still alive after shutdown request.");
+        }
+      } catch (InterruptedException e) {
+        LOGGER.error("Interrupted while joining reader thread.", e);
       }
-    } catch (InterruptedException e) {
-      LOGGER.error("Interrupted while joining reader thread.", e);
     }
 
-    LOGGER.info("Releasing unconsumed events: {}", queue.size());
-    // Don't need to ACK, since DCP connection is already closed.
-    releaseAll(queue);
+    if (queue != null) {
+      LOGGER.info("Releasing unconsumed events: {}", queue.size());
+      // Don't need to ACK, since DCP connection is already closed.
+      releaseAll(queue);
+    }
   }
 
   private void releaseAll(Iterable<Event> events) {
@@ -279,7 +244,7 @@ public class CouchbaseSourceTask extends SourceTask {
     sourcePartition.put("bucket", bucket);
     sourcePartition.put("partition", String.valueOf(partition)); // Stringify for robust round-tripping across Kafka [de]serialization
     if (connectorNameInOffsets) {
-      sourcePartition.put("connector", config.getConnectorName());
+      sourcePartition.put("connector", connectorName);
     }
     return sourcePartition;
   }
