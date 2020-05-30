@@ -24,10 +24,10 @@ import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.ForeachAction;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KStreamBuilder;
 import org.apache.kafka.streams.kstream.Predicate;
 import org.apache.kafka.streams.kstream.ValueMapper;
 
@@ -47,8 +47,8 @@ public class KafkaStreamsDemo {
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-  public static void main(String[] args) throws InterruptedException, SQLException {
-    /**
+  public static void main(String[] args) throws Exception {
+    /*
      * The example assumes the following SQL schema
      *
      *    DROP DATABASE IF EXISTS beer_sample_sql;
@@ -108,14 +108,13 @@ public class KafkaStreamsDemo {
     Properties props = new Properties();
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-test");
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-    props.put(StreamsConfig.ZOOKEEPER_CONNECT_CONFIG, "localhost:2181");
     props.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
-    props.put(StreamsConfig.KEY_SERDE_CLASS_CONFIG, KeyAvroSerde.class);
-    props.put(StreamsConfig.VALUE_SERDE_CLASS_CONFIG, ValueAvroSerde.class);
+    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, KeyAvroSerde.class);
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, ValueAvroSerde.class);
 
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-    KStreamBuilder builder = new KStreamBuilder();
+    StreamsBuilder builder = new StreamsBuilder();
 
     KStream<String, GenericRecord> source = builder
         .stream("streaming-topic-beer-sample");
@@ -204,7 +203,7 @@ public class KafkaStreamsDemo {
       }
     });
 
-    final KafkaStreams streams = new KafkaStreams(builder, props);
+    final KafkaStreams streams = new KafkaStreams(builder.build(), props);
     streams.start();
     Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
       @Override

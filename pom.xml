@@ -69,8 +69,7 @@
 
     <properties>
         <java-compat.version>1.8</java-compat.version>
-        <confluent.version>4.0.2</confluent.version>
-        <kafka.version>1.0.2</kafka.version>
+        <kafka.version>2.5.0</kafka.version>
         <dcp-client.version>0.28.0</dcp-client.version>
         <java-client.version>2.7.13</java-client.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -84,10 +83,11 @@
 
         <!-- When deploying, don't promote artifacts from staging repository unless 'release' profile is active -->
         <autoReleaseAfterClose>false</autoReleaseAfterClose>
-
     </properties>
 
     <repositories>
+        <!-- For the `kafka-connect-avro-converter` library
+             used by the Kafka Streams demo -->
         <repository>
             <id>confluent</id>
             <name>Confluent</name>
@@ -108,11 +108,12 @@
             <version>${kafka.version}</version>
             <scope>provided</scope>
         </dependency>
+        <!-- For Kafka Streams demo -->
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-connect-avro-converter</artifactId>
-            <version>${confluent.version}</version>
-            <scope>provided</scope>
+            <version>5.5.0</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.couchbase.client</groupId>
@@ -155,7 +156,6 @@
             <version>${mysql.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
