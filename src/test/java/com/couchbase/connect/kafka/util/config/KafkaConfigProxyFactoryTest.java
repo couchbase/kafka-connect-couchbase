@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertEquals;
@@ -84,6 +85,9 @@ public class KafkaConfigProxyFactoryTest {
 
     @Default("a,b,c")
     List<String> listValue();
+
+    @Default
+    List<String> emptyListValue();
 
     @Default("RED")
     Color enumValue();
@@ -146,6 +150,7 @@ public class KafkaConfigProxyFactoryTest {
     assertEquals(2, config.shortValue());
     assertEquals(3.14, config.doubleValue(), .0001);
     assertEquals(Arrays.asList("a", "b", "c"), config.listValue());
+    assertEquals(emptyList(), config.emptyListValue());
     assertEquals(Color.RED, config.enumValue());
     assertEquals("swordfish", config.passwordValue().value());
     assertEquals(Duration.ofSeconds(30), config.durationValue());

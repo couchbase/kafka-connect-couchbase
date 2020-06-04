@@ -16,9 +16,10 @@
 package com.couchbase.connect.kafka;
 
 
-import com.couchbase.client.core.utils.NetworkAddress;
+import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
-import com.couchbase.connect.kafka.util.Cluster;
 import com.couchbase.connect.kafka.util.Config;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
@@ -29,7 +30,9 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -51,24 +54,23 @@ public class CouchbaseSourceConnector extends SourceConnector {
       configProperties = properties;
       CouchbaseSourceConfig config = ConfigHelper.parse(CouchbaseSourceConfig.class, properties);
 
-      setForceIpv4(config.forceIPv4());
-
-      bucketConfig = Cluster.fetchBucketConfig(config);
-      if (bucketConfig == null) {
-        String bucket = config.bucket();
-        throw new ConnectException("Cannot fetch configuration for bucket " + bucket);
+      try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
+        Bucket bucket = client.cluster().bucket(config.bucket());
+        bucketConfig = new Config((CouchbaseBucketConfig) getConfig(bucket, config.bootstrapTimeout()));
       }
+
     } catch (ConfigException e) {
       throw new ConnectException("Cannot start CouchbaseSourceConnector due to configuration error", e);
     }
   }
 
-  static void setForceIpv4(boolean forceIpv4) {
-    // Can't use constant NetworkAddress.FORCE_IPV4_PROPERTY because that would trigger static init
-    System.setProperty("com.couchbase.forceIPv4", String.valueOf(forceIpv4));
-    if (NetworkAddress.FORCE_IPV4 != forceIpv4) {
-      throw new IllegalStateException("Too late to set 'com.couchbase.forceIPv4' system property; static init for NetworkAddress already done.");
-    }
+  private static BucketConfig getConfig(Bucket bucket, Duration timeout) {
+    return bucket.core()
+        .configurationProvider()
+        .configs()
+        .flatMap(clusterConfig ->
+            Mono.justOrEmpty(clusterConfig.bucketConfig(bucket.name())))
+        .blockFirst(timeout);
   }
 
   @Override

@@ -46,7 +46,8 @@ public interface SinkBehaviorConfig {
   DocumentMode documentMode();
 
   /**
-   * JSON Pointer to the property to use as the root for the Couchbase sub-document operation.
+   * JSON Pointer to the property of the Kafka message whose value is
+   * the subdocument path to use when modifying the Couchbase document.
    */
   @Default
   String subdocumentPath();
@@ -60,7 +61,7 @@ public interface SinkBehaviorConfig {
   /**
    * Setting to indicate the type of update to use when 'couchbase.documentMode' is 'N1QL'.
    */
-  @Default("UPSERT")
+  @Default("UPDATE")
   N1qlMode n1qlOperation();
 
   /**
@@ -78,14 +79,19 @@ public interface SinkBehaviorConfig {
   boolean subdocumentCreatePath();
 
   /**
-   * Whether to create the document if it does not exist.
+   * When `couchbase.documentMode` is SUBDOCUMENT or N1QL, this property controls
+   * whether to create the document if it does not exist.
    */
   @Default("true")
-  boolean subdocumentCreateDocument();
+  boolean createDocument();
 
   /**
    * Document expiration time specified as an integer followed by a time unit (s = seconds, m = minutes, h = hours, d = days).
-   * For example, to have documents expire after 30 minutes, set this value to "30m". By default, documents do not expire.
+   * For example, to have documents expire after 30 minutes, set this value to "30m".
+   * <p>
+   * By default, documents do not expire.
+   * <p>
+   * Only Applies only to the DOCUMENT and SUBDOCUMENT modes.
    */
   @Default("0")
   Duration documentExpiration();

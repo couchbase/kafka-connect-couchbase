@@ -16,8 +16,8 @@
 
 package com.couchbase.connect.kafka.config.sink;
 
-import com.couchbase.client.java.PersistTo;
-import com.couchbase.client.java.ReplicateTo;
+import com.couchbase.client.java.kv.PersistTo;
+import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 
 public interface DurabilityConfig {

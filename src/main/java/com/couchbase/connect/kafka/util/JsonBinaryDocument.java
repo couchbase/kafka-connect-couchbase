@@ -16,29 +16,23 @@
 
 package com.couchbase.connect.kafka.util;
 
-import com.couchbase.client.core.message.kv.MutationToken;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.java.document.AbstractDocument;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
-/**
- * A JSON document backed by a ByteBuf. Unlike RawJsonDocument,
- * does not require copying the bytes into String.
- */
-public class JsonBinaryDocument extends AbstractDocument<ByteBuf> {
-  public static JsonBinaryDocument create(String id, int expiry, ByteBuf content) {
-    return new JsonBinaryDocument(id, expiry, content, 0L, null);
+public class JsonBinaryDocument {
+  private final String id;
+  private final byte[] content;
+
+  public JsonBinaryDocument(String id, byte[] content) {
+    this.id = notNullOrEmpty(id, "id");
+    this.content = requireNonNull(content);
   }
 
-  public static JsonBinaryDocument create(String id, byte[] content) {
-    return create(id, 0, content);
+  public String id() {
+    return id;
   }
 
-  public static JsonBinaryDocument create(String id, int expiry, byte[] content) {
-    return create(id, expiry, content == null ? null : Unpooled.wrappedBuffer(content));
-  }
-
-  public JsonBinaryDocument(String id, int expiry, ByteBuf content, long cas, MutationToken mutationToken) {
-    super(id, expiry, content, cas, mutationToken);
+  public byte[] content() {
+    return content;
   }
 }

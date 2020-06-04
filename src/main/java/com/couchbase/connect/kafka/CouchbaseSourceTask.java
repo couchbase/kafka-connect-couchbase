@@ -16,9 +16,8 @@
 
 package com.couchbase.connect.kafka;
 
-import com.couchbase.client.core.env.NetworkResolution;
-import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.dcp.config.CompressionMode;
+import com.couchbase.client.core.logging.LogRedaction;
+import com.couchbase.client.dcp.core.logging.RedactionLevel;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.filter.Filter;
@@ -45,8 +44,6 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-
-import static com.couchbase.connect.kafka.CouchbaseSinkTask.parseNetworkResolution;
 
 public class CouchbaseSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
@@ -84,7 +81,8 @@ public class CouchbaseSourceTask extends SourceTask {
       throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
     }
 
-    CouchbaseLoggerFactory.setRedactionLevel(config.logRedaction());
+    LogRedaction.setRedactionLevel(config.logRedaction());
+    RedactionLevel.set(toDcp(config.logRedaction()));
 
     filter = Utils.newInstance(config.eventFilter());
     sourceHandler = Utils.newInstance(config.sourceHandler());
@@ -102,6 +100,19 @@ public class CouchbaseSourceTask extends SourceTask {
     errorQueue = new LinkedBlockingQueue<>(1);
     couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno);
     couchbaseReader.start();
+  }
+
+  private RedactionLevel toDcp(com.couchbase.client.core.logging.RedactionLevel level) {
+    switch (level) {
+      case FULL:
+        return RedactionLevel.FULL;
+      case NONE:
+        return RedactionLevel.NONE;
+      case PARTIAL:
+        return RedactionLevel.PARTIAL;
+      default:
+        throw new IllegalArgumentException("Unrecognized redaction level: " + level);
+    }
   }
 
   @Override

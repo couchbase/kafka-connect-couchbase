@@ -1,23 +1,18 @@
 package com.couchbase.connect.kafka.sink;
 
-import com.couchbase.client.java.AsyncBucket;
-import com.couchbase.client.java.PersistTo;
-import com.couchbase.client.java.ReplicateTo;
-import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.AsyncN1qlQueryResult;
-import com.couchbase.client.java.query.N1qlMetrics;
-import com.couchbase.client.java.query.N1qlQuery;
+
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Completable;
-import rx.Observable;
-import rx.functions.Func1;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
+import static com.couchbase.client.java.query.QueryOptions.queryOptions;
+import static java.util.Objects.requireNonNull;
 
 public class N1qlWriter {
 
@@ -30,29 +25,23 @@ public class N1qlWriter {
   private final boolean createDocuments;
 
   public N1qlWriter(N1qlMode mode, List<String> whereFields, boolean createDocuments) {
-    this.mode = mode;
-    this.conditions = whereFields == null ? null : conditions(whereFields);
+    this.mode = requireNonNull(mode);
+    this.conditions = conditions(whereFields);
     this.createDocuments = createDocuments;
   }
 
-  public Completable write(final AsyncBucket bucket, final JsonBinaryDocument document, PersistTo persistTo, ReplicateTo replicateTo) {
-    if (document == null || document.content() == null) {
-      LOGGER.warn("document or document content is null");
-      // skip it
-      return Completable.complete();
-    }
-
+  public Mono<Void> write(final Cluster cluster, final String bucketName, final JsonBinaryDocument document) {
     final JsonObject node;
     try {
-      node = JsonObject.fromJson(document.content().toString(UTF_8));
+      node = JsonObject.fromJson(document.content());
     } catch (IllegalArgumentException e) {
       LOGGER.warn("could not generate n1ql statement from node (not json)", e);
-      return Completable.complete();
+      return Mono.empty();
     }
 
     if (node.isEmpty()) {
       LOGGER.warn("could not generate n1ql statement from empty node");
-      return Completable.complete();
+      return Mono.empty();
     }
 
     for (String name : node.getNames()) {
@@ -60,66 +49,28 @@ public class N1qlWriter {
         // todo figure out how to escape backticks when generating N1QL statements.
         // For now, bail out to avoid N1QL injection.
         LOGGER.warn("could not generate n1ql statement from node with backtick (`) in field name");
-        return Completable.complete();
+        return Mono.empty();
       }
     }
 
+    String statement = getStatement(bucketName, node);
+    node.put(ID_FIELD, document.id());
+    return cluster.reactive()
+        .query(statement, queryOptions().parameters(node))
+        .then();
+  }
+
+  private String getStatement(String bucketName, JsonObject kafkaMessage) {
     switch (this.mode) {
-      case UPSERT: {
-        String statement = upsertStatement(bucket.name(), node);
-        JsonObject idObject = JsonObject.create().put(ID_FIELD, document.id());
-        N1qlQuery query = N1qlQuery.parameterized(statement, idObject);
-        return bucket.query(query).toCompletable();
-      }
-
-      case UPDATE_WHERE: {
-        String statement = updateWithConditionStatement(bucket.name(), node);
-        node.put(ID_FIELD, document.id());
-        N1qlQuery query = N1qlQuery.parameterized(statement, node);
-        return bucket.query(query).toCompletable();
-      }
-
-      case UPDATE: {
-        String statement = updateStatement(bucket.name(), node);
-        node.put(ID_FIELD, document.id());
-        N1qlQuery query = N1qlQuery.parameterized(statement, node);
-        if (!createDocuments) {
-          return bucket.query(query).toCompletable();
-        }
-
-        return bucket.query(query)
-            .flatMap(new Func1<AsyncN1qlQueryResult, Observable<N1qlMetrics>>() {
-              @Override
-              public Observable<N1qlMetrics> call(AsyncN1qlQueryResult asyncN1qlQueryResult) {
-                return asyncN1qlQueryResult.info();
-              }
-            })
-            .flatMap(new Func1<N1qlMetrics, Observable<?>>() {
-              @Override
-              public Observable<?> call(N1qlMetrics n1qlMetrics) {
-                if (n1qlMetrics != null && n1qlMetrics.mutationCount() == 0) {
-                  // Document didn't exist, so create it
-                  node.removeKey(ID_FIELD);
-                  String statement = upsertStatement(bucket.name(), node);
-                  JsonObject idObject = JsonObject.create().put(ID_FIELD, document.id());
-                  return bucket.query(N1qlQuery.parameterized(statement, idObject));
-                } else {
-                  return Observable.just(n1qlMetrics);
-                }
-              }
-            })
-            .toCompletable();
-      }
-
+      case UPDATE_WHERE:
+        return updateWithConditionStatement(bucketName, kafkaMessage);
+      case UPDATE:
+        return createDocuments
+            ? mergeStatement(bucketName, kafkaMessage)
+            : updateStatement(bucketName, kafkaMessage);
       default:
         throw new AssertionError("unrecognized n1ql mode");
     }
-  }
-
-  private String upsertStatement(String keySpace, JsonObject values) {
-    return "UPSERT INTO `" + keySpace + "`" +
-        " (KEY,VALUE) VALUES ($" + ID_FIELD + ", " + values + ")" +
-        " RETURNING meta().id;";
   }
 
   private String updateStatement(String keySpace, JsonObject values) {
@@ -136,10 +87,22 @@ public class N1qlWriter {
         " RETURNING meta().id;";
   }
 
+  private String mergeStatement(String keyspace, JsonObject values) {
+    return "MERGE INTO `" + keyspace + "` AS doc" +
+        " USING 1 AS o" + // dummy to satisfy the MERGE INTO syntax?
+        " ON KEY $" + ID_FIELD +
+        " WHEN MATCHED THEN UPDATE SET " + assignments(values, "doc.") +
+        " WHEN NOT MATCHED THEN INSERT " + values;
+  }
+
   private static String assignments(JsonObject values) {
+    return assignments(values, "");
+  }
+
+  private static String assignments(JsonObject values, String prefix) {
     List<String> assignments = new ArrayList<>();
     for (String name : values.getNames()) {
-      assignments.add("`" + name + "` = $" + name);
+      assignments.add(prefix + "`" + name + "` = $" + name);
     }
     return String.join(", ", assignments);
   }

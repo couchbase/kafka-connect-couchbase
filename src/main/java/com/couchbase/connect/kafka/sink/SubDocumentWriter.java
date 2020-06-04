@@ -1,22 +1,27 @@
 package com.couchbase.connect.kafka.sink;
 
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.java.AsyncBucket;
-import com.couchbase.client.java.PersistTo;
-import com.couchbase.client.java.ReplicateTo;
-import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
-import com.couchbase.client.java.subdoc.SubdocOptionsBuilder;
+import com.couchbase.client.java.ReactiveCollection;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.ArrayAppend;
+import com.couchbase.client.java.kv.ArrayPrepend;
+import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.PersistTo;
+import com.couchbase.client.java.kv.ReplicateTo;
+import com.couchbase.client.java.kv.Upsert;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Completable;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.time.Duration;
 
-import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
+import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
+import static com.couchbase.client.java.kv.StoreSemantics.REPLACE;
+import static com.couchbase.client.java.kv.StoreSemantics.UPSERT;
+import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 
 public class SubDocumentWriter {
   private static final Logger LOGGER = LoggerFactory.getLogger(SubDocumentWriter.class);
@@ -26,16 +31,15 @@ public class SubDocumentWriter {
     private final String path;
     private final JsonObject data;
 
-    public SubdocOperation(String id, String path, ByteBuf data) {
+    public SubdocOperation(String id, String path, byte[] data) {
       this.id = id;
       this.path = path;
-      this.data = JsonObject.fromJson(data.toString(UTF_8));
+      this.data = JsonObject.fromJson(data);
     }
 
     public String getId() {
       return id;
     }
-
 
     public String getPath() {
       return path;
@@ -49,114 +53,83 @@ public class SubDocumentWriter {
   private final SubDocumentMode mode;
   private final String path;
   private final boolean createPaths;
-  private final boolean extractPath;
+  private final boolean pathIsDynamic;
   private final boolean createDocuments;
+  private final Duration documentExpiry;
 
-  public SubDocumentWriter(SubDocumentMode mode, String path, boolean extractPath, boolean createPaths, boolean createDocuments) {
-    this.mode = mode;
-    this.path = path;
-    this.extractPath = extractPath;
+  public SubDocumentWriter(SubDocumentMode mode, String path, boolean createPaths, boolean createDocuments, Duration expiry) {
+    this.mode = requireNonNull(mode);
+
+    if (path.startsWith("/")) {
+      // Interpret the given path as a JSON pointer.
+      // Each Kafka message is then expected to have a field at this location;
+      // the value of that field is the path to use when doing the subdoc operation.
+      this.path = "${" + path + "}";
+      this.pathIsDynamic = true;
+    } else {
+      // Interpret the path as a normal subdoc path.
+      // The same path is then used for each subdoc operation.
+      this.path = path;
+      this.pathIsDynamic = false;
+    }
+
     this.createPaths = createPaths;
     this.createDocuments = createDocuments;
+    this.documentExpiry = requireNonNull(expiry);
   }
 
-  public Completable write(final AsyncBucket bucket, final JsonBinaryDocument document, PersistTo persistTo, ReplicateTo replicateTo) {
-    if (document == null || (document.content() == null && (document.id() == null || document.id().isEmpty()))) {
-
-      LOGGER.warn("document or document content is null");
-      // skip it
-      return Completable.complete();
-    }
-
+  public Mono<Void> write(final ReactiveCollection bucket, final JsonBinaryDocument document, PersistTo persistTo, ReplicateTo replicateTo) {
     SubdocOperation operation = getOperation(document);
 
-    SubdocOptionsBuilder options = new SubdocOptionsBuilder().createPath(createPaths);
+    MutateInSpec mutation;
 
-    AsyncMutateInBuilder mutation = bucket
-        .mutateIn(document.id());
+    switch (mode) {
+      case UPSERT:
+        mutation = MutateInSpec.upsert(operation.getPath(), operation.getData());
+        if (createPaths) {
+          mutation = ((Upsert) mutation).createPath();
+        }
+        break;
 
-    if (operation.data == null && !document.id().isEmpty()) {
-      mutation = mutation.remove(operation.path, options);
-    } else {
-      switch (mode) {
-        case UPSERT: {
-          mutation = mutation.upsert(operation.getPath(), operation.getData(), options);
-          break;
+      case ARRAY_APPEND:
+        mutation = MutateInSpec.arrayAppend(operation.getPath(), singletonList(operation.getData()));
+        if (createPaths) {
+          mutation = ((ArrayAppend) mutation).createPath();
         }
-        case ARRAY_INSERT: {
-          mutation = mutation.arrayInsert(operation.getPath(), operation.getData(), options);
-          break;
-        }
-        case ARRAY_APPEND: {
-          mutation = mutation.arrayAppend(operation.getPath(), operation.getData(), options);
+        break;
 
-          break;
+      case ARRAY_PREPEND:
+        mutation = MutateInSpec.arrayPrepend(operation.getPath(), singletonList(operation.getData()));
+        if (createPaths) {
+          mutation = ((ArrayPrepend) mutation).createPath();
         }
-        case ARRAY_PREPEND: {
-          mutation = mutation.arrayPrepend(operation.getPath(), operation.getData(), options);
+        break;
 
-          break;
-        }
-        case ARRAY_INSERT_ALL: {
-          mutation = mutation.arrayInsertAll(operation.getPath(), operation.getData(), options);
-
-          break;
-        }
-        case ARRAY_APPEND_ALL: {
-          mutation = mutation.arrayAppendAll(operation.getPath(), operation.getData(), options);
-
-          break;
-        }
-        case ARRAY_PREPEND_ALL: {
-          mutation = mutation.arrayPrependAll(operation.getPath(), operation.getData(), options);
-          break;
-        }
-        case ARRAY_ADD_UNIQUE: {
-          mutation = mutation.arrayAddUnique(operation.getPath(), operation.getData(), options);
-          break;
-        }
-      }
+      default:
+        throw new RuntimeException("Unsupported subdoc mode: " + mode);
     }
 
-    return mutation
-        .upsertDocument(createDocuments)
-        .execute(persistTo, replicateTo)
-        .toCompletable();
-
+    return bucket.mutateIn(document.id(), singletonList(mutation),
+        mutateInOptions()
+            .expiry(documentExpiry)
+            .durability(persistTo, replicateTo)
+            .storeSemantics(createDocuments ? UPSERT : REPLACE))
+        .then();
   }
 
   private SubdocOperation getOperation(JsonBinaryDocument doc) {
-    String id = doc.id();
-    String documentPath = null;
-    ByteBuf data = null;
-    if (extractPath) {
+    if (!pathIsDynamic) {
+      return new SubdocOperation(doc.id(), this.path, doc.content());
+    }
+
+    try {
       DocumentPathExtractor extractor = new DocumentPathExtractor(path, true);
-      try {
-        DocumentPathExtractor.DocumentExtraction extraction = extractor.extractDocumentPath(getBytes(doc.content()));
-        documentPath = extraction.getPathValue();
-        data = Unpooled.wrappedBuffer(extraction.getData());
-      } catch (IOException | DocumentPathExtractor.DocumentPathNotFoundException e) {
-        LOGGER.error(e.getMessage(), e);
-      }
-    } else {
-      documentPath = this.path;
-      data = doc.content();
+      DocumentPathExtractor.DocumentExtraction extraction = extractor.extractDocumentPath(doc.content());
+      return new SubdocOperation(doc.id(), extraction.getPathValue(), extraction.getData());
+
+    } catch (IOException | DocumentPathExtractor.DocumentPathNotFoundException e) {
+      LOGGER.error(e.getMessage(), e);
+      return new SubdocOperation(doc.id(), null, null);
     }
-
-    return new SubdocOperation(id, documentPath, data);
-  }
-
-  private byte[] getBytes(final ByteBuf byteBuf) {
-    final byte[] documentBytes;
-    if (byteBuf.hasArray()
-        && byteBuf.arrayOffset() == 0
-        && byteBuf.readableBytes() == byteBuf.array().length) {
-      documentBytes = byteBuf.array();
-    } else {
-      documentBytes = new byte[byteBuf.readableBytes()];
-      byteBuf.getBytes(byteBuf.readerIndex(), documentBytes);
-    }
-
-    return documentBytes;
   }
 }

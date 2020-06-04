@@ -35,8 +35,8 @@ public class DocumentIdExtractor {
    * @param json The document content encoded as UTF-8. If this method returns normally,
    * it may modify the contents of the array to remove the fields used by the document ID.
    */
-  public JsonBinaryDocument extractDocumentId(final byte[] json, int expiry) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException {
+  public JsonBinaryDocument extractDocumentId(final byte[] json) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException {
     DocumentPathExtractor.DocumentExtraction extraction = pathExtractor.extractDocumentPath(json);
-    return JsonBinaryDocument.create(extraction.getPathValue(), expiry, extraction.getData());
+    return new JsonBinaryDocument(extraction.getPathValue(), extraction.getData());
   }
 }

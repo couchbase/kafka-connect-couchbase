@@ -16,20 +16,13 @@
 
 package com.couchbase.connect.kafka;
 
-import com.couchbase.client.core.env.NetworkResolution;
-import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.time.Delay;
-import com.couchbase.client.java.Bucket;
-import com.couchbase.client.java.CouchbaseCluster;
-import com.couchbase.client.java.PersistTo;
-import com.couchbase.client.java.ReplicateTo;
-import com.couchbase.client.java.document.Document;
-import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
-import com.couchbase.client.java.error.DocumentDoesNotExistException;
-import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.util.retry.RetryBuilder;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.logging.LogRedaction;
+import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.codec.RawJsonTranscoder;
+import com.couchbase.client.java.kv.PersistTo;
+import com.couchbase.client.java.kv.ReplicateTo;
+import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.sink.DocumentMode;
 import com.couchbase.connect.kafka.sink.N1qlMode;
@@ -39,7 +32,6 @@ import com.couchbase.connect.kafka.sink.SubDocumentWriter;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
-import com.couchbase.connect.kafka.util.JsonBinaryTranscoder;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -51,28 +43,25 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Completable;
-import rx.Observable;
-import rx.functions.Func1;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
-import static com.couchbase.connect.kafka.CouchbaseSourceConnector.setForceIpv4;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class CouchbaseSinkTask extends SinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
 
-  private Bucket bucket;
-  private CouchbaseCluster cluster;
+  private String bucketName;
+  private Collection collection;
+  private KafkaCouchbaseClient client;
   private JsonConverter converter;
   private DocumentIdExtractor documentIdExtractor;
   private DocumentMode documentMode;
@@ -83,15 +72,11 @@ public class CouchbaseSinkTask extends SinkTask {
   private PersistTo persistTo;
   private ReplicateTo replicateTo;
 
-  private long expiryOffsetSeconds;
+  private Duration documentExpiry;
 
   @Override
   public String version() {
     return Version.getVersion();
-  }
-
-  static NetworkResolution parseNetworkResolution(String s) {
-    return s.isEmpty() ? NetworkResolution.AUTO : NetworkResolution.custom(s);
   }
 
   @Override
@@ -103,29 +88,15 @@ public class CouchbaseSinkTask extends SinkTask {
       throw new ConnectException("Couldn't start CouchbaseSinkTask due to configuration error", e);
     }
 
-    setForceIpv4(config.forceIPv4());
-    CouchbaseLoggerFactory.setRedactionLevel(config.logRedaction());
-
-    List<String> clusterAddress = config.seedNodes();
-    NetworkResolution networkResolution = parseNetworkResolution(config.network());
-
-    CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
-        .sslEnabled(config.enableTls())
-        .networkResolution(networkResolution)
-        .sslKeystoreFile(config.trustStorePath())
-        .sslKeystorePassword(config.trustStorePassword().value())
-        .connectTimeout(config.bootstrapTimeout().toMillis())
-        .mutationTokensEnabled(true)
-        .build();
-    cluster = CouchbaseCluster.create(env, clusterAddress);
-    cluster.authenticate(config.username(), config.password().value());
-
-    List<Transcoder<? extends Document, ?>> transcoders =
-        Collections.singletonList(new JsonBinaryTranscoder());
-    bucket = cluster.openBucket(config.bucket(), transcoders);
+    LogRedaction.setRedactionLevel(config.logRedaction());
+    client = new KafkaCouchbaseClient(config);
+    bucketName = config.bucket();
+    collection = client.cluster()
+        .bucket(bucketName)
+        .defaultCollection();
 
     converter = new JsonConverter();
-    converter.configure(Collections.singletonMap("schemas.enable", false), false);
+    converter.configure(mapOf("schemas.enable", false), false);
 
     String docIdPointer = config.documentId();
     if (docIdPointer != null && !docIdPointer.isEmpty()) {
@@ -136,23 +107,21 @@ public class CouchbaseSinkTask extends SinkTask {
     persistTo = config.persistTo();
     replicateTo = config.replicateTo();
 
-    final Duration expiryDuration = config.documentExpiration();
-    expiryOffsetSeconds = expiryDuration.isZero() ? 0 : expiryDuration.toMillis() / 1000;
+    documentExpiry = config.documentExpiration();
 
-    boolean createDocuments;
     switch (documentMode) {
       case SUBDOCUMENT: {
         SubDocumentMode subDocumentMode = config.subdocumentOperation();
         String path = config.subdocumentPath();
         boolean createPaths = config.subdocumentCreatePath();
-        createDocuments = config.subdocumentCreateDocument();
+        boolean createDocuments = config.createDocument();
 
-        subDocumentWriter = new SubDocumentWriter(subDocumentMode, path, path.startsWith("/"), createPaths, createDocuments);
+        subDocumentWriter = new SubDocumentWriter(subDocumentMode, path, createPaths, createDocuments, documentExpiry);
         break;
       }
       case N1QL: {
         N1qlMode n1qlMode = config.n1qlOperation();
-        createDocuments = config.subdocumentCreateDocument();
+        boolean createDocuments = config.createDocument();
         List<String> n1qlWhereFields = config.n1qlWhereFields();
 
         n1qlWriter = new N1qlWriter(n1qlMode, n1qlWhereFields, createDocuments);
@@ -162,7 +131,7 @@ public class CouchbaseSinkTask extends SinkTask {
   }
 
   @Override
-  public void put(Collection<SinkRecord> records) {
+  public void put(java.util.Collection<SinkRecord> records) {
     if (records.isEmpty()) {
       return;
     }
@@ -171,54 +140,39 @@ public class CouchbaseSinkTask extends SinkTask {
     LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
         recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
 
-    //noinspection unchecked
-    Observable.from(records)
-        .flatMapCompletable(new Func1<SinkRecord, Completable>() {
-          @Override
-          public Completable call(SinkRecord record) {
-            if (record.value() == null) {
-              String documentId = documentIdFromKafkaMetadata(record);
-              return removeIfExists(documentId);
+    Flux.fromIterable(records)
+        .flatMap(record -> {
+          if (record.value() == null) {
+            String documentId = documentIdFromKafkaMetadata(record);
+            return removeIfExists(documentId);
+          }
+
+          JsonBinaryDocument doc = convert(record);
+
+          switch (documentMode) {
+            case N1QL: {
+              return n1qlWriter.write(client.cluster(), bucketName, doc);
             }
-
-            JsonBinaryDocument doc = convert(record);
-
-            switch (documentMode) {
-              case N1QL: {
-                return n1qlWriter.write(bucket.async(), doc, persistTo, replicateTo);
-              }
-              case SUBDOCUMENT: {
-                return subDocumentWriter.write(bucket.async(), doc, persistTo, replicateTo);
-              }
-              default: {
-                return bucket.async()
-                    .upsert(doc, persistTo, replicateTo)
-                    .toCompletable();
-              }
+            case SUBDOCUMENT: {
+              return subDocumentWriter.write(collection.reactive(), doc, persistTo, replicateTo);
+            }
+            default: {
+              return collection.reactive()
+                  .upsert(doc.id(), doc.content(), UpsertOptions.upsertOptions()
+                      .durability(persistTo, replicateTo)
+                      .expiry(documentExpiry)
+                      .transcoder(RawJsonTranscoder.INSTANCE))
+                  .then();
             }
           }
-        })
-        .retryWhen(
-            // TODO: make it configurable
-            RetryBuilder
-                .anyOf(RuntimeException.class)
-                .delay(Delay.exponential(TimeUnit.SECONDS, 5))
-                .max(5)
-                .build())
-
-        .toCompletable().await();
+        }).blockLast();
   }
 
-  private Completable removeIfExists(String documentId) {
-    return bucket.async().remove(documentId, persistTo, replicateTo)
-        .onErrorResumeNext(new Func1<Throwable, Observable<JsonDocument>>() {
-          @Override
-          public Observable<JsonDocument> call(Throwable throwable) {
-            return (throwable instanceof DocumentDoesNotExistException)
-                ? Observable.empty()
-                : Observable.error(throwable);
-          }
-        }).toCompletable();
+  private Mono<Void> removeIfExists(String documentId) {
+    return collection.reactive()
+        .remove(documentId, removeOptions().durability(persistTo, replicateTo))
+        .onErrorResume(DocumentNotFoundException.class, throwable -> Mono.empty())
+        .then();
   }
 
   private static String toString(ByteBuffer byteBuffer) {
@@ -256,7 +210,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
     try {
       if (documentIdExtractor != null) {
-        return documentIdExtractor.extractDocumentId(valueAsJsonBytes, getAbsoluteExpirySeconds());
+        return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
       }
 
     } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
@@ -271,17 +225,8 @@ public class CouchbaseSinkTask extends SinkTask {
       defaultId = documentIdFromKafkaMetadata(record);
     }
 
-    return JsonBinaryDocument.create(defaultId, getAbsoluteExpirySeconds(), valueAsJsonBytes);
+    return new JsonBinaryDocument(defaultId, valueAsJsonBytes);
   }
-
-  private int getAbsoluteExpirySeconds() {
-    if (expiryOffsetSeconds == 0) {
-      return 0; // no expiration
-    }
-
-    return (int) (MILLISECONDS.toSeconds(System.currentTimeMillis()) + expiryOffsetSeconds);
-  }
-
 
   @Override
   public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
@@ -289,6 +234,6 @@ public class CouchbaseSinkTask extends SinkTask {
 
   @Override
   public void stop() {
-    cluster.disconnect();
+    client.close();
   }
 }

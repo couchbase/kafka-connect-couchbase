@@ -30,7 +30,7 @@ import com.couchbase.client.dcp.message.RollbackMessage;
 import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
-import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
+import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.util.Version;
 import org.slf4j.Logger;
@@ -53,7 +53,7 @@ public class CouchbaseReader extends Thread {
   private final StreamFrom streamFrom;
   private final BlockingQueue<Throwable> errorQueue;
 
-  public CouchbaseReader(CouchbaseSourceConfig config, final String connectorName,
+  public CouchbaseReader(CouchbaseSourceTaskConfig config, final String connectorName,
                          final BlockingQueue<Event> queue, final BlockingQueue<Throwable> errorQueue,
                          final Short[] partitions, final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno) {
     this.partitions = partitions;

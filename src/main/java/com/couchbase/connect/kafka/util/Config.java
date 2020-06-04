@@ -48,7 +48,7 @@ public class Config {
     }
     int numberOfPartitions = numberOfPartitions();
     for (short partition = 0; partition < numberOfPartitions; partition++) {
-      short nodeIdx = bucketConfig.nodeIndexForMaster(partition, false);
+      short nodeIdx = bucketConfig.nodeIndexForActive(partition, false);
       groups.get(nodeIdx).add(partition);
     }
     return groups;

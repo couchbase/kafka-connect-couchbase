@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -93,7 +94,7 @@ public class DocumentPathExtractor {
 
   private static final JsonFactory factory = new JsonFactory();
   private final String documentPathFormat;
-  private final Map<String, JsonPointer> placeholderToJsonPointer = new HashMap<>();
+  private final Map<String, JsonPointer> placeholderToJsonPointer;
 
   private final boolean removeDocumentPath;
 
@@ -115,12 +116,14 @@ public class DocumentPathExtractor {
       }
     }
 
+    Map<String, JsonPointer> placeholderToJsonPointerTemp = new HashMap<>();
     do {
       final String placeholder = m.group();
       final String jsonPointer = m.group(1);
-      placeholderToJsonPointer.put(placeholder, JsonPointer.compile(jsonPointer));
+      placeholderToJsonPointerTemp.put(placeholder, JsonPointer.compile(jsonPointer));
     } while (m.find());
 
+    this.placeholderToJsonPointer = unmodifiableMap(placeholderToJsonPointerTemp);
     this.documentPathFormat = documentPathFormat;
     this.removeDocumentPath = removeDocumentPath;
   }

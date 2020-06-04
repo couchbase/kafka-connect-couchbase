@@ -16,9 +16,9 @@
 
 package com.couchbase.connect.kafka.util;
 
+import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
-import com.couchbase.client.core.config.parser.BucketConfigParser;
-import com.couchbase.client.core.utils.NetworkAddress;
+import com.couchbase.client.core.env.CoreEnvironment;
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -27,6 +27,7 @@ import java.util.Set;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 
 public class ConfigTest {
   private static void assertGroupEquals(int[] expected, List<Short> actual) {
@@ -39,7 +40,9 @@ public class ConfigTest {
 
   private CouchbaseBucketConfig loadConfig(String resource) {
     String body = Resources.read(resource, getClass());
-    return (CouchbaseBucketConfig) BucketConfigParser.parse(body, Cluster.dummyBootstrapEnv, null);
+
+    CoreEnvironment env = mock(CoreEnvironment.class);
+    return (CouchbaseBucketConfig) BucketConfigParser.parse(body, env, null);
   }
 
   private int numberOfConnections(CouchbaseBucketConfig bucketConfig, List<List<Short>> groups) {
@@ -48,7 +51,7 @@ public class ConfigTest {
     for (List<Short> group : groups) {
       Set<Short> nodes = new HashSet<>();
       for (short partition : group) {
-        nodes.add(bucketConfig.nodeIndexForMaster(partition, false));
+        nodes.add(bucketConfig.nodeIndexForActive(partition, false));
       }
       numberOfConnections += nodes.size();
     }

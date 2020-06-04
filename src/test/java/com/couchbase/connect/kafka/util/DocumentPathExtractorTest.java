@@ -16,15 +16,14 @@
 
 package com.couchbase.connect.kafka.util;
 
-import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonParser;
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.deps.io.netty.util.CharsetUtil;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 
 import java.io.IOException;
 
-import static com.couchbase.client.deps.io.netty.util.CharsetUtil.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -85,9 +84,8 @@ public class DocumentPathExtractorTest {
     assertEquals(parsedExpected, parsedActual);
   }
 
-
   private static DocumentPathExtractor.DocumentExtraction extract(DocumentPathExtractor extractor, String s) throws Exception {
-    return extractor.extractDocumentPath(toValidJson(s).getBytes(CharsetUtil.UTF_8));
+    return extractor.extractDocumentPath(toValidJson(s).getBytes(UTF_8));
   }
 
   private static String toValidJson(String json) throws IOException {

@@ -16,8 +16,8 @@
 
 package examples;
 
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import examples.serde.KeyAvroSerde;
 import examples.serde.ValueAvroSerde;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
