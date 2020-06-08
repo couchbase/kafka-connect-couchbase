@@ -43,6 +43,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -448,7 +449,12 @@ public class KafkaConfigProxyFactory {
   }
 
   protected String getConfigKeyName(Method method) {
-    return prefix + method.getName();
+    return prefix + lowerCamelCaseToDottedLowerCase(method.getName());
+  }
+
+  protected static String lowerCamelCaseToDottedLowerCase(String name) {
+    return name.replaceAll("(\\p{javaUpperCase})", ".$1")
+        .toLowerCase(Locale.ROOT);
   }
 
   protected ConfigDef.Width getWidth(Method method) {

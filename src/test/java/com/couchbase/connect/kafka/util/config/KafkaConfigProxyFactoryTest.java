@@ -108,17 +108,17 @@ public class KafkaConfigProxyFactoryTest {
   @Test
   public void requiredValues() throws Exception {
     Map<String, String> props = new HashMap<>();
-    props.put("foo.stringValue", "xyzzy");
-    props.put("foo.booleanValue", "true");
-    props.put("foo.intValue", "1");
-    props.put("foo.shortValue", "2");
-    props.put("foo.doubleValue", "3.14");
-    props.put("foo.listValue", "a,b,c");
-    props.put("foo.enumValue", "RED");
-    props.put("foo.passwordValue", "swordfish");
-    props.put("foo.durationValue", "30s");
-    props.put("foo.dataSizeValue", "1k");
-    props.put("foo.classValue", "java.lang.String");
+    props.put("foo.string.value", "xyzzy");
+    props.put("foo.boolean.value", "true");
+    props.put("foo.int.value", "1");
+    props.put("foo.short.value", "2");
+    props.put("foo.double.value", "3.14");
+    props.put("foo.list.value", "a,b,c");
+    props.put("foo.enum.value", "RED");
+    props.put("foo.password.value", "swordfish");
+    props.put("foo.duration.value", "30s");
+    props.put("foo.data.size.value", "1k");
+    props.put("foo.class.value", "java.lang.String");
 
     TestConfig config = factory.newProxy(TestConfig.class, props, false);
 
@@ -183,7 +183,7 @@ public class KafkaConfigProxyFactoryTest {
     assertEquals("hello", config.stringValue());
 
     try {
-      factory.newProxy(TestConfigWithValidator.class, singletonMap("foo.stringValue", "xyzzy"), false);
+      factory.newProxy(TestConfigWithValidator.class, singletonMap("foo.string.value", "xyzzy"), false);
       fail();
     } catch (ConfigException e) {
       assertTrue(e.getMessage().contains("The letter 'z' has been outlawed"));

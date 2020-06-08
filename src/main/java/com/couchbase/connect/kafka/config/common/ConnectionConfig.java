@@ -73,7 +73,7 @@ public interface ConnectionConfig {
    * Setting the 'couchbase.network' config property to 'default' or 'external' forces
    * the selection of the respective addresses. Setting the value to 'auto' tells the
    * connector to select whichever network contains the addresses specified in the
-   * 'couchbase.seedNodes' config property.
+   * 'couchbase.seed.nodes' config property.
    */
   @Default("auto")
   String network();
@@ -91,5 +91,5 @@ public interface ConnectionConfig {
    */
   @Default("false")
   @DisplayName("Force IPv4")
-  boolean forceIPv4();
+  boolean forceIpv4();
 }

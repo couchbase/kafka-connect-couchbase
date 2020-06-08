@@ -28,9 +28,9 @@ import static org.apache.kafka.common.config.ConfigDef.Width.LONG;
 public interface SecurityConfig {
   /**
    * Use secure connection to Couchbase Server.
-   * If true, 'couchbase.trustStorePath' and 'couchbase.trustStorePassword' must also be provided.
+   * If true, 'couchbase.trust.store.path' and 'couchbase.trust.store.password' must also be provided.
    */
-  @Dependents({"couchbase.trustStorePath", "couchbase.trustStorePassword"})
+  @Dependents({"couchbase.trust.store.path", "couchbase.trust.store.password"})
   @Default("false")
   @DisplayName("Enable TLS")
   boolean enableTls();
