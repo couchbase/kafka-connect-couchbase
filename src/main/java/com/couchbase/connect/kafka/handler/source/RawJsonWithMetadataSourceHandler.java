@@ -16,11 +16,8 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
-import com.couchbase.client.dcp.message.DcpMutationMessage;
 import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.dcp.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.connect.kafka.dcp.EventType;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.slf4j.Logger;
@@ -43,7 +40,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * <p>
  * To use this handler, configure the connector properties like this:
  * <pre>
- * dcp.message.converter.class=com.couchbase.connect.kafka.handler.source.RawJsonWithMetadataSourceHandler
+ * couchbase.source.handler=com.couchbase.connect.kafka.handler.source.RawJsonWithMetadataSourceHandler
  * value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
  * </pre>
  *
@@ -69,44 +66,38 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
   }
 
   protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
-
     if (!super.buildValue(params, builder)) {
       return false;
     }
 
     final DocumentEvent docEvent = params.documentEvent();
-    final ByteBuf event = docEvent.rawDcpEvent();
-
-    final EventType type = EventType.of(event);
+    final DocumentEvent.Type type = docEvent.type();
 
     Map<String, Object> metadata = new HashMap<>();
+    metadata.put("event", type.schemaName());
 
     metadata.put("bucket", docEvent.bucket());
-    metadata.put("partition", docEvent.vBucket());
-    metadata.put("vBucketUuid", docEvent.vBucketUuid());
+    metadata.put("partition", docEvent.partition());
+    metadata.put("vBucketUuid", docEvent.partitionUuid());
     metadata.put("key", docEvent.key());
     metadata.put("cas", docEvent.cas());
     metadata.put("bySeqno", docEvent.bySeqno());
     metadata.put("revSeqno", docEvent.revisionSeqno());
 
-    if (type == EventType.MUTATION) {
-      metadata.put("event", "mutation");
-      metadata.put("expiration", DcpMutationMessage.expiry(event));
-      metadata.put("flags", DcpMutationMessage.flags(event));
-      metadata.put("lockTime", DcpMutationMessage.lockTime(event));
+    final MutationMetadata mutation = docEvent.mutationMetadata().orElse(null);
+    if (mutation != null) {
+      metadata.put("expiration", mutation.expiry());
+      metadata.put("flags", mutation.flags());
+      metadata.put("lockTime", mutation.lockTime());
 
-    } else if (type == EventType.DELETION) {
-      metadata.put("event", "deletion");
-    } else if (type == EventType.EXPIRATION) {
-      metadata.put("event", "expiration");
-    } else {
-      LOGGER.warn("unexpected event type {}", event.getByte(1));
+    } else if (type != DocumentEvent.Type.DELETION && type != DocumentEvent.Type.EXPIRATION) {
+      LOGGER.warn("unexpected event type");
       return false;
     }
 
     try {
       byte[] value = objectMapper.writeValueAsBytes(metadata);
-      if (type == EventType.MUTATION) {
+      if (docEvent.isMutation()) {
         value = withContentField(value, (byte[]) builder.value());
       }
       builder.value(null, value);
@@ -122,7 +113,7 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
     final int resultLength = metadata.length + contentFieldNameBytes.length + documentContent.length;
     return new ByteArrayBuilder(resultLength)
         .append(metadata, metadata.length - 1) // omit trailing brace; we'll add it later
-        .append(contentFieldNameBytes) // ,content=
+        .append(contentFieldNameBytes) // ,"content":
         .append(documentContent) // known to be well-formed JSON
         .append((byte) '}')
         .build();

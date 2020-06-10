@@ -16,9 +16,6 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
-import com.couchbase.client.dcp.message.DcpMutationMessage;
-import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.util.Schemas;
 import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
@@ -64,35 +61,28 @@ public class DefaultSchemaSourceHandler extends SourceHandler {
    */
   protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
     final DocumentEvent docEvent = params.documentEvent();
-    final ByteBuf event = docEvent.rawDcpEvent();
-
-    final EventType type = EventType.of(event);
-    if (type == null) {
-      LOGGER.warn("unexpected event type {}", event.getByte(1));
-      return false;
-    }
+    final DocumentEvent.Type type = docEvent.type();
 
     final Struct record = new Struct(Schemas.VALUE_DEFAULT_SCHEMA);
+    record.put("event", type.schemaName());
+
     record.put("bucket", docEvent.bucket());
-    record.put("partition", docEvent.vBucket());
-    record.put("vBucketUuid", docEvent.vBucketUuid());
+    record.put("partition", docEvent.partition());
+    record.put("vBucketUuid", docEvent.partitionUuid());
     record.put("key", docEvent.key());
     record.put("cas", docEvent.cas());
     record.put("bySeqno", docEvent.bySeqno());
     record.put("revSeqno", docEvent.revisionSeqno());
 
-    if (type == EventType.MUTATION) {
-      record.put("event", "mutation");
-      record.put("expiration", DcpMutationMessage.expiry(event));
-      record.put("flags", DcpMutationMessage.flags(event));
-      record.put("lockTime", DcpMutationMessage.lockTime(event));
-      record.put("content", DcpMutationMessage.contentBytes(event));
-    } else if (type == EventType.DELETION) {
-      record.put("event", "deletion");
-    } else if (type == EventType.EXPIRATION) {
-      record.put("event", "expiration");
-    } else {
-      LOGGER.warn("unexpected event type {}", event.getByte(1));
+    final MutationMetadata mutation = docEvent.mutationMetadata().orElse(null);
+    if (mutation != null) {
+      record.put("expiration", mutation.expiry());
+      record.put("flags", mutation.flags());
+      record.put("lockTime", mutation.lockTime());
+      record.put("content", docEvent.content());
+
+    } else if (type != DocumentEvent.Type.DELETION && type != DocumentEvent.Type.EXPIRATION) {
+      LOGGER.warn("unexpected event type: {}", type);
       return false;
     }
 

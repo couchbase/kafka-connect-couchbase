@@ -16,9 +16,6 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
-import com.couchbase.client.dcp.message.MessageUtil;
-import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.connect.kafka.dcp.EventType;
 import com.couchbase.connect.kafka.transform.DeserializeJson;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
@@ -41,14 +38,14 @@ import java.io.IOException;
  * If there are no downstream transforms, configure the connector like this
  * for maximum efficiency:
  * <pre>
- * dcp.message.converter.class=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
+ * couchbase.source.handler=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
  * value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
  * </pre>
  * If you wish to use Single Message Transforms with this handler, the first transform
  * must be {@link DeserializeJson} to convert the
  * byte array to a Map that downstream transforms can work with. Like this:
  * <pre>
- * dcp.message.converter.class=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
+ * couchbase.source.handler=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
  * value.converter=org.apache.kafka.connect.json.JsonConverter
  * value.converter.schemas.enable=false
  * transforms=deserializeJson,ignoreDeletes,addField
@@ -131,13 +128,7 @@ public class RawJsonSourceHandler extends SourceHandler {
 
   protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
     final DocumentEvent docEvent = params.documentEvent();
-    final ByteBuf event = docEvent.rawDcpEvent();
-
-    final EventType type = EventType.of(event);
-    if (type == null) {
-      LOGGER.warn("unexpected event type {}", event.getByte(1));
-      return false;
-    }
+    final DocumentEvent.Type type = docEvent.type();
 
     switch (type) {
       case EXPIRATION:
@@ -146,9 +137,9 @@ public class RawJsonSourceHandler extends SourceHandler {
         return true;
 
       case MUTATION:
-        final byte[] document = MessageUtil.getContentAsByteArray(event);
+        final byte[] document = docEvent.content();
         if (!isValidJson(document)) {
-          LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.key());
+          LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());
           return false;
         }
 
@@ -156,7 +147,7 @@ public class RawJsonSourceHandler extends SourceHandler {
         return true;
 
       default:
-        LOGGER.warn("unexpected event type {}", event.getByte(1));
+        LOGGER.warn("unexpected event type {}", type);
         return false;
     }
   }

@@ -16,12 +16,12 @@
 
 package com.couchbase.connect.kafka.filter;
 
-import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 
 public class AllPassFilter implements Filter {
 
   @Override
-  public boolean pass(final ByteBuf message) {
+  public boolean pass(final DocumentEvent event) {
     return true;
   }
 }

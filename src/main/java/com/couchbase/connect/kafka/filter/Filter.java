@@ -17,21 +17,14 @@
 package com.couchbase.connect.kafka.filter;
 
 
-import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 
 /**
- * General interface to select Couchbase events, which has to be sent to Kafka.
- *
- * @author mstadelmann@atex.com
+ * Determines which Couchbase document changes get published to Kafka.
  */
 public interface Filter {
-
   /**
-   * Decides whether <code>message</code> should be sent to Kafka.
-   *
-   * @param message DCP event message from Couchbase.
-   * @return true if event should be sent to Kafka.
+   * Returns true if the event should be published to Kafka, otherwise false.
    */
-  boolean pass(ByteBuf message);
-
+  boolean pass(DocumentEvent event);
 }

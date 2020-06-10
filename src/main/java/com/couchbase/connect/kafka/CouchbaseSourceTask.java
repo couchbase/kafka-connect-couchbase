@@ -18,8 +18,8 @@ package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.dcp.core.logging.RedactionLevel;
+import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
-import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
@@ -38,21 +38,24 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 
 public class CouchbaseSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
 
-  private static final long MAX_TIMEOUT = 10000L;
+  private static final long STOP_TIMEOUT_MILLIS = SECONDS.toMillis(10);
 
   private String connectorName;
   private CouchbaseReader couchbaseReader;
-  private BlockingQueue<Event> queue;
+  private BlockingQueue<DocumentChange> queue;
   private BlockingQueue<Throwable> errorQueue;
   private String topic;
   private String bucket;
@@ -74,7 +77,7 @@ public class CouchbaseSourceTask extends SourceTask {
     CouchbaseSourceTaskConfig config;
     try {
       config = ConfigHelper.parse(CouchbaseSourceTaskConfig.class, properties);
-      if (connectorName == null || connectorName.isEmpty()) {
+      if (isNullOrEmpty(connectorName)) {
         throw new ConfigException("Connector must have a non-blank 'name' config property.");
       }
     } catch (ConfigException e) {
@@ -116,52 +119,55 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   @Override
-  public List<SourceRecord> poll()
-      throws InterruptedException {
-    List<SourceRecord> results = new LinkedList<>();
-    int batchSize = batchSizeMax;
+  public List<SourceRecord> poll() throws InterruptedException {
+    // If a fatal error occurred in another thread, propagate it.
+    checkErrorQueue();
 
-    while (running) {
-      Event event = queue.poll(100, TimeUnit.MILLISECONDS);
-      if (event != null) {
-        try {
-          if (filter == null || filter.pass(event.message())) {
-            SourceRecord record = convert(event);
-            if (record != null) {
-              results.add(record);
-            }
-          }
-
-          event.ack();
-          batchSize--;
-        } finally {
-          event.message().release();
-        }
-      }
-      if (!results.isEmpty() &&
-          (batchSize == 0 || event == null)) {
-        LOGGER.info("Poll returns {} result(s)", results.size());
-        return results;
-      }
-
-      final Throwable fatalError = errorQueue.poll();
-      if (fatalError != null) {
-        throw new ConnectException(fatalError);
-      }
+    // Block until at least one item is available or until the
+    // courtesy timeout expires, giving the framework a chance
+    // to pause the connector.
+    DocumentChange event = queue.poll(1, SECONDS);
+    if (event == null) {
+      LOGGER.debug("Poll returns 0 results");
+      return null; // Looks weird, but caller expects it.
     }
-    return results;
+
+    List<DocumentChange> events = new ArrayList<>();
+    try {
+      events.add(event);
+      queue.drainTo(events, batchSizeMax - 1);
+
+      List<SourceRecord> results = events.stream()
+          .map(e -> DocumentEvent.create(event, bucket))
+          .filter(e -> filter.pass(e))
+          .map(this::convertToSourceRecord)
+          .filter(Objects::nonNull)
+          .collect(toList());
+
+      int excluded = events.size() - results.size();
+      LOGGER.info("Poll returns {} result(s) (filtered out {})", results.size(), excluded);
+      return results;
+
+    } finally {
+      events.forEach(DocumentChange::flowControlAck);
+    }
   }
 
-  public SourceRecord convert(Event event) {
-    final DocumentEvent docEvent = DocumentEvent.create(event.message(), bucket, event.vbucketUuid());
+  private void checkErrorQueue() throws ConnectException {
+    final Throwable fatalError = errorQueue.poll();
+    if (fatalError != null) {
+      throw new ConnectException(fatalError);
+    }
+  }
 
+  private SourceRecord convertToSourceRecord(DocumentEvent docEvent) {
     CouchbaseSourceRecord r = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
     if (r == null) {
       return null;
     }
 
     return new SourceRecord(
-        sourcePartition(docEvent.vBucket()),
+        sourcePartition(docEvent.partition()),
         sourceOffset(docEvent),
         r.topic() == null ? topic : r.topic(),
         r.kafkaPartition(),
@@ -176,35 +182,13 @@ public class CouchbaseSourceTask extends SourceTask {
     if (couchbaseReader != null) {
       couchbaseReader.shutdown();
       try {
-        couchbaseReader.join(MAX_TIMEOUT);
+        couchbaseReader.join(STOP_TIMEOUT_MILLIS);
         if (couchbaseReader.isAlive()) {
           LOGGER.error("Reader thread is still alive after shutdown request.");
         }
       } catch (InterruptedException e) {
         LOGGER.error("Interrupted while joining reader thread.", e);
       }
-    }
-
-    if (queue != null) {
-      LOGGER.info("Releasing unconsumed events: {}", queue.size());
-      // Don't need to ACK, since DCP connection is already closed.
-      releaseAll(queue);
-    }
-  }
-
-  private void releaseAll(Iterable<Event> events) {
-    RuntimeException deferredException = null;
-
-    for (Event event : events) {
-      try {
-        event.message().release();
-      } catch (RuntimeException t) {
-        LOGGER.warn("Failed to release buffer {}", event, t);
-        deferredException = t;
-      }
-    }
-    if (deferredException != null) {
-      throw deferredException;
     }
   }
 
@@ -266,7 +250,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private static Map<String, Object> sourceOffset(DocumentEvent event) {
     Map<String, Object> offset = new HashMap<>();
     offset.put("bySeqno", event.bySeqno());
-    offset.put("vbuuid", event.vBucketUuid());
+    offset.put("vbuuid", event.partitionUuid());
     return offset;
   }
 

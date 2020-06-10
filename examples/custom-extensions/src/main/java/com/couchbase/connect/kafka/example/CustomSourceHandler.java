@@ -21,14 +21,13 @@ import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * An example of extending {@link RawJsonSourceHandler} to add custom behavior.
  * To use this handler, build this project and move the resulting JAR to
  * the same location as the kafka-connect-couchbase JAR. Then use these connector
  * config properties:
  * <pre>
- * dcp.message.converter.class=com.couchbase.connect.kafka.example.CustomSourceHandler
+ * couchbase.source.handler=com.couchbase.connect.kafka.example.CustomSourceHandler
  * value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
  * </pre>
  * For more customization ideas, please see the source code for {@link RawJsonSourceHandler}

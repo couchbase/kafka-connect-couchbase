@@ -17,26 +17,21 @@
 package com.couchbase.connect.kafka;
 
 import com.couchbase.client.dcp.Client;
-import com.couchbase.client.dcp.ControlEventHandler;
-import com.couchbase.client.dcp.DataEventHandler;
 import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.core.env.NetworkResolution;
-import com.couchbase.client.dcp.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.dcp.deps.io.netty.util.IllegalReferenceCountException;
+import com.couchbase.client.dcp.highlevel.DatabaseChangeListener;
+import com.couchbase.client.dcp.highlevel.Deletion;
+import com.couchbase.client.dcp.highlevel.DocumentChange;
+import com.couchbase.client.dcp.highlevel.Mutation;
 import com.couchbase.client.dcp.highlevel.SnapshotMarker;
+import com.couchbase.client.dcp.highlevel.StreamFailure;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
-import com.couchbase.client.dcp.message.MessageUtil;
-import com.couchbase.client.dcp.message.RollbackMessage;
 import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
-import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
-import com.couchbase.connect.kafka.dcp.Event;
 import com.couchbase.connect.kafka.util.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.CompletableSubscriber;
-import rx.Subscription;
 
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -54,7 +49,7 @@ public class CouchbaseReader extends Thread {
   private final BlockingQueue<Throwable> errorQueue;
 
   public CouchbaseReader(CouchbaseSourceTaskConfig config, final String connectorName,
-                         final BlockingQueue<Event> queue, final BlockingQueue<Throwable> errorQueue,
+                         final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
                          final Short[] partitions, final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno) {
     this.partitions = partitions;
     this.partitionToSavedSeqno = partitionToSavedSeqno;
@@ -75,55 +70,32 @@ public class CouchbaseReader extends Thread {
         .sslKeystoreFile(config.trustStorePath())
         .sslKeystorePassword(config.trustStorePassword().value())
         .build();
-    client.controlEventHandler(new ControlEventHandler() {
+
+    client.nonBlockingListener(new DatabaseChangeListener() {
       @Override
-      public void onEvent(ChannelFlowController flowController, ByteBuf event) {
+      public void onMutation(Mutation mutation) {
+        onChange(mutation);
+      }
+
+      @Override
+      public void onDeletion(Deletion deletion) {
+        onChange(deletion);
+      }
+
+      private void onChange(DocumentChange change) {
         try {
-          if (RollbackMessage.is(event)) {
-            final short partition = RollbackMessage.vbucket(event);
-            final long seqno = RollbackMessage.seqno(event);
-
-            LOGGER.warn("Rolling back partition {} to seqno {}", partition, seqno);
-
-            // Careful, we're in the Netty IO thread, so must not await completion.
-            client.rollbackAndRestartStream(partition, seqno)
-                .subscribe(new CompletableSubscriber() {
-                  @Override
-                  public void onCompleted() {
-                    LOGGER.info("Rollback for partition {} complete", partition);
-                  }
-
-                  @Override
-                  public void onError(Throwable e) {
-                    LOGGER.error("Failed to roll back partition {} to seqno {}", partition, seqno, e);
-                    errorQueue.offer(e);
-                  }
-
-                  @Override
-                  public void onSubscribe(Subscription d) {
-                  }
-                });
-          }
+          queue.put(change);
 
         } catch (Throwable t) {
-          LOGGER.error("Exception in control event handler", t);
+          change.flowControlAck();
+          LOGGER.error("Unable to put DCP request into the queue", t);
           errorQueue.offer(t);
-        } finally {
-          ackAndRelease(flowController, event);
         }
       }
-    });
-    client.dataEventHandler(new DataEventHandler() {
+
       @Override
-      public void onEvent(ChannelFlowController flowController, ByteBuf event) {
-        try {
-          long vbucketUuid = getVBucketUuid(MessageUtil.getVbucket(event));
-          queue.put(new Event(event, vbucketUuid, flowController));
-        } catch (Throwable t) {
-          LOGGER.error("Unable to put DCP request into the queue", t);
-          ackAndRelease(flowController, event);
-          errorQueue.offer(t);
-        }
+      public void onFailure(StreamFailure streamFailure) {
+        errorQueue.offer(streamFailure.getCause());
       }
     });
   }
@@ -131,7 +103,7 @@ public class CouchbaseReader extends Thread {
   @Override
   public void run() {
     try {
-      client.connect().await(); // FIXME: uncomment and raise timeout exception: .await(connectionTimeout, TimeUnit.MILLISECONDS);
+      client.connect().await();
 
       // Apply the fallback state to all partitions. As of DCP client version 0.12.0,
       // this is the only way to set the sequence number to "now".
@@ -198,28 +170,7 @@ public class CouchbaseReader extends Thread {
     });
   }
 
-  private long getVBucketUuid(int vBucketId) {
-    return client.sessionState().get(vBucketId).getLastUuid();
-  }
-
   public void shutdown() {
     client.disconnect().await();
-  }
-
-  private static void ackAndRelease(ChannelFlowController flowController, ByteBuf buffer) throws IllegalReferenceCountException {
-    ack(flowController, buffer);
-    buffer.release();
-  }
-
-  private static void ack(ChannelFlowController flowController, ByteBuf buffer) throws IllegalReferenceCountException {
-    try {
-      flowController.ack(buffer);
-
-    } catch (IllegalReferenceCountException e) {
-      throw e;
-
-    } catch (Exception e) {
-      LOGGER.warn("Flow control ack failed (channel already closed?)", e);
-    }
   }
 }
