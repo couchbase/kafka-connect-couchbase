@@ -21,6 +21,8 @@ import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 
+import java.util.List;
+
 public interface SourceBehaviorConfig {
   /**
    * Name of the Kafka topic to publish data to.
@@ -58,4 +60,29 @@ public interface SourceBehaviorConfig {
    */
   @Default("SAVED_OFFSET_OR_BEGINNING")
   StreamFrom streamFrom();
+
+  /**
+   * If you wish to stream from all collections within a scope, specify the scope name here.
+   * <p>
+   * If you specify neither "couchbase.scope" nor "couchbase.collections",
+   * the connector will stream from all collections of all scopes in the bucket.
+   * <p>
+   * Requires Couchbase Server 7.0 or later.
+   */
+  @Default
+  String scope();
+
+  /**
+   * If you wish to stream from specific collections, specify the fully qualified collection
+   * names here, separated by commas. A fully qualified name is the name of the scope
+   * followed by a dot (.) and then the name of the collection. For example:
+   * "tenant-foo.invoices".
+   * <p>
+   * If you specify neither "couchbase.scope" nor "couchbase.collections",
+   * the connector will stream from all collections of all scopes in the bucket.
+   * <p>
+   * Requires Couchbase Server 7.0 or later.
+   */
+  @Default
+  List<String> collections();
 }
