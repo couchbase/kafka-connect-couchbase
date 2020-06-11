@@ -21,6 +21,7 @@ import com.couchbase.client.dcp.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.filter.Filter;
+import com.couchbase.connect.kafka.handler.source.CollectionMetadata;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
@@ -160,15 +161,26 @@ public class CouchbaseSourceTask extends SourceTask {
     }
   }
 
+  private String getDefaultTopic(DocumentEvent docEvent) {
+    CollectionMetadata collectionMetadata = docEvent.collectionMetadata();
+    return topic
+        .replace("${bucket}", bucket)
+        .replace("${scope}", collectionMetadata.scopeName())
+        .replace("${collection}", collectionMetadata.collectionName())
+        .replace("%", "_"); // % is valid in Couchbase name but not Kafka topic name
+  }
+
   private SourceRecord convertToSourceRecord(DocumentEvent docEvent) {
-    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
+    String defaultTopic = getDefaultTopic(docEvent);
+
+    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, defaultTopic));
     if (builder == null) {
       return null;
     }
     return builder.build(
         sourcePartition(docEvent.partition()),
         sourceOffset(docEvent),
-        topic);
+        defaultTopic);
   }
 
   @Override

@@ -26,7 +26,15 @@ import java.util.List;
 public interface SourceBehaviorConfig {
   /**
    * Name of the Kafka topic to publish data to.
+   * This is a format string that recognizes the following placeholders:
+   * <p>
+   * ${bucket} refers to the bucket containing the document.
+   * <p>
+   * ${scope} refers to the scope containing the document.
+   * <p>
+   * ${collection} refers to the collection containing the document.
    */
+  @Default("${bucket}.${scope}.${collection}")
   String topic();
 
   /**
