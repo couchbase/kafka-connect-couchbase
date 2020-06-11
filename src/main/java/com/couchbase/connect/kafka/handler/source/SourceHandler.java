@@ -19,15 +19,15 @@ package com.couchbase.connect.kafka.handler.source;
 /**
  * Primary extension point for customizing how the Source Connector publishes messages to Kafka.
  */
-public abstract class SourceHandler {
+public interface SourceHandler {
   /**
-   * Translates a DocumentEvent into a CouchbaseSourceRecord for publication to a Kafka topic.
+   * Translates a DocumentEvent into a SourceRecord for publication to a Kafka topic.
    * <p>
    * The document event is specified by the SourceHandlerParams parameter block, along with
    * other bits of info that may be useful to custom implementations.
    * <p>
    * The handler may route the message to an arbitrary topic by setting the {@code topic}
-   * property of the returned record, or may leave it null to use the default topic
+   * property of the returned builder, or may leave it null to use the default topic
    * from the connector configuration.
    * <p>
    * The handler may filter the event stream by returning {@code null} to skip this event.
@@ -36,5 +36,5 @@ public abstract class SourceHandler {
    * most notably the {@link DocumentEvent}.
    * @return The record to publish to Kafka, or {@code null} to skip this event.
    */
-  public abstract CouchbaseSourceRecord handle(SourceHandlerParams params);
+  SourceRecordBuilder handle(SourceHandlerParams params);
 }

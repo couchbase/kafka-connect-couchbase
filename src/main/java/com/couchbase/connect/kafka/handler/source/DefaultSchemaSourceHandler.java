@@ -28,13 +28,13 @@ import org.slf4j.LoggerFactory;
  * @see RawJsonSourceHandler
  * @see RawJsonWithMetadataSourceHandler
  */
-public class DefaultSchemaSourceHandler extends SourceHandler {
+public class DefaultSchemaSourceHandler implements SourceHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultSchemaSourceHandler.class);
 
   @Override
-  public CouchbaseSourceRecord handle(SourceHandlerParams params) {
-    CouchbaseSourceRecord.Builder builder = CouchbaseSourceRecord.builder();
+  public SourceRecordBuilder handle(SourceHandlerParams params) {
+    SourceRecordBuilder builder = new SourceRecordBuilder();
 
     // A handler may choose to route the message to any topic.
     // The code shown here sends the message to the topic from the connector configuration.
@@ -49,17 +49,17 @@ public class DefaultSchemaSourceHandler extends SourceHandler {
       return null;
     }
 
-    return builder.build();
+    return builder;
   }
 
-  protected void buildKey(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
+  protected void buildKey(SourceHandlerParams params, SourceRecordBuilder builder) {
     builder.key(Schemas.KEY_SCHEMA, params.documentEvent().key());
   }
 
   /**
    * @return true to publish the message, or false to skip it
    */
-  protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
+  protected boolean buildValue(SourceHandlerParams params, SourceRecordBuilder builder) {
     final DocumentEvent docEvent = params.documentEvent();
     final DocumentEvent.Type type = docEvent.type();
 

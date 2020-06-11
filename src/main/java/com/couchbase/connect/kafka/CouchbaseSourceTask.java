@@ -21,10 +21,10 @@ import com.couchbase.client.dcp.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.filter.Filter;
-import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
+import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigException;
@@ -161,19 +161,14 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   private SourceRecord convertToSourceRecord(DocumentEvent docEvent) {
-    CouchbaseSourceRecord r = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
-    if (r == null) {
+    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, topic));
+    if (builder == null) {
       return null;
     }
-
-    return new SourceRecord(
+    return builder.build(
         sourcePartition(docEvent.partition()),
         sourceOffset(docEvent),
-        r.topic() == null ? topic : r.topic(),
-        r.kafkaPartition(),
-        r.keySchema(), r.key(),
-        r.valueSchema(), r.value(),
-        r.timestamp());
+        topic);
   }
 
   @Override

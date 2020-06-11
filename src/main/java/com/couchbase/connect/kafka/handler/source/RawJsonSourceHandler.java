@@ -58,7 +58,7 @@ import java.io.IOException;
  *
  * @see RawJsonWithMetadataSourceHandler
  */
-public class RawJsonSourceHandler extends SourceHandler {
+public class RawJsonSourceHandler implements SourceHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(RawJsonSourceHandler.class);
 
   private static final JsonFactory jsonFactory = new JsonFactory();
@@ -106,8 +106,8 @@ public class RawJsonSourceHandler extends SourceHandler {
   }
 
   @Override
-  public CouchbaseSourceRecord handle(SourceHandlerParams params) {
-    final CouchbaseSourceRecord.Builder builder = CouchbaseSourceRecord.builder();
+  public SourceRecordBuilder handle(SourceHandlerParams params) {
+    final SourceRecordBuilder builder = new SourceRecordBuilder();
 
     if (!passesFilter(params)) {
       return null;
@@ -118,15 +118,14 @@ public class RawJsonSourceHandler extends SourceHandler {
     }
 
     return builder.topic(getTopic(params))
-        .key(Schema.STRING_SCHEMA, params.documentEvent().key())
-        .build();
+        .key(Schema.STRING_SCHEMA, params.documentEvent().key());
   }
 
   protected boolean passesFilter(SourceHandlerParams params) {
     return true;
   }
 
-  protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
+  protected boolean buildValue(SourceHandlerParams params, SourceRecordBuilder builder) {
     final DocumentEvent docEvent = params.documentEvent();
     final DocumentEvent.Type type = docEvent.type();
 

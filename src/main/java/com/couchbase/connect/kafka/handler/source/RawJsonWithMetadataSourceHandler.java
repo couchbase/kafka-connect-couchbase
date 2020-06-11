@@ -52,8 +52,8 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   @Override
-  public CouchbaseSourceRecord handle(SourceHandlerParams params) {
-    CouchbaseSourceRecord.Builder builder = CouchbaseSourceRecord.builder();
+  public SourceRecordBuilder handle(SourceHandlerParams params) {
+    SourceRecordBuilder builder = new SourceRecordBuilder();
 
     if (!buildValue(params, builder)) {
       return null;
@@ -61,11 +61,10 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
 
     return builder
         .topic(getTopic(params))
-        .key(Schema.STRING_SCHEMA, params.documentEvent().key())
-        .build();
+        .key(Schema.STRING_SCHEMA, params.documentEvent().key());
   }
 
-  protected boolean buildValue(SourceHandlerParams params, CouchbaseSourceRecord.Builder builder) {
+  protected boolean buildValue(SourceHandlerParams params, SourceRecordBuilder builder) {
     if (!super.buildValue(params, builder)) {
       return false;
     }
@@ -98,7 +97,7 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
     try {
       byte[] value = objectMapper.writeValueAsBytes(metadata);
       if (docEvent.isMutation()) {
-        value = withContentField(value, (byte[]) builder.value());
+        value = withContentField(value, docEvent.content());
       }
       builder.value(null, value);
       return true;

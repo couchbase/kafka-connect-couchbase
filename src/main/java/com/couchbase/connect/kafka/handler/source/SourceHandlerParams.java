@@ -29,7 +29,7 @@ public class SourceHandlerParams {
   }
 
   /**
-   * Returns the event to be converted to a {@link CouchbaseSourceRecord}.
+   * Returns the event to be converted to a {@link SourceRecordBuilder}.
    */
   public DocumentEvent documentEvent() {
     return documentEvent;
