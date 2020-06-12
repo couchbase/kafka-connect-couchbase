@@ -4,7 +4,7 @@
     "name": "test-couchbase-source",
     "connector.class": "com.couchbase.connect.kafka.CouchbaseSourceConnector",
     "tasks.max": "2",
-    "topic.name": "test-default",
+    "couchbase.topic": "test-default",
     "couchbase.seed.nodes": "127.0.0.1",
     "couchbase.bootstrap.timeout": "2000",
     "couchbase.bucket": "default",
