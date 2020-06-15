@@ -23,7 +23,7 @@
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
     <packaging>jar</packaging>
-    <version>4.0.0-dp.1-SNAPSHOT</version>
+    <version>4.0.0-pre.1-SNAPSHOT</version>
     <name>Kafka Connector for Couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
@@ -191,22 +191,6 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.1</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <createDependencyReducedPom>false</createDependencyReducedPom>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>3.0.1</version>
                 <executions>
@@ -232,25 +216,60 @@
                 </executions>
             </plugin>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.1.1</version>
-                <configuration>
-
-                    <!-- Don't deploy the ZIP archive to Maven Central -->
-                    <attach>false</attach>
-
-                    <appendAssemblyId>false</appendAssemblyId>
-                    <descriptors>
-                        <descriptor>src/assembly/dist.xml</descriptor>
-                    </descriptors>
-                </configuration>
+                <groupId>io.confluent</groupId>
+                <version>0.11.3</version>
+                <artifactId>kafka-connect-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>kafka-connect</goal>
                         </goals>
+                        <configuration>
+                            <title>Kafka Connect Couchbase</title>
+                            <documentationUrl>https://docs.couchbase.com/kafka-connector/current/</documentationUrl>
+                            <description>
+                                This is the official Couchbase connector developed by Couchbase, Inc.
+
+                                The source connector listens for database changes and publishes changed documents to Kafka.
+                                The sink connector writes Kafka messages to Couchbase.
+                            </description>
+                            <logo>assets/couchbase_logo.png</logo>
+
+                            <supportProviderName>Couchbase, Inc.</supportProviderName>
+                            <supportSummary>Join us on the Couchbase Forums where we provide support free of charge on a best effort basis. Couchbase Enterprise Edition subscribers receive additional support through their normal support channel.</supportSummary>
+                            <supportUrl>https://forums.couchbase.com/c/Kafka-Connector/27</supportUrl>
+                            <supportLogo>assets/couchbase_logo.png</supportLogo>
+
+                            <ownerUsername>couchbaseinc</ownerUsername>
+                            <ownerType>organization</ownerType>
+                            <ownerName>Couchbase, Inc.</ownerName>
+                            <ownerUrl>https://couchbase.com/</ownerUrl>
+                            <ownerLogo>assets/couchbase_logo.png</ownerLogo>
+
+                            <componentTypes>
+                                <componentType>sink</componentType>
+                                <componentType>source</componentType>
+                                <componentType>transform</componentType>
+                            </componentTypes>
+
+                            <tags>
+                                <tag>Couchbase</tag>
+                                <tag>database</tag>
+                            </tags>
+
+                            <requirements>
+                                <requirement>Couchbase Server 5.0 or later</requirement>
+                                <requirement>Confluent Platform 4.1.0 or later</requirement>
+                            </requirements>
+
+                            <deliveryGuarantee>
+                                <deliveryGuarantee>atLeastOnce</deliveryGuarantee>
+                            </deliveryGuarantee>
+
+                            <kafkaConnectApi>true</kafkaConnectApi>
+                            <singleMessageTransforms>true</singleMessageTransforms>
+                            <confluentControlCenterIntegration>true</confluentControlCenterIntegration>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

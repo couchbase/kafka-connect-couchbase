@@ -8,7 +8,7 @@ It describes how to cut a release of this project and publish it to the Maven Ce
 
 You will need:
 * AWS credentials with write access to the `packages.couchbase.com` S3 bucket.
-* The [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/), for uploading the distribution archive to S3. 
+* The [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/), for uploading the distribution archive to S3.
 * The `gpg` command-line program and a PGP key. Mac users, grab `gpg` from
 https://gpgtools.org and enjoy
 [this setup guide](http://notes.jerzygangi.com/the-best-pgp-tutorial-for-mac-os-x-ever/).
@@ -84,11 +84,10 @@ Remember, you can add `-DskipITs` to either command to skip integration tests if
 If publishing to Maven Central was successful, you're ready to publish the distribution archive to S3 with this shell command:
 
     VERS=x.y.z
-    aws s3 cp target/kafka-connect-couchbase-${VERS}.zip \
-        s3://packages.couchbase.com/clients/kafka/${VERS}/kafka-connect-couchbase-${VERS}.zip \
+    ARTIFACT=couchbaseinc-kafka-connect-couchbase-${VERS}.zip
+    aws s3 cp target/components/packages/${ARTIFACT} \
+        s3://packages.couchbase.com/clients/kafka/${VERS}/${ARTIFACT} \
         --acl public-read
-
-
 
 Whew, you did it! Or the build failed and you're looking at a cryptic error message, in which
 case you might want to check out the Troubleshooting section below.
