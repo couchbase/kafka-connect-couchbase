@@ -16,8 +16,11 @@
 package com.couchbase.connect.kafka;
 
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import com.couchbase.connect.kafka.util.Config;
@@ -37,11 +40,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import static java.util.stream.Collectors.joining;
 
 public class CouchbaseSourceConnector extends SourceConnector {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
   private Map<String, String> configProperties;
   private Config bucketConfig;
+  private Set<SeedNode> seedNodes;
 
   @Override
   public String version() {
@@ -57,6 +64,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
       try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
         Bucket bucket = client.cluster().bucket(config.bucket());
         bucketConfig = new Config((CouchbaseBucketConfig) getConfig(bucket, config.bootstrapTimeout()));
+        seedNodes = getSeedNodes(client.cluster().core(), config.bootstrapTimeout());
       }
 
     } catch (ConfigException e) {
@@ -73,6 +81,13 @@ public class CouchbaseSourceConnector extends SourceConnector {
         .blockFirst(timeout);
   }
 
+  private static Set<SeedNode> getSeedNodes(Core core, Duration timeout) {
+    return core
+        .configurationProvider()
+        .seedNodes()
+        .blockFirst(timeout);
+  }
+
   @Override
   public Class<? extends Task> taskClass() {
     return CouchbaseSourceTask.class;
@@ -80,12 +95,21 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
   @Override
   public List<Map<String, String>> taskConfigs(int maxTasks) {
+    String seedNodes = this.seedNodes.stream()
+        .map(n -> {
+          int port = n.kvPort().orElseThrow(() -> new AssertionError("seed node must have kv port"));
+          return new HostAndPort(n.address(), port).format();
+        })
+        .collect(joining(","));
+
     List<List<String>> partitionsGrouped = bucketConfig.groupGreedyToString(maxTasks);
     List<Map<String, String>> taskConfigs = new ArrayList<>(partitionsGrouped.size());
     for (List<String> taskPartitions : partitionsGrouped) {
       Map<String, String> taskProps = new HashMap<>(configProperties);
       // property name matches CouchbaseSourceTaskConfig.partitions()
       taskProps.put("couchbase.partitions", String.join(",", taskPartitions));
+      // property name matches CouchbaseSourceTaskConfig.dcpSeedNodes()
+      taskProps.put("couchbase.dcp.seed.nodes", seedNodes);
       taskConfigs.add(taskProps);
     }
     return taskConfigs;

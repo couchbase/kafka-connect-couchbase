@@ -58,7 +58,7 @@ public class CouchbaseReader extends Thread {
     client = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .connectTimeout(config.bootstrapTimeout().toMillis())
-        .seedNodes(config.seedNodes())
+        .seedNodes(config.dcpSeedNodes())
         .networkResolution(NetworkResolution.valueOf(config.network()))
         .bucket(config.bucket())
         .credentials(config.username(), config.password().value())

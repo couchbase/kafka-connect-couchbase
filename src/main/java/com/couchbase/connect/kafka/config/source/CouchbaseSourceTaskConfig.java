@@ -23,4 +23,12 @@ public interface CouchbaseSourceTaskConfig extends CouchbaseSourceConfig {
    * List of partitions for this task to watch for changes.
    */
   List<String> partitions(); // each item is a stringified integer.
+
+  /**
+   * KV node addresses the DCP client should bootstrap against.
+   * <p>
+   * These addresses come from the Java client, so DNS SRV
+   * and other complexities have already been handled.
+   */
+  List<String> dcpSeedNodes();
 }
