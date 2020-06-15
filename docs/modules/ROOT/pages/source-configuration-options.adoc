@@ -4,7 +4,7 @@ Reference of the source connector options.
 
 == Database
 
-=== `connection.cluster_address`
+=== `couchbase.seed.nodes`
 
 Couchbase Cluster addresses to listen (use comma to specify several).
 
@@ -16,7 +16,7 @@ Couchbase Cluster addresses to listen (use comma to specify several).
 The network selection strategy for connecting to a Couchbase Server cluster that advertises alternate addresses.
 A Couchbase node running inside a container environment (like Docker or Kubernetes) might be configured to advertise both its address within the container environment (known as its "default" address) as well as an "external" address for use by clients connecting from outside the environment.
 Setting the `couchbase.network` config property to `default` or `external` forces the selection of the respective addresses.
-Setting the value to `auto` tells the connector to select whichever network contains the addresses specified in the `connection.cluster_address` config property; this heuristic works well in most environments and is the recommended mode.
+Setting the value to `auto` tells the connector to select whichever network contains the addresses specified in the `couchbase.seed.nodes` config property; this heuristic works well in most environments and is the recommended mode.
 
 * Possible values:
 ** `auto`
@@ -28,26 +28,26 @@ Setting the value to `auto` tells the connector to select whichever network cont
 * Importance: low
 * Default: `"auto"`
 
-=== `connection.bucket`
+=== `couchbase.bucket`
 
 Couchbase bucket name.
 
 * Type: string
 * Importance: high
 
-=== `connection.username`
+=== `couchbase.username`
 
 Couchbase username for Couchbase Server 5.0 and later.
 
 * Type: string
 * Importance: high
-* Default: the bucket name specified by `connection.bucket`
+* Default: the bucket name specified by `couchbase.bucket`
 
-=== `connection.password`
+=== `couchbase.password`
 
 Couchbase password. For Couchbase Server versions prior to 5.0 this is
 the bucket password. For versions 5.0 and later, this is the password
-associated with `connection.username`.
+associated with `couchbase.username`.
 
 Two options are available for protecting the password.
 If you set the environment variable `KAFKA_COUCHBASE_PASSWORD`, its value will override the password in the connector configuration.
@@ -58,14 +58,14 @@ Alternatively, you can take advantage of the Kafka Connect framework's support f
 * Importance: low
 * Default: `""`
 
-=== `connection.timeout.ms`
+=== `couchbase.bootstrap.timeout`
 
 Connection timeout in milliseconds.
 
 * Type: long
 * Importance: low
 
-=== `connection.ssl.enabled`
+=== `couchbase.enable.tls`
 
 Use SSL to connect to Couchbase. This feature only available in
 Couchbase Enterprise.
@@ -73,17 +73,17 @@ Couchbase Enterprise.
 * Type: boolean
 * Importance: low
 * Default: `false`
-* Dependents: `connection.ssl.keystore.location`,
-`connection.ssl.keystore.password`
+* Dependents: `couchbase.trust.store.path`,
+`couchbase.trust.store.password`
 
-=== `connection.ssl.keystore.location`
+=== `couchbase.trust.store.path`
 
 The location of the key store file.
 
 * Type: string
 * Importance: low
 
-=== `connection.ssl.keystore.password`
+=== `couchbase.trust.store.password`
 
 The password of the private key in the key store file.
 
@@ -98,14 +98,14 @@ Alternatively, you can take advantage of the Kafka Connect framework's support f
 
 == Connector
 
-=== `topic.name`
+=== `couchbase.topic`
 
 Name of the Kafka topic to publish data to.
 
 * Type: string
 * Importance: high
 
-=== `dcp.message.converter.class`
+=== `couchbase.source.handler`
 
 The class name of the message converter to use.
 
@@ -114,7 +114,7 @@ The class name of the message converter to use.
 * Default:
 `"com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler"`
 
-=== `event.filter.class`
+=== `couchbase.event.filter`
 
 The class name of the event filter to use.
 
@@ -122,7 +122,7 @@ The class name of the event filter to use.
 * Importance: low
 * Default: `"com.couchbase.connect.kafka.filter.AllPassFilter"`
 
-=== `couchbase.stream_from`
+=== `couchbase.stream.from`
 
 The point in Couchbase history to start streaming from.
 
@@ -141,7 +141,7 @@ state)
 * Importance: low
 * Default: `"SAVED_OFFSET_OR_BEGINNING"`
 
-=== `couchbase.log_redaction`
+=== `couchbase.log.redaction`
 
 Optionally tag sensitive values in the log output for later redaction.
 
@@ -189,7 +189,7 @@ to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
 * Importance: low
 * Default: `false`
 
-=== `couchbase.persistence_polling_interval`
+=== `couchbase.persistence.polling.interval`
 
 The frequency at which the connector will poll Couchbase Server to determine
 which database changes are unlikely to be rolled back. A value of `0`

@@ -35,7 +35,7 @@ For simplicity, this guide assumes you're installing from a ZIP or TAR archive, 
 
 Decompress the Apache Kafka or Confluent Platform archive and move the resulting directory under `~/opt` (or wherever you like to keep this kind of software).
 The rest of this guide refers to the root of the installation directory as `$KAFKA_HOME` or `$CONFLUENT_HOME`.
-Be aware that some config files are in different relative locations depending on whether you're using Apache Kafka or Confluent Platform Kafka.
+Be aware some config files are in different relative locations depending on whether you're using Apache Kafka or Confluent Platform Kafka.
 
 Make sure the Kafka command line tools are in your path:
 
@@ -84,8 +84,8 @@ Take a moment to peruse the configuration options specified here.
 Some are https://kafka.apache.org/documentation/#connect_configuring[standard options available to all connectors].
 The rest are specific to the Couchbase connector.
 
-For this exercise, change the value of `connection.bucket` to `travel-sample` (or whichever bucket you want to stream from).
-For `connection.username` and `connection.password`, supply the credentials of a Couchbase user who has the "Data DCP Reader" role for the bucket.
+For this exercise, change the value of `couchbase.bucket` to `travel-sample` (or whichever bucket you want to stream from).
+For `couchbase.username` and `couchbase.password`, supply the credentials of a Couchbase user who has the "Data DCP Reader" role for the bucket.
 If you have not yet created such a user, now is a good time to read about xref:server:manage:manage-security/manage-users-and-roles.adoc[Creating and Managing Users with the UI].
 
 NOTE: For Couchbase Server versions prior to 5.0, leave the username blank.
@@ -164,11 +164,11 @@ Once the consumer catches up to the current state of the bucket, try xref:java-s
 The consumer will print a notification of type `mutation`.
 Now delete the document and watch for an event of type `deletion`.
 
-Perhaps it goes without saying, but all of the offset management and fault tolerance features of Kafka Connect work with the Couchbase connector.
-You can kill and restart the processes and they will pick up where they left off.
+Perhaps it goes without saying, but all the offset management and fault tolerance features of Kafka Connect work with the Couchbase connector.
+You can kill and restart the processes, and they will pick up where they left off.
 
-The shape of the message payload is controlled by the `dcp.message.converter.class` property of the connector config.
-By default it is set to `com.couchbase.connect.kafka.converter.SchemaConverter`, which formats each notification into a structure that holds document metadata and contents.
+The shape of the message payload is controlled by the `couchbase.source.handler` property of the connector config.
+By default, it is set to `com.couchbase.connect.kafka.converter.SchemaConverter`, which formats each notification into a structure that holds document metadata and contents.
 For reference, the Avro schema for this payload format is shown below:
 
 [source,json]
@@ -243,11 +243,11 @@ For reference, the Avro schema for this payload format is shown below:
 NOTE: The information in this section applies to connector versions 3.4.3 and later.
 
 Since version 3.4.3 it's easy to configure the connector to publish schemaless JSON messages identical to the JSON documents from Couchbase.
-This feature is enabled by setting the `dcp.message.converter.class` and `value.converter` source connector configuration properties like so:
+This feature is enabled by setting the `couchbase.source.handler` and `value.converter` source connector configuration properties like so:
 
 [source]
 ----
-dcp.message.converter.class=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
+couchbase.source.handler=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
 value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
 ----
 
@@ -266,7 +266,7 @@ To do this, include the `DeserializeJson` transform as the first in the chain an
 
 [source]
 ----
-dcp.message.converter.class=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
+couchbase.source.handler=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler
 
 value.converter=org.apache.kafka.connect.json.JsonConverter
 value.converter.schemas.enable=false
@@ -297,7 +297,7 @@ As of version 3.2.2, if the Kafka message body is null, the sink connector will 
 === Configure and Run the Sink Connector
 
 In the `$KAFKA_CONNECT_COUCHBASE_HOME/config` directory there is a file called `quickstart-couchbase-sink.properties`.
-Customize this file as described in <<source-config>>, only now the bucket will receive messages and the user must have _write_ access to the bucket.
+Customize this file as described in <<source-config>>, only now the bucket will receive messages, and the user must have _write_ access to the bucket.
 
 Note: Make sure to specify an existing bucket, otherwise the sink connector will fail.
 You may wish to xref:server:manage:manage-buckets/create-bucket.adoc[create a new bucket] to receive the messages.

@@ -4,7 +4,7 @@ Reference of the sink connector options.
 
 == Database
 
-=== `connection.cluster_address`
+=== `couchbase.seed.nodes`
 
 Couchbase Cluster addresses to listen (use comma to specify several).
 
@@ -16,51 +16,51 @@ Couchbase Cluster addresses to listen (use comma to specify several).
 The network selection strategy for connecting to a Couchbase Server cluster that advertises alternate addresses.
 A Couchbase node running inside a container environment (like Docker or Kubernetes) might be configured to advertise both its address within the container environment (known as its "default" address) as well as an "external" address for use by clients connecting from outside the environment.
 Setting the `couchbase.network` config property to `default` or `external` forces the selection of the respective addresses.
-Setting the value to `auto` tells the connector to select whichever network contains the addresses specified in the `connection.cluster_address` config property; this heuristic works well in most environments and is the recommended mode.
+Setting the value to `auto` tells the connector to select whichever network contains the addresses specified in the `couchbase.seed.nodes` config property; this heuristic works well in most environments and is the recommended mode.
 
 * Possible values:
 ** `auto`
 ** `default`
 ** `external`
 
-* Since: 3.4.5 (uncommitted)
 * Type: string
 * Importance: low
 * Default: `"auto"`
 
-=== `connection.bucket`
+=== `couchbase.bucket`
 
 Couchbase bucket name.
 
 * Type: string
 * Importance: high
 
-=== `connection.username`
+=== `couchbase.username`
 
 Couchbase username for Couchbase Server 5.0 and later.
 
 * Type: string
 * Importance: high
-* Default: the bucket name specified by `connection.bucket`
+* Default: the bucket name specified by `couchbase.bucket`
 
-=== `connection.password`
+=== `couchbase.password`
 
 Couchbase password.
 For Couchbase Server versions prior to 5.0 this is the bucket password.
-For versions 5.0 and later, this is the password associated with `connection.username`.
+For versions 5.0 and later, this is the password associated with `couchbase.username`.
 
 * Type: password
 * Importance: low
 * Default: `""`
 
-=== `connection.timeout.ms`
+=== `couchbase.bootstrap.timeout`
 
 Connection timeout in milliseconds.
 
 * Type: long
 * Importance: low
+* Default: `"10s"`
 
-=== `connection.ssl.enabled`
+=== `couchbase.enable.tls`
 
 Use SSL to connect to Couchbase.
 This feature only available in Couchbase Enterprise.
@@ -68,16 +68,16 @@ This feature only available in Couchbase Enterprise.
 * Type: boolean
 * Importance: low
 * Default: `false`
-* Dependents: `connection.ssl.keystore.location`, `connection.ssl.keystore.password`
+* Dependents: `couchbase.trust.store.path`, `couchbase.trust.store.password`
 
-=== `connection.ssl.keystore.location`
+=== `couchbase.trust.store.path`
 
 The location of the key store file.
 
 * Type: string
 * Importance: low
 
-=== `connection.ssl.keystore.password`
+=== `couchbase.trust.store.password`
 
 The password of the private key in the key store file.
 
@@ -109,7 +109,6 @@ The examples below assume the following sample document content:
  ** `${/metadata/type}::${/id}` -> widget::123
  ** `/id` -> 123 (deprecated, use `${/id}` instead)
 
-* Since: 3.3.1
 * Type: string
 * Importance: low
 * Default: `""`
@@ -123,7 +122,7 @@ Controls whether the ID field is removed from the document when `couchbase.docum
 * Importance: low
 * Default: `false`
 
-=== `couchbase.durability.persist_to`
+=== `couchbase.persist.to`
 
 Optionally specify Couchbase persistence requirements for a write to be considered successful.
 If the requested requirements cannot be met (due to Couchbase rebalance or failover, for instance) the connector will terminate.
@@ -136,12 +135,11 @@ If the requested requirements cannot be met (due to Couchbase rebalance or failo
  ** THREE - Require disk persistence of three nodes (master or replica).
  ** FOUR - Require disk persistence of four nodes (master + three replicas).
 
-* Since: 3.2.2
 * Type: boolean
 * Importance: low
 * Default: `"NONE"`
 
-=== `couchbase.durability.replicate_to`
+=== `couchbase.replicate.to`
 
 Optionally specify Couchbase replication requirements for a write to be considered successful.
 If the requested requirements cannot be met (due to Couchbase rebalance or failover, for instance) the connector will terminate.
@@ -152,12 +150,11 @@ If the requested requirements cannot be met (due to Couchbase rebalance or failo
  ** TWO - Require replication to two replicas.
  ** THREE - Require replication to three replicas.
 
-* Since: 3.2.2
 * Type: boolean
 * Importance: low
 * Default: `"NONE"`
 
-=== `couchbase.log_redaction`
+=== `couchbase.log.redaction`
 
 Optionally tag sensitive values in the log output for later redaction.
 
@@ -166,19 +163,9 @@ Optionally tag sensitive values in the log output for later redaction.
  ** PARTIAL - Only user data is redacted, system and metadata are not.
  ** FULL - User, System and Metadata are all redacted.
 
-* Since: 3.2.3
 * Type: string
 * Importance: low
 * Default: `"NONE"`
-
-=== `couchbase.forceIPv4`
-
-In a network environment that supports both IPv4 and IPv6, setting this property to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
-
-* Since: 3.3.0
-* Type: boolean
-* Importance: low
-* Default: `false`
 
 === `couchbase.document.expiration`
 
@@ -187,7 +174,6 @@ If present, the value must be an integer followed by a time unit.
 (`s` = seconds, `m` = minutes, `h` = hours, `d` = days).
 Example value: `30m`.
 
-* Since: 3.3.1
 * Type: string
 * Importance: low
 * Default: `""` (documents will not expire)
