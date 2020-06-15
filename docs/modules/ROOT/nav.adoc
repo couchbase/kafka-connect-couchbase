@@ -4,4 +4,5 @@
 * xref:sink-configuration-options.adoc[Sink Configuration Options]
 * xref:streams-sample.adoc[Couchbase Sample with Kafka Streams]
 * xref:migration.adoc[Migration Guide]
+* xref:compatibility.adoc[Compatibility]
 * xref:release-notes.adoc[Release Notes]

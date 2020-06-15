@@ -1,0 +1,14 @@
+= Compatibility
+
+[abstract]
+Compatiblity information for kafka-connect-couchbase version 4.0.
+
+[%autowidth,cols="3*^"]
+|===
+h| Couchbase Server h| Apache Kafka   h| Confluent Platform
+| 5.0.0 or later     | 1.1.0 or later  | 4.1.0 or later
+|===
+
+== Known Incompatibilities
+
+Not compatible with the Istio service mesh.
