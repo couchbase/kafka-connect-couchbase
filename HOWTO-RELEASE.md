@@ -51,6 +51,7 @@ When you're satisfied with the test results, it's time to...
 ## Bump the project version number
 
 1. Edit `pom.xml` and remove the `-SNAPSHOT` suffix from the version string.
+2. Edit `examples/custom-extensions/pom.xml` and update the `kafka-connect-couchbase.version` property.
 3. Edit `README.md` and bump the version numbers if applicable.
 4. Commit these changes, with message "Prepare x.y.z release"
 (where x.y.z is the version you're releasing).

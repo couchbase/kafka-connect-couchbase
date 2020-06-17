@@ -30,8 +30,8 @@
         <java-compat.version>1.8</java-compat.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <kafka-connect-couchbase.version>3.4.8</kafka-connect-couchbase.version>
-        <kafka.version>1.0.2</kafka.version>
+        <kafka-connect-couchbase.version>4.0.0-pre.1-SNAPSHOT</kafka-connect-couchbase.version>
+        <kafka.version>2.5.0</kafka.version>
         <slf4j.version>1.7.7</slf4j.version>
     </properties>
 

@@ -4,23 +4,23 @@ This section shows how to add the connector to your application.
 
 == Download
 
-The connector is shipped as a zip archive which you can download from the xref:release-notes.adoc[Release Notes] page.
+The connector is distributed as a zip archive which you can download from the xref:release-notes.adoc[Release Notes] page.
 
-If you prefer to build the connectors from source:
+If you prefer to build the connector from source:
 
 . Clone the https://github.com/couchbase/kafka-connect-couchbase[GitHub repository]
 . Run `mvn package` to generate the connector archive
-. Look for `kafka-connect-couchbase-<version>.zip` in the `target` directory.
+. Look for `couchbaseinc-kafka-connect-couchbase-<version>.zip` under the `target` directory.
 
 == Getting Started
 
 However you obtained the connector archive, go ahead and unzip it now.
-The result should be a directory called `kafka-connect-couchbase-<version>`.
+The result should be a directory called `couchbaseinc-kafka-connect-couchbase-<version>`.
 The rest of this guide will refer to this directory as `$KAFKA_CONNECT_COUCHBASE_HOME`.
 
 This guide assumes you have already installed Couchbase Server locally and have loaded the sample bucket called `travel-sample`.
 (It's fine if you want to use a different bucket;
-neither the connector nor this guide depend on the contents of the documents in the bucket.)
+neither the connector nor this guide depends on the contents of the documents in the bucket.)
 
 You'll also need a local installation of Apache Kafka or Confluent Platform Kafka.
 
@@ -46,18 +46,12 @@ export PATH=<path-to-apache-kafka-or-confluent>/bin:$PATH
 
 == Start the Kafka Servers
 
-If you're using Confluent Platform Kafka, start the servers by running these commands, *each in a separate terminal*:
+If you're using Confluent Platform Kafka, you can use the `confluent` command to start the servers in development mode:
 
 [source,bash]
 ----
-zookeeper-server-start $CONFLUENT_HOME/etc/kafka/zookeeper.properties
-kafka-server-start $CONFLUENT_HOME/etc/kafka/server.properties
-schema-registry-start $CONFLUENT_HOME/etc/schema-registry/schema-registry.properties
+confluent local start
 ----
-
-NOTE: Confluent 3.3.0 introduced a CLI tool that lets you start all the servers with a single command.
-It also provides a more sophisticated way to manage connectors than the technique described in this guide.
-Read about it http://docs.confluent.io/current/connect/quickstart.html[here].
 
 If you're not using Confluent, the commands are slightly different, but the idea is the same.
 Start the servers by running these commands, *each in a separate terminal*:
@@ -78,7 +72,7 @@ TIP: If you're more interested in saving Kafka messages to Couchbase, skip ahead
 === Configure the Source Connector
 
 The Couchbase connector distribution includes sample config files.
-Look inside `$KAFKA_CONNECT_COUCHBASE_HOME/config` and edit the `quickstart-couchbase-source.properties` file.
+Look inside `$KAFKA_CONNECT_COUCHBASE_HOME/etc` and edit the `quickstart-couchbase-source.properties` file.
 
 Take a moment to peruse the configuration options specified here.
 Some are https://kafka.apache.org/documentation/#connect_configuring[standard options available to all connectors].
@@ -87,10 +81,6 @@ The rest are specific to the Couchbase connector.
 For this exercise, change the value of `couchbase.bucket` to `travel-sample` (or whichever bucket you want to stream from).
 For `couchbase.username` and `couchbase.password`, supply the credentials of a Couchbase user who has the "Data DCP Reader" role for the bucket.
 If you have not yet created such a user, now is a good time to read about xref:server:manage:manage-security/manage-users-and-roles.adoc[Creating and Managing Users with the UI].
-
-NOTE: For Couchbase Server versions prior to 5.0, leave the username blank.
-Set the password property to the bucket password, or leave it blank if the bucket does not have a password.
-The sample buckets do not have passwords.
 
 === Run the Source Connector
 
@@ -102,9 +92,9 @@ For Confluent Platform Kafka:
 [source,bash]
 ----
 cd $KAFKA_CONNECT_COUCHBASE_HOME
-env CLASSPATH=./* \
+env CLASSPATH=lib/* \
     connect-standalone $CONFLUENT_HOME/etc/schema-registry/connect-avro-standalone.properties \
-                       config/quickstart-couchbase-source.properties
+                       etc/quickstart-couchbase-source.properties
 ----
 
 Or for Apache Kafka:
@@ -112,19 +102,53 @@ Or for Apache Kafka:
 [source,bash]
 ----
 cd $KAFKA_CONNECT_COUCHBASE_HOME
-env CLASSPATH=./* \
+env CLASSPATH=lib/* \
     connect-standalone.sh $KAFKA_HOME/config/connect-standalone.properties \
-                       config/quickstart-couchbase-source.properties
+                       etc/quickstart-couchbase-source.properties
 ----
 
 === Alternatively, Run the Connector with Class Loader Isolation
 
-Apache Kafka version 0.11.0 (and Confluent Platform 3.3.0) introduced a mechanism for plugin class path isolation.
-To take advantage of this feature, edit the connect worker config file (the `connect-*.properties` file in the above commands).
-Modify the `plugin.path` property to include the parent directory of `kafka-connect-couchbase-<version>.jar`.
+Class loader isolation prevents plugins that use different versions of the same Java library from interfering with one another.
+Instead of adding the plugin JARs to the class path when running the connect worker, you can install them in a location called the "plugin path."
 
-Run the connector using the same commands as above, but omitting the `env CLASSPATH=./*` prefix.
-Each Kafka Connect plugin will use a separate class loader, removing the possibility of dependency conflicts.
+There are multiple ways to do this.
+You can choose whichever method is most convenient.
+All of these methods involve the `plugin.path` worker config property which is defined in the `connect-*.properties` file referenced by the above commands.
+
+Once the connector is in the plugin path (using any of the methods described below), it is no longer necessary to set the `CLASSPATH` environment variable when running the connect worker.
+
+==== Option 1: Use Confluent Platform tools
+
+Confluent Platform users can install the connector by running the https://docs.confluent.io/current/connect/managing/confluent-hub/command-reference/confluent-hub-install.html[`confluent-hub install`] command:
+
+[source,bash]
+----
+confluent-hub install couchbaseinc-kafka-connect-couchbase-<version>.zip
+----
+
+==== Option 2: Modify the `plugin.path` config property
+
+Alternatively, Edit the connect worker config file (`connect-*.properties`) and search for the `plugin.path` property.
+Change the value of this property to include the full path to the `couchbaseinc-kafka-connect-couchbase-<version>` directory (which we have been calling `$KAFKA_CONNECT_COUCHBASE_HOME`).
+
+==== Option 3: Copy the connector to an existing `plugin.path` location
+
+Alternatively, copy the `$KAFKA_CONNECT_COUCHBASE_HOME/*lib*` directory to one of the directories already listed in the plugin path.
+You may also wish to rename the directory from `lib` to `kafka-connect-couchbase`.
+
+For example, if the `plugin.path` property is `/opt/connectors`, you want to end up with a directory structure like:
+
+[source]
+----
+opt
+`-- connectors
+    `-- kafka-connect-couchbase
+        |-- kafka-connect-couchbase-<version>.jar
+        |-- java-client-<version>.jar
+        |-- core-io-<version>.jar
+        `-- (and the other JARs too)
+----
 
 === Observe Messages Published by Couchbase Source Connector
 
@@ -240,10 +264,8 @@ For reference, the Avro schema for this payload format is shown below:
 
 === Publishing Raw Json Messages
 
-NOTE: The information in this section applies to connector versions 3.4.3 and later.
-
-Since version 3.4.3 it's easy to configure the connector to publish schemaless JSON messages identical to the JSON documents from Couchbase.
-This feature is enabled by setting the `couchbase.source.handler` and `value.converter` source connector configuration properties like so:
+It's easy to configure the connector to publish schemaless JSON messages identical to the JSON documents from Couchbase.
+To enable this feature, set the `couchbase.source.handler` and `value.converter` source connector configuration properties like so:
 
 [source]
 ----
@@ -296,7 +318,7 @@ As of version 3.2.2, if the Kafka message body is null, the sink connector will 
 
 === Configure and Run the Sink Connector
 
-In the `$KAFKA_CONNECT_COUCHBASE_HOME/config` directory there is a file called `quickstart-couchbase-sink.properties`.
+In the `$KAFKA_CONNECT_COUCHBASE_HOME/etc` directory there is a file called `quickstart-couchbase-sink.properties`.
 Customize this file as described in <<source-config>>, only now the bucket will receive messages, and the user must have _write_ access to the bucket.
 
 Note: Make sure to specify an existing bucket, otherwise the sink connector will fail.
@@ -310,7 +332,8 @@ Now that the Couchbase Sink Connector is running, let's give it some messages to
 
 [source,bash]
 ----
-cd $KAFKA_CONNECT_COUCHBASE_HOME/examples/json-producer
+git clone https://github.com/couchbase/kafka-connect-couchbase.git
+cd kafka-connect-couchbase/examples/json-producer
 mvn compile exec:java
 ----
 
@@ -337,7 +360,7 @@ transforms.addMagicWord.static.value=xyzzy
 Now if you restart the sink connector and send some more test messages, each new Couchbase document should have a "magicWord" field with value "xyzzy".
 
 If the built-in transforms are not sufficient, you can write Java code to implement more complex logic.
-Since version 3.4.3, the `examples/custom-extensions` project in `$KAFKA_CONNECT_COUCHBASE_HOME` includes a sample `CustomTransform` which may be used as a starting point for creating your own transforms.
+The https://github.com/couchbase/kafka-connect-couchbase/tree/master/examples/custom-extensions[`custom-extensions`] project on GitHub includes a sample `CustomTransform` which you can use as a starting point for creating your own transforms.
 
 *Parent topic:* xref:index.adoc[Kafka Connector]
 

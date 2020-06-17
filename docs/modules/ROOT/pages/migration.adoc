@@ -14,7 +14,7 @@ If you have written a custom `SourceHandler` or `Filter` component, some minor c
 == Configuration Properties
 
 A shell script called `migrate-config-3-to-4.sh` is available to assist with updating a version 3.x config file.
-You can find this script in the `config` directory of the connector distribution archive, or you can https://github.com/couchbase/kafka-connect-couchbase/blob/master/config/migrate-config-3-to-4.sh[download it from GitHub].
+You can find this script in the `etc` directory of the connector distribution archive, or you can https://github.com/couchbase/kafka-connect-couchbase/blob/master/config/migrate-config-3-to-4.sh[download it from GitHub].
 
 The following tables show how the config properties changed between 3.x and 4.x.
 

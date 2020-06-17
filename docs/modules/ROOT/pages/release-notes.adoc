@@ -2,6 +2,53 @@
 
 Release notes for the Kafka Connector.
 
+== Couchbase Kafka Connector 4.0.0-pre.1 (2020-06-17) [[4.0.0-pre.1]]
+
+https://packages.couchbase.com/clients/kafka/4.0.0-pre.1/couchbaseinc-kafka-connect-couchbase-4.0.0-pre.1.zip[couchbaseinc-kafka-connect-couchbase-4.0.0-pre.1.zip]
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>kafka-connect-couchbase</artifactId>
+    <version>4.0.0-pre.1</version>
+</dependency>
+----
+
+This pre-release version offers a sneak peek at some features coming in version 4.0.0 of the Couchbase Kafka connector, including support for Couchbase Collections and Scopes.
+
+NOTE: The new features in this pre-release version should be considered "volatile" and may change before the 4.0.0 GA release.
+
+=== New Source Features
+
+The new `couchbase.scope` and `couchbase.collection` config properties let you stream documents from a specific scope or set of collections.
+
+The `couchbase.topic` config property is now a format string that supports `${bucket}`, `${scope}`, and `${collection}` placeholders.
+This makes it easy to publish to different Kafka topics depending on the Couchbase document's parent collection.
+The default value is `${bucket}.${scope}.${collection}`.
+
+A custom `SourceHandler` can now set headers on a Kafka `SourceRecord`.
+
+=== Breaking Changes
+
+Version 4.0 is a major update that changes how you configure and extend the connector.
+If you are upgrading from a previous version of the connector, be sure to read the xref:migration.adoc[Migration Guide] which will help you with the upgrade process.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-182[KAFKAC-182] Upgrade Kafka Connect API from 1.0.2 to 2.5.0
+* https://issues.couchbase.com/browse/KAFKAC-188[KAFKAC-188] Upgrade Couchbase client from 2.7.13 to 3.0.5
+* https://issues.couchbase.com/browse/KAFKAC-189[KAFKAC-189] Upgrade DCP client from 0.26.0 to 0.28.0
+* https://issues.couchbase.com/browse/KAFKAC-192[KAFKAC-192] Follow standard naming convention for Kafka config properties
+* https://issues.couchbase.com/browse/KAFKAC-196[KAFKAC-196] Source: Stream from specific scope or collections
+* https://issues.couchbase.com/browse/KAFKAC-195[KAFKAC-195] Source: Publish to Kafka topic corresponding to collection
+* https://issues.couchbase.com/browse/KAFKAC-194[KAFKAC-194] Source: Support Kafka record headers
+* https://issues.couchbase.com/browse/KAFKAC-157[KAFKAC-157] Package connector for distribution on Confluent Hub
+* https://issues.couchbase.com/browse/KAFKAC-167[KAFKAC-167] Sink: Cannot connect to Couchbase on custom port
+* https://issues.couchbase.com/browse/KAFKAC-171[KAFKAC-171] Password config property should not default to empty string
+* https://issues.couchbase.com/browse/KAFKAC-173[KAFKAC-173] Enable connector names in offset by default
+* https://issues.couchbase.com/browse/KAFKAC-175[KAFKAC-175] Remove deprecated APIs
+
 == Couchbase Kafka Connector 3.4.8 (2020-04-21)
 
 https://packages.couchbase.com/clients/kafka/3.4.8/kafka-connect-couchbase-3.4.8.zip[kafka-connect-couchbase-3.4.8.zip]
