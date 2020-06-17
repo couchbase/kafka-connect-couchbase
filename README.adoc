@@ -1,5 +1,5 @@
-https://docs.couchbase.com/kafka-connector/3.4/release-notes.html[*Download*]
-| https://docs.couchbase.com/kafka-connector/3.4/index.html[*Documentation*]
+https://docs.couchbase.com/kafka-connector/4.0/release-notes.html[*Download*]
+| https://docs.couchbase.com/kafka-connector/4.0/index.html[*Documentation*]
 | https://issues.couchbase.com/projects/KAFKAC[*Issues*]
 | https://forums.couchbase.com/c/Kafka-Connector[*Discussion*]
 
@@ -25,4 +25,4 @@ The following instructions are intended for developers working on the connector.
 
 . Clone this GitHub repository.
 . Run `mvn package` in the project's root directory to generate the connector archive.
-. Look for `kafka-connect-couchbase-<version>.zip` in the `target` directory.
+. Look for `couchbaseinc-kafka-connect-couchbase-<version>.zip` under the `target` directory.
