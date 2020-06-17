@@ -127,19 +127,19 @@ public class CouchbaseSourceTask extends SourceTask {
     // Block until at least one item is available or until the
     // courtesy timeout expires, giving the framework a chance
     // to pause the connector.
-    DocumentChange event = queue.poll(1, SECONDS);
-    if (event == null) {
+    DocumentChange firstEvent = queue.poll(1, SECONDS);
+    if (firstEvent == null) {
       LOGGER.debug("Poll returns 0 results");
       return null; // Looks weird, but caller expects it.
     }
 
     List<DocumentChange> events = new ArrayList<>();
     try {
-      events.add(event);
+      events.add(firstEvent);
       queue.drainTo(events, batchSizeMax - 1);
 
       List<SourceRecord> results = events.stream()
-          .map(e -> DocumentEvent.create(event, bucket))
+          .map(e -> DocumentEvent.create(e, bucket))
           .filter(e -> filter.pass(e))
           .map(this::convertToSourceRecord)
           .filter(Objects::nonNull)
@@ -211,12 +211,13 @@ public class CouchbaseSourceTask extends SourceTask {
     Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
         sourcePartitions(partitions));
 
-    LOGGER.debug("Raw source offsets: {}", offsets);
+    LOGGER.info("Raw source offsets: {}", offsets);
 
     for (Map.Entry<Map<String, Object>, Map<String, Object>> entry : offsets.entrySet()) {
       Map<String, Object> partitionIdentifier = entry.getKey();
       Map<String, Object> offset = entry.getValue();
       if (offset == null) {
+        LOGGER.warn("null offset value for {}", entry.getKey());
         continue;
       }
       short partition = Short.parseShort((String) partitionIdentifier.get("partition"));
@@ -233,7 +234,9 @@ public class CouchbaseSourceTask extends SourceTask {
   private List<Map<String, Object>> sourcePartitions(Short[] partitions) {
     List<Map<String, Object>> sourcePartitions = new ArrayList<>();
     for (Short partition : partitions) {
-      sourcePartitions.add(sourcePartition(partition));
+      Map<String, Object> p = sourcePartition(partition);
+      System.out.println(p);
+      sourcePartitions.add(p);
     }
     return sourcePartitions;
   }
