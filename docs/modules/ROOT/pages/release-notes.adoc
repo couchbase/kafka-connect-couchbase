@@ -2,7 +2,8 @@
 
 Release notes for the Kafka Connector.
 
-== Couchbase Kafka Connector 4.0.0-dp.1 (2020-06-17) [[4.0.0-dp.1]]
+[#v4.0.0-dp.1]
+== Couchbase Kafka Connector 4.0.0-dp.1 (2020-06-17)
 
 https://packages.couchbase.com/clients/kafka/4.0.0-dp.1/couchbaseinc-kafka-connect-couchbase-4.0.0-dp.1.zip[couchbaseinc-kafka-connect-couchbase-4.0.0-dp.1.zip]
 
