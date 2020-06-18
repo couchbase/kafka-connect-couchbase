@@ -1,623 +1,85 @@
 = Release Notes
 
-Release notes for the Kafka Connector.
+[abstract]
+Release notes, installation instructions, and download archive for the Couchbase Kafka Connector.
 
-[#v4.0.0-dp.1]
-== Couchbase Kafka Connector 4.0.0-dp.1 (2020-06-17)
+This page covers version 4.0.x of the Couchbase Kafka Connector.
+For earlier versions, please see the xref:3.4@release-notes.adoc[3.x Release Notes].
 
-https://packages.couchbase.com/clients/kafka/4.0.0-dp.1/couchbaseinc-kafka-connect-couchbase-4.0.0-dp.1.zip[couchbaseinc-kafka-connect-couchbase-4.0.0-dp.1.zip]
+== Installation
+
+Scroll down to the version you want, then click the "Download" link to get the full connector distribution.
+Refer to the xref:quickstart.adoc[Quickstart Guide] for detailed installation instructions.
+
+=== Java API Maven Coordinates
+You can optionally extend the connector's functionality by writing custom components.
+Include the connector's Java API in your custom component Maven project by adding this dependency to your POM:
 
 [source,xml]
 ----
 <dependency>
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
-    <version>4.0.0-dp.1</version>
+    <version><!-- connector version --></version>
 </dependency>
 ----
 
+
+[[v4.0.0-dp.1]]
+== Version 4.0.0-dp.1 (17 June 2020)
+
+https://packages.couchbase.com/clients/kafka/4.0.0-dp.1/couchbaseinc-kafka-connect-couchbase-4.0.0-dp.1.zip[Download]
+
 This developer preview version offers a sneak peek at some features coming in version 4.0.0 of the Couchbase Kafka connector, including support for Couchbase Collections and Scopes.
-
-NOTE: The new features in this pre-release version should be considered "volatile" and may change before the 4.0.0 GA release.
-
-=== New Source Features
-
-The new `couchbase.scope` and `couchbase.collection` config properties let you stream documents from a specific scope or set of collections.
-
-The `couchbase.topic` config property is now a format string that supports `${bucket}`, `${scope}`, and `${collection}` placeholders.
-This makes it easy to publish to different Kafka topics depending on the Couchbase document's parent collection.
-The default value is `${bucket}.${scope}.${collection}`.
-
-A custom `SourceHandler` can now set headers on a Kafka `SourceRecord`.
-
-=== Breaking Changes
 
 Version 4.0 is a major update that changes how you configure and extend the connector.
 If you are upgrading from a previous version of the connector, be sure to read the xref:migration.adoc[Migration Guide] which will help you with the upgrade process.
 
-=== Enhancements
-
-* https://issues.couchbase.com/browse/KAFKAC-182[KAFKAC-182] Upgrade Kafka Connect API from 1.0.2 to 2.5.0
-* https://issues.couchbase.com/browse/KAFKAC-188[KAFKAC-188] Upgrade Couchbase client from 2.7.13 to 3.0.5
-* https://issues.couchbase.com/browse/KAFKAC-189[KAFKAC-189] Upgrade DCP client from 0.26.0 to 0.28.0
-* https://issues.couchbase.com/browse/KAFKAC-192[KAFKAC-192] Follow standard naming convention for Kafka config properties
-* https://issues.couchbase.com/browse/KAFKAC-196[KAFKAC-196] Source: Stream from specific scope or collections
-* https://issues.couchbase.com/browse/KAFKAC-195[KAFKAC-195] Source: Publish to Kafka topic corresponding to collection
-* https://issues.couchbase.com/browse/KAFKAC-194[KAFKAC-194] Source: Support Kafka record headers
-* https://issues.couchbase.com/browse/KAFKAC-157[KAFKAC-157] Package connector for distribution on Confluent Hub
-* https://issues.couchbase.com/browse/KAFKAC-167[KAFKAC-167] Sink: Cannot connect to Couchbase on custom port
-* https://issues.couchbase.com/browse/KAFKAC-171[KAFKAC-171] Password config property should not default to empty string
-* https://issues.couchbase.com/browse/KAFKAC-173[KAFKAC-173] Enable connector names in offset by default
-* https://issues.couchbase.com/browse/KAFKAC-175[KAFKAC-175] Remove deprecated APIs
-
-== Couchbase Kafka Connector 3.4.8 (2020-04-21)
-
-https://packages.couchbase.com/clients/kafka/3.4.8/kafka-connect-couchbase-3.4.8.zip[kafka-connect-couchbase-3.4.8.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.8</version>
-</dependency>
-----
-
-The Sink connector's Couchbase client now uses mutation tokens to improve performance when the `couchbase.durability.replicate_to` or `couchbase.durability.persist_to` config options are used.
-This also prevents the `DocumentConcurrentlyModifiedException` that would sometimes occur with the old CAS-based durability checks.
+NOTE: The new features in this pre-release version should be considered "volatile" and may change before the 4.0.0 GA release.
 
 === Enhancements
 
-* https://issues.couchbase.com/browse/KAFKAC-170[KAFKAC-170] Sink: Enable mutation tokens
+* https://issues.couchbase.com/browse/KAFKAC-182[KAFKAC-182]:
+Upgraded Kafka Connect API from 1.0.2 to 2.5.0.
 
-== Couchbase Kafka Connector 3.4.7 (2020-03-18)
+* https://issues.couchbase.com/browse/KAFKAC-188[KAFKAC-188]:
+Upgraded Couchbase client from 2.7.13 to 3.0.5.
 
-https://packages.couchbase.com/clients/kafka/3.4.7/kafka-connect-couchbase-3.4.7.zip[kafka-connect-couchbase-3.4.7.zip]
+* https://issues.couchbase.com/browse/KAFKAC-189[KAFKAC-189]:
+Upgraded DCP client from 0.26.0 to 0.28.0.
 
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.7</version>
-</dependency>
-----
+* https://issues.couchbase.com/browse/KAFKAC-192[KAFKAC-192]:
+Renamed the connector config properties to follow the standard Kafka naming convention ("lowercase.with.dots.between.words").
+See the xref:migration.adoc[Migration Guide] for a comprehensive list of changes, and a shell script that can help upgrade your 3.x config files to use the new property names.
 
-This maintenance release fixes a bug in the Source connector where specifying a custom port in the `connection.cluster_address` config property would cause a connection failure.
+* https://issues.couchbase.com/browse/KAFKAC-196[KAFKAC-196]:
+Source: Added `couchbase.scope` and `couchbase.collection` config properties that let you stream from a specific scope or set of collections.
 
-The Couchbase libraries are also updated to the latest versions.
+* https://issues.couchbase.com/browse/KAFKAC-195[KAFKAC-195]:
+Source: Modified the `couchbase.topic` config property to be a format string that supports `${bucket}`, `${scope}`, and `${collection}` placeholders.
+This makes it easy to publish to different Kafka topics depending on the Couchbase document's parent collection.
+The default value is `${bucket}.${scope}.${collection}`.
 
-=== Bug Fixes
+* https://issues.couchbase.com/browse/KAFKAC-194[KAFKAC-194]:
+Source: A custom `SourceHandler` can now set headers on the Kafka record.
 
-* https://issues.couchbase.com/browse/KAFKAC-165[KAFKAC-165] Source: Cannot connect to Couchbase on custom port
+* https://issues.couchbase.com/browse/KAFKAC-157[KAFKAC-157]:
+The connector is now packaged as a Confluent Hub component.
+Confluent Platform users can easily install the connector using the `confluent-hub install` command.
+The xref:quickstart.adoc[Quickstart Guide] has been updated to show how Apache Kafka users can install the connector.
 
-=== Enhancements
+* https://issues.couchbase.com/browse/KAFKAC-167[KAFKAC-167]:
+You can now specify custom ports in the list of Couchbase seed nodes.
+If you specify a port, it must be the port of the Key/Value service (which defaults to 11210 for unencrypted connections).
 
-* https://issues.couchbase.com/browse/KAFKAC-164[KAFKAC-164] Upgrade DCP client from 0.25.0 to 0.26.0
-* https://issues.couchbase.com/browse/KAFKAC-184[KAFKAC-168] Upgrade Couchbase client from 2.7.11 to 2.7.13
+* https://issues.couchbase.com/browse/KAFKAC-171[KAFKAC-171]:
+The `couchbase.password` config property (previously called `connection.password`) no longer defaults to an empty string.
 
-=== Known Issues
+* https://issues.couchbase.com/browse/KAFKAC-173[KAFKAC-173]:
+The `couchbase.connector.name.in.offsets` config property (previously called `compat.connector_name_in_offsets`) now defaults to `true`.
 
-Unlike the Source connector, the Sink connector still can't use custom ports.
-We're hoping to address this in a future release.
-
-* https://issues.couchbase.com/browse/KAFKAC-167[KAFKAC-167] Sink: Cannot connect to Couchbase on custom port
-
-== Couchbase Kafka Connector 3.4.6 (2020-01-21)
-
-https://packages.couchbase.com/clients/kafka/3.4.6/kafka-connect-couchbase-3.4.6.zip[kafka-connect-couchbase-3.4.6.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.6</version>
-</dependency>
-----
-
-The connector is now more careful about tracking virtual bucket UUIDs.
-This makes it much less likely that a rollback to zero will occur when restarting the connector after a Couchbase Server rebalance.
-
-=== Bug Fixes
-
-* https://issues.couchbase.com/browse/KAFKAC-118[KAFKAC-118] Source: vBucketUuid may be incorrect
-* https://issues.couchbase.com/browse/KAFKAC-161[KAFKAC-161] Source: Should include vBucket UUID in saved offset
-
-=== Enhancements
-
-* https://issues.couchbase.com/browse/KAFKAC-162[KAFKAC-162] Upgrade to Couchbase client 2.7.11 and DCP client 0.25.0
-
-== Couchbase Kafka Connector 3.4.5 (2019-08-21)
-
-https://packages.couchbase.com/clients/kafka/3.4.5/kafka-connect-couchbase-3.4.5.zip[kafka-connect-couchbase-3.4.5.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.5</version>
-</dependency>
-----
-
-This maintenance release brings the connector up to date with the latest versions of the Couchbase Client SDK and DCP client.
-As a result of this upgrade, the connector is now able to connect to Couchbase Server clusters that advertise alternate addresses.
-This behavior is controlled by the new `couchbase.network` configuration property which defaults to automatic network selection.
-
-NOTE: The alternate address selection feature introduced in this patch version is an "uncommitted" feature, meaning it may change without advance notice in a future patch version.
-
-=== Enhancements
-
-* https://issues.couchbase.com/browse/KAFKAC-154[KAFKAC-154] Expose multi-network config options
-* https://issues.couchbase.com/browse/KAFKAC-155[KAFKAC-155] Upgrade to Couchbase client 2.7.9 and DCP client 0.24.0
-
-== Couchbase Kafka Connector 3.4.4 (2019-05-21)
-
-https://packages.couchbase.com/clients/kafka/3.4.4/kafka-connect-couchbase-3.4.4.zip[kafka-connect-couchbase-3.4.4.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.4</version>
-</dependency>
-----
-
-This maintenance release fixes a bug that could prevent some versions of Couchbase Server from rebalancing when the connector is running.
-
-=== Bug Fixes
-
-* https://issues.couchbase.com/browse/KAFKAC-148[KAFKAC-148] Couchbase Server fails to rebalance if Kafka connector is running
-
-== Couchbase Kafka Connector 3.4.3 (2019-03-19)
-
-https://packages.couchbase.com/clients/kafka/3.4.3/kafka-connect-couchbase-3.4.3.zip[kafka-connect-couchbase-3.4.3.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.3</version>
-</dependency>
-----
-
-This patch release adds out-of-the-box support for publishing Couchbase documents to Kafka as raw JSON using `RawJsonSourceHandler`.
-
-The quickstart guide has been updated with an example of how to apply Single Message Transforms to modify documents before the Sink connector writes them to Couchbase.
-
-The included `examples/custom-extensions` Maven project now demonstrates how to implement a custom transform.
-
-NOTE: The new source handlers and transforms introduced in this patch version are "uncommitted" features, meaning they may change without advance notice in a future patch version.
-
-=== Enhancements
-
-* https://issues.couchbase.com/browse/KAFKAC-141[KAFKAC-141] Add example of a custom Single Message Transform
-* https://issues.couchbase.com/browse/KAFKAC-142[KAFKAC-142] Support publishing raw JSON without having to build example project
-* https://issues.couchbase.com/browse/KAFKAC-143[KAFKAC-143] Upgrade DCP client to 0.22.0
-
-== Couchbase Kafka Connector 3.4.2 (2019-02-19)
-
-https://packages.couchbase.com/clients/kafka/3.4.2/kafka-connect-couchbase-3.4.2.zip[kafka-connect-couchbase-3.4.2.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.2</version>
-</dependency>
-----
-
-This maintenance release improves the behavior of persistence polling and connection keep-alive.
-
-When connecting to a multi-node Couchbase cluster, connections not used for streaming will no longer be incorrectly flagged as dead.
-
-Persistence polling no longer repeatedly closes connections to servers not hosting any partitions during a rebalance operation.
-
-NOTE: In this release the Couchbase client dependency has been upgraded to version 2.7.2 for security updates in the repackaged Jackson databind library.
-Because Jackson versions compatible with Java 1.6 are no longer maintained, the connector is no longer compatible with Java 1.6.
-*The connector now requires Java 1.8 or later.*
-Couchbase prefers to make such platform changes in minor releases, but is applying the change here given the nature of the issue.
-
-=== Enhancements
-
-* https://issues.couchbase.com/browse/KAFKAC-136[KAFKAC-136] Require Java 1.8 or later
-* https://issues.couchbase.com/browse/KAFKAC-137[KAFKAC-137] Fix Maven issues with Java 11
-* https://issues.couchbase.com/browse/KAFKAC-138[KAFKAC-138] Upgrade Kafka API dependencies to 1.0.2
-* https://issues.couchbase.com/browse/KAFKAC-139[KAFKAC-139] Upgrade Couchbase client to 2.7.2 and DCP client to 0.21.0
-
-=== Bug Fixes
-
-* https://issues.couchbase.com/browse/JDCP-116[JDCP-116] BucketConfigHelper.getHostedPartitions() fails when node hosts no partitions
-* https://issues.couchbase.com/browse/JDCP-117[JDCP-117] Dead connection detection gives false positives when no streams are open
-
-== Couchbase Kafka Connector 3.4.1 (2019-01-15)
-
-https://packages.couchbase.com/clients/kafka/3.4.1/kafka-connect-couchbase-3.4.1.zip[kafka-connect-couchbase-3.4.1.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.1</version>
-</dependency>
-----
-
-This maintenance release fixes memory leaks that can occur in distributed mode or under certain error conditions.
-
-Also, the connector now responds to more error conditions by reporting them to the Kafka Connect framework instead of failing silently.
-
-=== Issues resolved
-
-* https://issues.couchbase.com/browse/KAFKAC-133[KAFKAC-133]: [BUGFIX] Buffers not released on all code paths
-
-== Couchbase Kafka Connector 3.4.0 (2018-10-16)
-
-https://packages.couchbase.com/clients/kafka/3.4.0/kafka-connect-couchbase-3.4.0.zip[kafka-connect-couchbase-3.4.0.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.0</version>
-</dependency>
-----
-
-=== New features
-
-Version 3.4 introduces https://blog.couchbase.com/rollback-mitigation-kafka-connector-3-4-beta/[rollback mitigation] in the form of persistence polling.
-Messages are published to Kafka only after the database events have been saved to disk on all Couchbase replicas.
-Rollback mitigation is enabled by default.
-It may be disabled by setting the persistence polling interval to `0`.
-
-The flow control buffer size is now configurable, with a default size of 128 megabytes.
-This is an increase over the previous hard-coded value of 20 megabytes.
-
-=== New configuration properties
-
-* `couchbase.flow_control_buffer=128m`
-* `couchbase.persistence_polling_interval=100ms`
-
-=== Issues resolved
-
-* https://issues.couchbase.com/browse/KAFKAC-116[KAFKAC-116]: [ENHANCEMENT] Add support for rollback mitigation
-* https://issues.couchbase.com/browse/KAFKAC-127[KAFKAC-127]: [BUGFIX] Source connector can't reconnect to Couchbase hosted on Docker Container
-* https://issues.couchbase.com/browse/KAFKAC-124[KAFKAC-124]: [BUGFIX] Rollback mitigation causes data loss when opening DCP stream
-
-== Couchbase Kafka Connector 3.4.0-beta.1 (2018-07-06)
-
-https://packages.couchbase.com/clients/kafka/3.4.0-beta.1/kafka-connect-couchbase-3.4.0-beta.1.zip[kafka-connect-couchbase-3.4.0-beta.1.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.4.0-beta.1</version>
-</dependency>
-----
-
-WARNING: Version 3.4.0-beta.1 has a bug that can cause data loss. When rollback mitigation is enabled, some events might not be published to the Kafka topic.
-See https://issues.couchbase.com/browse/KAFKAC-124[KAFKAC-124] for details.
-This issue is resolved in the 3.4.0 release.
-
-When database changes are rolled back due to failover of a Couchbase Server node, the connector will now by default prevent the rolled-back changes from being published to the Kafka topic.
-This is done by buffering changes until they have been persisted to all replicas in the Couchbase cluster (and are unlikely to be rolled back).
-The connector polls the database at a configurable interval to determine which changes have been persisted.
-This feature is enabled by default, and may be disabled by setting the polling interval to `0`.
-
-The flow control buffer size is now configurable, with a default size of 128 megabytes.
-This is an increase over the previous hard-coded value of 20 megabytes.
-
-New configuration properties:
-
-* `couchbase.flow_control_buffer=128m`
-* `couchbase.persistence_polling_interval=100ms`
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-116[KAFKAC-116]: [ENHANCEMENT] Add support for rollback mitigation
-
-== Couchbase Kafka Connector 3.3.2 GA (2018-07-02)
-
-https://packages.couchbase.com/clients/kafka/3.3.2/kafka-connect-couchbase-3.3.2.zip[kafka-connect-couchbase-3.3.2.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.3.2</version>
-</dependency>
-----
-
-The source connector now resumes streaming after a Couchbase Server rollback.
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-72[KAFKAC-72]: [BUGFIX] Connector stops streaming after rollback
-* https://issues.couchbase.com/browse/KAFKAC-115[KAFKAC-115]: [ENHANCEMENT] Upgrade to DCP client 0.18.0
-
-== Couchbase Kafka Connector 3.3.1 GA (2018-06-19)
-
-https://packages.couchbase.com/clients/kafka/3.3.1/kafka-connect-couchbase-3.3.1.zip[kafka-connect-couchbase-3.3.1.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.3.1</version>
-</dependency>
-----
-
-The sink connector can now set expiration times for documents, and can assign document IDs by composing values from multiple fields.
-
-The source connector now continues streaming after a graceful failover.
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-104[KAFKAC-104]: [ENHANCEMENT] Support for setting TTL on items being written to Couchbase
-* https://issues.couchbase.com/browse/KAFKAC-106[KAFKAC-106]: [ENHANCEMENT] Support assigning document ID from multiple fields
-* https://issues.couchbase.com/browse/KAFKAC-109[KAFKAC-109]: [ENHANCEMENT] KAFKAC-109 Upgrade to Java client 2.5.9 and DCP client 0.17.0
-* https://issues.couchbase.com/browse/JDCP-85[JDCP-85]: [BUGFIX] Client stops receiving some events after failover
-* https://issues.couchbase.com/browse/JDCP-94[JDCP-94]: [BUGFIX] Should never pass null ChannelFlowController to event handlers
-
-== Couchbase Kafka Connector 3.3.0 GA (2018-05-15)
-
-https://packages.couchbase.com/clients/kafka/3.3.0/kafka-connect-couchbase-3.3.0.zip[kafka-connect-couchbase-3.3.0.zip]
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.3.0</version>
-</dependency>
-----
-
-Compression is now enabled by default (requires Couchbase Server 5.5 or later).
-
-IPv6 is now enabled by default. To disable IPv6 in a dual-stack environment, set the new `couchbase.forceIPv4` config property to `true`.
-
-Resolved a regression that caused the connector to need a restart after a Couchbase Server restart.
-
-Couchbase password and SSL keystore password may be specified using via `KAFKA_COUCHBASE_PASSWORD` and `KAFKA_COUCHBASE_SSL_KEYSTORE_PASSWORD` environment variables.
-
-The sink connector can now modify documents using the sub-document API (many thanks to community member Didier Caron).
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-97[KAFKAC-97]: [BUGFIX] Kafka Connector needs a restart after Couchbase Server restart
-* https://issues.couchbase.com/browse/KAFKAC-102[KAFKAC-102]: [ENHANCEMENT] Enable compression by default
-* https://issues.couchbase.com/browse/KAFKAC-100[KAFKAC-100]: [ENHANCEMENT] Enable IPv6 by default, add first-class config option
-* https://issues.couchbase.com/browse/KAFKAC-96[KAFKAC-96]: [ENHANCEMENT] Support setting password via environment variable
-* https://issues.couchbase.com/browse/KAFKAC-98[KAFKAC-98]: [ENHANCEMENT] Sink: Support sub-document access (Didier Caron)
-* https://issues.couchbase.com/browse/KAFKAC-103[KAFKAC-103]: [ENHANCEMENT] Upgrade Couchbase dependencies
-
-== Couchbase Kafka Connector 3.2.3 GA (2018-02-20)
-
-Keepalive is now enabled on the Couchbase Server connection.
-This prevents the server from dropping idle connections, and enables dead connection detection.
-Thanks to community member Patrik Nordebo (patrikn).
-
-A new config key "couchbase.log_redaction" controls whether sensitive info in connector log messages is tagged for redaction.
-Options are "NONE", "PARTIAL", and "FULL".
-
-A new source config key "couchbase.compression" can be used to enable compression when reading from Couchbase Server 4.5 and later.
-Options are "DISABLED", "ENABLED", and "FORCED".
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-89[KAFKAC-89]: [ENHANCEMENT] Enable NOOP for dead connection detection (Patrik Nordebo)
-* https://issues.couchbase.com/browse/KAFKAC-82[KAFKAC-82]: [FEATURE] Implement log redaction for Kafka Connector
-* https://issues.couchbase.com/browse/KAFKAC-90[KAFKAC-90]: [FEATURE] Source: Add config settings to enable compression
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.2.3</version>
-</dependency>
-----
-
-https://packages.couchbase.com/clients/kafka/3.2.3/kafka-connect-couchbase-3.2.3.zip[kafka-connect-couchbase-3.2.3.zip]
-
-== Couchbase Kafka Connector 3.2.2 GA (19 December 2017)
-
-The source connector now does a better job of reporting abnormal termination.
-Thanks to community member p_mx (tiny1990).
-
-A new config key "couchbase.stream_from" lets you tell the source connector when in Couchbase history to start streaming from.
-Options are "BEGINNING", "NOW", "SAVED_OFFSET_OR_BEGINNING", and "SAVED_OFFSET_OR_NOW".
-
-When the sink connector receives a Kafka message with a null value, it now deletes the Couchbase document whose ID matches the Kafka message key.
-(Previous versions would terminate when a null value was encountered.)
-
-You can now specify durability requirements for the sink connector's write operations via two new config keys:
-"couchbase.durability.persist_to" and "couchbase.durability.replicate_to".
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-84[KAFKAC-84]: [FEATURE] Sink: Allow setting durability requirements for Couchbase writes
-* https://issues.couchbase.com/browse/KAFKAC-85[KAFKAC-85]: [FEATURE] Sink: Support deletion
-* https://issues.couchbase.com/browse/KAFKAC-86[KAFKAC-86]: [FEATURE] Source: Restart from a given state / offset
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.2.2</version>
-</dependency>
-----
-
-https://packages.couchbase.com/clients/kafka/3.2.2/kafka-connect-couchbase-3.2.2.zip[kafka-connect-couchbase-3.2.2.zip]
-
-== Couchbase Kafka Connector 3.2.1 GA (8 November 2017)
-
-Fixes a regression in 3.2.0 that prevented the sink connector from working.
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-83[KAFKAC-83]: [BUGFIX] Sink connector fails due to UnsupportedOperationException in JsonBinaryTranscoder.newDocument.
-* https://issues.couchbase.com/browse/KAFKAC-81[KAFKAC-81]: [ENHANCEMENT] Document how to customize source handler
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.2.1</version>
-</dependency>
-----
-
-https://packages.couchbase.com/clients/kafka/3.2.1/kafka-connect-couchbase-3.2.1.zip[kafka-connect-couchbase-3.2.1.zip]
-
-== Couchbase Kafka Connector 3.2.0 GA (17 October 2017)
-
-The sink connector is now officially supported.
-
-Multiple source connector instances reading from the same Couchbase bucket can now manage their state independently.
-To enable this feature, assign a unique name to each connector and set the new config property `compat.connector_name_in_offsets` to `true`.
-
-The source connector has a new, more flexible `SourceHandler` extension point intended to replace the `Converter` interface.
-By providing a custom `SourceHandler`, a developer can filter events, route messages to a topic other than the configured default topic, and control the format of the Kafka message.
-
-The default Kafka message format now includes `bucket` and `vBucketUuid` fields, which may be used along with the `partition` (vBucketID) and `bySeqno` fields to construct a Couchbase MutationToken.
-
-The sink connector now allows the Couchbase document ID to come from a field of the document.
-This feature is controlled by two new config properties, `couchbase.document.id` and `couchbase.remove.document.id`.
-
-The Couchbase client libraries are upgraded to the latest versions, with performance enhancements and other improvements for Couchbase Server 5.0.
-
-The following classes are scheduled for removal in version 4.0.0 of the connector:
-
-* `com.couchbase.connect.kafka.converter.Converter` - Deprecated in favor of `SourceHandler`.
-* `com.couchbase.connect.kafka.converter.SchemaConverter` - Deprecated in favor of `DefaultSchemaSourceHandler`.
-
-Issues resolved in this release:
-
-* https://issues.couchbase.com/browse/KAFKAC-69[KAFKAC-69]: [FEATURE] Allow Source connector to split DCP stream and write into separate topics.
-* https://issues.couchbase.com/browse/KAFKAC-70[KAFKAC-70]: [FEATURE] Allow using connector name in offset storage namespace
-* https://issues.couchbase.com/browse/KAFKAC-77[KAFKAC-77]: [FEATURE] Allow setting document ID from message field.
-* https://issues.couchbase.com/browse/KAFKAC-78[KAFKAC-78]: [ENHANCEMENT] Upgrade Couchbase java-client to version 2.5.1, dcp-client to version 0.12.0
-* https://issues.couchbase.com/browse/KAFKAC-79[KAFKAC-79]: [ENHANCEMENT] Use custom doc transcoder to reduce memory copies.
-* https://issues.couchbase.com/browse/KAFKAC-80[KAFKAC-80]: [FEATURE] MutationToken Enabled in Kafka Connector to N1QL at plus.
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.2.0</version>
-</dependency>
-----
-
-https://packages.couchbase.com/clients/kafka/3.2.0/kafka-connect-couchbase-3.2.0.zip[kafka-connect-couchbase-3.2.0.zip]
-
-== Couchbase Kafka Connector 3.1.3 GA (31 May 2017)
-
-Version 3.1.3 is maintenance release.
-
-* https://issues.couchbase.com/browse/KAFKAC-71[KAFKAC-71]: Support for RBAC credentials on Couchbase Server 5+.
-Java DCP Client updated to 0.10.0.
-
-[source,xml]
-----
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>kafka-connect-couchbase</artifactId>
-    <version>3.1.3</version>
-</dependency>
-----
-
-https://packages.couchbase.com/clients/kafka/3.1.3/kafka-connect-couchbase-3.1.3.zip[kafka-connect-couchbase-3.1.3.zip]
-
-== Couchbase Kafka Connector 3.1.2 GA (14 March 2017)
-
-Version 3.1.2 is maintenance release.
-
-* https://issues.couchbase.com/browse/KAFKAC-66[KAFKAC-66]: On backfilling from large bucket, it is possible to get OOM when internal queue is not drained quickly enough to relay the data into Kafka.
-
-https://packages.couchbase.com/clients/kafka/3.1.2/kafka-connect-couchbase-3.1.2.zip[kafka-connect-couchbase-3.1.2.zip]
-
-== Couchbase Kafka Connector 3.1.1 GA (21 February 2017)
-
-Version 3.1.1 is maintenance release. It contains fixes for resuming DCP streams after restart.
-
-* https://issues.couchbase.com/browse/KAFKAC-56[KAFKAC-56]: Session state might be left partially initialized, which leads to rolling back to sequence number zero (0) and starting from the beginning (duplicating events in Kafka topic).
-
-https://packages.couchbase.com/clients/kafka/3.1.1/kafka-connect-couchbase-3.1.1.zip[kafka-connect-couchbase-3.1.1.zip]
-
-== Couchbase Kafka Connector 3.1.0 GA (03 January 2017)
-
-Version 3.1.0 is GA release.
-
-* https://issues.couchbase.com/browse/KAFKAC-55[KAFKAC-55]: Sink Connector support
-
-https://packages.couchbase.com/clients/kafka/3.1.0/kafka-connect-couchbase-3.1.0.zip[kafka-connect-couchbase-3.1.0.zip]
-
-== Couchbase Kafka Connector 3.0.0 GA (14 December 2016)
-
-Version 3.0.0 is GA release.
-It brings documentation update.
-
-https://packages.couchbase.com/clients/kafka/3.0.0/kafka-connect-couchbase-3.0.0.zip[kafka-connect-couchbase-3.0.0.zip]
-
-== Couchbase Kafka Connector 3.0.0 BETA (22 November 2016)
-
-Version 3.0.0-BETA is pre-release version of the 3.0.0.
-It brings documentation update, feature enhancements and bug fixes
-
-* https://issues.couchbase.com/browse/KAFKAC-52[KAFKAC-52]: Support for SSL connections
-* Update dependencies: dcp-client to 0.7.0, and confluent libraries up to versions shipped with 3.1.1
-* Cleanup various configuration workarounds for platform 3.0
-
-https://packages.couchbase.com/clients/kafka/3.0.0-BETA/kafka-connect-couchbase-3.0.0-BETA.zip[kafka-connect-couchbase-3.0.0-BETA.zip]
-
-== Couchbase Kafka Connector 3.0.0 DP4 (5 November 2016)
-
-Version 3.0.0-DP4 is the fourth developer preview of the 3.0.x series.
-
-* https://issues.couchbase.com/browse/KAFKAC-54[KAFKAC-54]: Create example of using in Kafka Stream to process events from Couchbase
-* Rename internal classes, and make configuration more consistent with other connectors (e.g. instead of timeout_ms, use timeout.ms)
-* Allow to override internal convertor into SourceRecord, and allow to inject Filter class to skip events before writing into Kafka
-
-https://packages.couchbase.com/clients/kafka/3.0.0-DP4/kafka-connect-couchbase-3.0.0-DP4.zip[kafka-connect-couchbase-3.0.0-DP4.zip]
-
-== Couchbase Kafka Connector 3.0.0 DP3 (20 October 2016)
-
-Version 3.0.0-DP3 is the third developer preview of the 3.0.x series.
-It implements new features and also includes bug fixes to previous release.
-
-* https://issues.couchbase.com/browse/KAFKAC-50[KAFKAC-50]: Allow to buffer DCP snapshots for consistent writes.
-* https://issues.couchbase.com/browse/KAFKAC-51[KAFKAC-51]: Specify key for SourceRecord.
-Allows to use multiple Kafka partitions.
-* https://issues.couchbase.com/browse/KAFKAC-53[KAFKAC-53]: Node-aware distribution of partitions for Tasks.
-Reduces amount of resources allocated on the server.
-
-https://packages.couchbase.com/clients/kafka/3.0.0-DP3/kafka-connect-couchbase-3.0.0-DP3.zip[kafka-connect-couchbase-3.0.0-DP3.zip]
-
-== Couchbase Kafka Connector 3.0.0 DP2 (24 September 2016)
-
-Version 3.0.0-DP2 is the second developer preview of the 3.0.x series.
-It improves configuration.
-And now can maintain replication state, which allow to resume transmission.
-
-https://packages.couchbase.com/clients/kafka/3.0.0-DP2/kafka-connect-couchbase-3.0.0-DP2.zip[kafka-connect-couchbase-3.0.0-DP2.zip]
-
-== Couchbase Kafka Connector 3.0.0 DP1 (6 September 2016)
-
-Version 3.0.0-DP1 is the first developer preview of the 3.0.x series.
-
-https://packages.couchbase.com/clients/kafka/3.0.0-DP1/kafka-connect-couchbase-3.0.0-DP1.zip[kafka-connect-couchbase-3.0.0-DP1.zip]
+* https://issues.couchbase.com/browse/KAFKAC-175[KAFKAC-175]:
+APIs deprecated in version 3.x have been removed.
 
 *Parent topic:* xref:index.adoc[Kafka Connector]
 
