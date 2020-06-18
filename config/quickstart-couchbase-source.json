@@ -6,7 +6,7 @@
     "tasks.max": "2",
     "couchbase.topic": "test-default",
     "couchbase.seed.nodes": "127.0.0.1",
-    "couchbase.bootstrap.timeout": "2000",
+    "couchbase.bootstrap.timeout": "10s",
     "couchbase.bucket": "default",
     "couchbase.username": "Administrator",
     "couchbase.password": "password",
