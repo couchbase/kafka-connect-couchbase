@@ -211,13 +211,12 @@ public class CouchbaseSourceTask extends SourceTask {
     Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
         sourcePartitions(partitions));
 
-    LOGGER.info("Raw source offsets: {}", offsets);
+    LOGGER.debug("Raw source offsets: {}", offsets);
 
     for (Map.Entry<Map<String, Object>, Map<String, Object>> entry : offsets.entrySet()) {
       Map<String, Object> partitionIdentifier = entry.getKey();
       Map<String, Object> offset = entry.getValue();
       if (offset == null) {
-        LOGGER.warn("null offset value for {}", entry.getKey());
         continue;
       }
       short partition = Short.parseShort((String) partitionIdentifier.get("partition"));
@@ -234,9 +233,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private List<Map<String, Object>> sourcePartitions(Short[] partitions) {
     List<Map<String, Object>> sourcePartitions = new ArrayList<>();
     for (Short partition : partitions) {
-      Map<String, Object> p = sourcePartition(partition);
-      System.out.println(p);
-      sourcePartitions.add(p);
+      sourcePartitions.add(sourcePartition(partition));
     }
     return sourcePartitions;
   }
