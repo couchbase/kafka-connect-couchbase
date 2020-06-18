@@ -179,16 +179,6 @@ usage reduction above all else. *Requires Couchbase Server 5.5 or later*.
 * Importance: low
 * Default: `"ENABLED"`
 
-=== `couchbase.forceIPv4`
-
-In a network environment that supports both IPv4 and IPv6, setting this property
-to `true` will force the use of IPv4 when resolving Couchbase Server hostnames.
-
-* Since: 3.3.0
-* Type: boolean
-* Importance: low
-* Default: `false`
-
 === `couchbase.persistence.polling.interval`
 
 The frequency at which the connector will poll Couchbase Server to determine

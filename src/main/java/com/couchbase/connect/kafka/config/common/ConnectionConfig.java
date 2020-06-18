@@ -84,12 +84,4 @@ public interface ConnectionConfig {
    */
   @Default("30s")
   Duration bootstrapTimeout();
-
-  /**
-   * In a network environment that supports both IPv4 and IPv6, setting this property
-   * to 'true' will force the use of IPv4 when resolving Couchbase Server hostnames.
-   */
-  @Default("false")
-  @DisplayName("Force IPv4")
-  boolean forceIpv4();
 }
