@@ -67,7 +67,7 @@ public class CouchbaseReader extends Thread {
         .collectionNames(config.collections())
         .compression(config.compression())
         .mitigateRollbacks(config.persistencePollingInterval().toMillis(), TimeUnit.MILLISECONDS)
-        .flowControl(config.flowControlBufferSize().getByteCountAsSaturatedInt())
+        .flowControl(config.flowControlBuffer().getByteCountAsSaturatedInt())
         .bufferAckWatermark(60)
         .sslEnabled(config.enableTls())
         .sslKeystoreFile(config.trustStorePath())

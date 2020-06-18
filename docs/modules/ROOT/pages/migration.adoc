@@ -111,6 +111,10 @@ Now defaults to `${bucket}.${scope}.${collection}`
 | `couchbase.persistence_polling_interval`
 | `couchbase.persistence.polling.interval`
 |
+
+| `couchbase.flow_control_buffer`
+| `couchbase.flow.control.buffer`
+|
 |===
 
 .Sink properties

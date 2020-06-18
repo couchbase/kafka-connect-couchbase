@@ -50,6 +50,7 @@ sed -i "$BACKUP_SUFFIX" \
 -e "s/couchbase.log_redaction/couchbase.log.redaction/g" \
 -e "s/couchbase.compression/couchbase.compression/g" \
 -e "s/couchbase.persistence_polling_interval/couchbase.persistence.polling.interval/g" \
+-e "s/couchbase.flow_control_buffer/couchbase.flow.control.buffer/g" \
 -e "s/couchbase.document.id/couchbase.document.id/g" \
 -e "s/couchbase.remove.document.id/couchbase.remove.document.id/g" \
 -e "s/couchbase.durability.persist_to/couchbase.persist.to/g" \

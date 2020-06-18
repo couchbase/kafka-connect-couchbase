@@ -203,7 +203,7 @@ CAUTION: If the source is an ephemeral bucket (which never persists documents) t
 * Importance: low
 * Default: `"100ms"`
 
-=== `couchbase.flow_control_buffer`
+=== `couchbase.flow.control.buffer`
 
 The amount of heap space to reserve for the flow control buffer.
 This is the amount of data Couchbase Server will push to the connector

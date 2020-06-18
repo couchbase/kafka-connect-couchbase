@@ -46,5 +46,5 @@ public interface DcpConfig {
    * Specify an integer followed by a size qualifier (example: 128m)
    */
   @Default("128m")
-  DataSize flowControlBufferSize();
+  DataSize flowControlBuffer();
 }
