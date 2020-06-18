@@ -6,8 +6,6 @@ Tools and information for upgrading your connector configuration.
 In version 4.x the names of the config properties have changed to follow a consistent naming convention.
 Some default values have changed to provide a better out-of-box experience for new users.
 
-WARNING: If you use the Source connector, and your 3.x configuration does not have `compat.connector_name_in_offsets` set to `true`, you will need to set the `couchbase.connector.name.in.offsets` property to `false` in your 4.x config, so the connector can continue streaming from where the 3.x connector left off.
-
 The Java API for customizing the connector's behavior has also changed in a way that is not backwards compatible.
 If you have written a custom `SourceHandler` or `Filter` component, some minor changes are required for it to work with the new version of the connector.
 
@@ -94,7 +92,8 @@ Now defaults to `${bucket}.${scope}.${collection}`
 
 | `compat.connector_name_in_offsets`
 | `couchbase.connector.name.in.offsets`
-| Now defaults to `true`.
+| **Deprecated**.
+Only set this to `true` if you have previously deployed the connector to production with this set to `true`.
 
 | `couchbase.stream_from`
 | `couchbase.stream.from`

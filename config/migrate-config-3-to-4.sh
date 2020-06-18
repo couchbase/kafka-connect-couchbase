@@ -78,10 +78,3 @@ done
 if grep -q couchbase.bootstrap.timeout "$INPUT_FILE"; then
   echo "*** Please manually update the 'couchbase.bootstrap.timeout' property and append 'ms' to the value to indicate the value is in milliseconds."
 fi
-
-if grep -q couchbase.topic "$INPUT_FILE"; then
-  # It's a Source config file! Warn about this default value change.
-  if ! grep -q couchbase.connector.name.in.offsets "$INPUT_FILE"; then
-    echo "*** Please manually add 'couchbase.connector.name.in.offsets=false' if you wish to resume streaming from the same saved offsets."
-  fi
-fi

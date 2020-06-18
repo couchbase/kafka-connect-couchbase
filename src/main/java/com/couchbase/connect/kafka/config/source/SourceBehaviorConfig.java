@@ -58,9 +58,16 @@ public interface SourceBehaviorConfig {
   int batchSizeMax();
 
   /**
-   * If true, the library will use name in the offsets to allow multiple connectors for the same bucket.
+   * When true, the connector's offsets are saved under a key that
+   * includes the connector name. This is redundant, since the Kafka Connect
+   * framework already isolates the offsets of connectors with different names.
+   * <p>
+   * Set this to true only if you've previously deployed the connector
+   * to production with this set to true, and you do not wish to restart streaming
+   * from the beginning. Otherwise you should ignore this property.
    */
-  @Default("true")
+  @Deprecated
+  @Default("false")
   boolean connectorNameInOffsets();
 
   /**
