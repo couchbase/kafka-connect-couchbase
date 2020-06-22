@@ -49,6 +49,7 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -140,14 +141,15 @@ public class CouchbaseSinkTask extends SinkTask {
     LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
         recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
 
-    Flux.fromIterable(records)
-        .flatMap(record -> {
-          if (record.value() == null) {
-            String documentId = documentIdFromKafkaMetadata(record);
-            return removeIfExists(documentId);
+    Map<String, JsonBinaryDocument> idToDocumentOrNull = toJsonBinaryDocuments(records);
+
+    Flux.fromIterable(idToDocumentOrNull.entrySet())
+        .flatMap(entry -> {
+          if (entry.getValue() == null) {
+            return removeIfExists(entry.getKey());
           }
 
-          JsonBinaryDocument doc = convert(record);
+          JsonBinaryDocument doc = entry.getValue();
 
           switch (documentMode) {
             case N1QL: {
@@ -166,6 +168,37 @@ public class CouchbaseSinkTask extends SinkTask {
             }
           }
         }).blockLast();
+  }
+
+  /**
+   * Converts Kafka records to documents and indexes them by document ID.
+   * <p>
+   * If there are duplicate document IDs, ignores all but the last. This
+   * prevents a stale version of the document from "winning" by being the
+   * last one written to Couchbase.
+   *
+   * @return a map where the key is the ID of a document, and the value is the document.
+   * A null value indicates the document should be deleted.
+   */
+  private Map<String, JsonBinaryDocument> toJsonBinaryDocuments(java.util.Collection<SinkRecord> records) {
+    Map<String, JsonBinaryDocument> idToDocumentOrNull = new HashMap<>();
+    for (SinkRecord record : records) {
+      if (record.value() == null) {
+        String documentId = documentIdFromKafkaMetadata(record);
+        idToDocumentOrNull.put(documentId, null);
+        continue;
+      }
+
+      JsonBinaryDocument doc = convert(record);
+      idToDocumentOrNull.put(doc.id(), doc);
+    }
+
+    int deduplicatedRecords = records.size() - idToDocumentOrNull.size();
+    if (deduplicatedRecords != 0) {
+      LOGGER.debug("Batch contained {} redundant Kafka records.", deduplicatedRecords);
+    }
+
+    return idToDocumentOrNull;
   }
 
   private Mono<Void> removeIfExists(String documentId) {
