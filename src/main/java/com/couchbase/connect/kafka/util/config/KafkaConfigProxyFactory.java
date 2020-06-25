@@ -46,10 +46,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.couchbase.connect.kafka.util.config.HtmlRenderer.htmlToPlaintext;
 import static java.util.Collections.emptyList;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Given a config interface, generates a matching Kafka ConfigDef.
@@ -217,6 +219,56 @@ public class KafkaConfigProxyFactory {
                 return postProcessValue(method, result);
               }
             }));
+  }
+
+  /**
+   * Returns the name of the config key associated with the method invoked
+   * by the given consumer.
+   * <p>
+   * Example usage:
+   * <pre>
+   * String name = proxyFactory.keyName(MyConfig.class, MyConfig::myProperty);
+   * </pre>
+   *
+   * @param configInterface the config interface to inspect
+   * @param methodInvoker accepts an implementation of the specified interface
+   * and calls the method whose name you want to know
+   */
+  public <T> String keyName(Class<T> configInterface, Consumer<T> methodInvoker) {
+    try {
+      T instance = newProxyForKeyNames(configInterface);
+      methodInvoker.accept(instance);
+      throw new IllegalArgumentException("Consumer should have invoked a method of the config interface.");
+
+    } catch (KeyNameHolderException e) {
+      return e.name;
+    }
+  }
+
+  /**
+   * Returns an implementation whose methods all throw an exception
+   * that holds the name of the config key associated with the method.
+   */
+  protected <T> T newProxyForKeyNames(Class<T> configInterface) {
+    return configInterface.cast(
+        Proxy.newProxyInstance(
+            configInterface.getClassLoader(),
+            new Class[]{configInterface},
+            new AbstractInvocationHandler(configInterface.getName()) {
+              @Override
+              protected Object doInvoke(Object proxy, Method method, Object[] args) {
+                throw new KeyNameHolderException(getConfigKeyName(method));
+              }
+            }));
+  }
+
+  protected static class KeyNameHolderException extends RuntimeException {
+    private final String name;
+
+    public KeyNameHolderException(String name) {
+      super(name);
+      this.name = requireNonNull(name);
+    }
   }
 
   protected Object postProcessValue(Method method, Object value) {

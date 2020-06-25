@@ -25,12 +25,19 @@ import org.apache.kafka.connect.errors.ConnectException;
 
 import java.util.function.Consumer;
 
+import static com.couchbase.connect.kafka.util.config.ConfigHelper.keyName;
+
 public interface DurabilitySetter extends Consumer<CommonDurabilityOptions<?>> {
   static DurabilitySetter create(DurabilityConfig config) {
     DurabilityLevel durabilityLevel = config.durability();
     if (durabilityLevel != DurabilityLevel.NONE) {
       if (config.persistTo() != PersistTo.NONE || config.replicateTo() != ReplicateTo.NONE) {
-        throw new ConnectException("Invalid durability config. When 'couchbase.durability' is set, you must not set 'couchbase.replicate.to' or 'couchbase.persist.to'.");
+        String durabilityKey = keyName(DurabilityConfig.class, DurabilityConfig::durability);
+        String replicateToKey = keyName(DurabilityConfig.class, DurabilityConfig::replicateTo);
+        String persistToKey = keyName(DurabilityConfig.class, DurabilityConfig::persistTo);
+
+        throw new ConnectException("Invalid durability config. When '" + durabilityKey + "' is set," +
+            " you must not set '" + replicateToKey + "' or '" + persistToKey + "'.");
       }
 
       return options -> options.durability(durabilityLevel);

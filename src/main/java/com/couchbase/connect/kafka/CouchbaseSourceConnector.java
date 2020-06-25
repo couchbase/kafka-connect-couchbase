@@ -23,6 +23,7 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
+import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.util.Config;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.couchbase.connect.kafka.util.config.ConfigHelper.keyName;
 import static java.util.stream.Collectors.joining;
 
 public class CouchbaseSourceConnector extends SourceConnector {
@@ -105,11 +107,12 @@ public class CouchbaseSourceConnector extends SourceConnector {
     List<List<String>> partitionsGrouped = bucketConfig.groupGreedyToString(maxTasks);
     List<Map<String, String>> taskConfigs = new ArrayList<>(partitionsGrouped.size());
     for (List<String> taskPartitions : partitionsGrouped) {
+      String partitionsKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::partitions);
+      String dcpSeedNodesKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::dcpSeedNodes);
+
       Map<String, String> taskProps = new HashMap<>(configProperties);
-      // property name matches CouchbaseSourceTaskConfig.partitions()
-      taskProps.put("couchbase.partitions", String.join(",", taskPartitions));
-      // property name matches CouchbaseSourceTaskConfig.dcpSeedNodes()
-      taskProps.put("couchbase.dcp.seed.nodes", seedNodes);
+      taskProps.put(partitionsKey, String.join(",", taskPartitions));
+      taskProps.put(dcpSeedNodesKey, seedNodes);
       taskConfigs.add(taskProps);
     }
     return taskConfigs;

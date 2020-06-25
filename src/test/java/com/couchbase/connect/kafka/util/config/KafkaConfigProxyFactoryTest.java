@@ -208,6 +208,7 @@ public class KafkaConfigProxyFactoryTest {
   }
 
   private static final String ENVAR_NAME = "SOME_RANDOM_NAME_THAT_SHOULD_NEVER_ACTUALLY_BE_SET";
+
   public interface EnvarConfig {
     @EnvironmentVariable(ENVAR_NAME)
     Password password();
@@ -223,5 +224,10 @@ public class KafkaConfigProxyFactoryTest {
     assertEquals("b", config.password().value());
   }
 
+  @Test
+  public void keyName() throws Exception {
+    KafkaConfigProxyFactory factory = new KafkaConfigProxyFactory("foo");
+    assertEquals("foo.string.value", factory.keyName(TestConfig.class, TestConfig::stringValue));
+  }
 }
 

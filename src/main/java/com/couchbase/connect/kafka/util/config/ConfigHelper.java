@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka.util.config;
 import org.apache.kafka.common.config.ConfigDef;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class ConfigHelper {
   private static final KafkaConfigProxyFactory factory =
@@ -34,5 +35,9 @@ public class ConfigHelper {
 
   public static <T> T parse(Class<T> configClass, Map<String, String> props) {
     return factory.newProxy(configClass, props);
+  }
+
+  public static <T> String keyName(Class<T> configClass, Consumer<T> methodInvoker) {
+    return factory.keyName(configClass, methodInvoker);
   }
 }
