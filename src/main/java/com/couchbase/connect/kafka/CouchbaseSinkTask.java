@@ -20,8 +20,7 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.codec.RawJsonTranscoder;
-import com.couchbase.client.java.kv.PersistTo;
-import com.couchbase.client.java.kv.ReplicateTo;
+import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.sink.DocumentMode;
@@ -31,6 +30,7 @@ import com.couchbase.connect.kafka.sink.SubDocumentMode;
 import com.couchbase.connect.kafka.sink.SubDocumentWriter;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
+import com.couchbase.connect.kafka.util.DurabilitySetter;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
@@ -70,8 +70,7 @@ public class CouchbaseSinkTask extends SinkTask {
   private SubDocumentWriter subDocumentWriter;
   private N1qlWriter n1qlWriter;
 
-  private PersistTo persistTo;
-  private ReplicateTo replicateTo;
+  private DurabilitySetter durabilitySetter;
 
   private Duration documentExpiry;
 
@@ -105,9 +104,7 @@ public class CouchbaseSinkTask extends SinkTask {
     }
 
     documentMode = config.documentMode();
-    persistTo = config.persistTo();
-    replicateTo = config.replicateTo();
-
+    durabilitySetter = DurabilitySetter.create(config);
     documentExpiry = config.documentExpiration();
 
     switch (documentMode) {
@@ -156,14 +153,16 @@ public class CouchbaseSinkTask extends SinkTask {
               return n1qlWriter.write(client.cluster(), bucketName, doc);
             }
             case SUBDOCUMENT: {
-              return subDocumentWriter.write(collection.reactive(), doc, persistTo, replicateTo);
+              return subDocumentWriter.write(collection.reactive(), doc, durabilitySetter);
             }
             default: {
+              UpsertOptions options = UpsertOptions.upsertOptions()
+                  .expiry(documentExpiry)
+                  .transcoder(RawJsonTranscoder.INSTANCE);
+              durabilitySetter.accept(options);
+
               return collection.reactive()
-                  .upsert(doc.id(), doc.content(), UpsertOptions.upsertOptions()
-                      .durability(persistTo, replicateTo)
-                      .expiry(documentExpiry)
-                      .transcoder(RawJsonTranscoder.INSTANCE))
+                  .upsert(doc.id(), doc.content(), options)
                   .then();
             }
           }
@@ -202,8 +201,10 @@ public class CouchbaseSinkTask extends SinkTask {
   }
 
   private Mono<Void> removeIfExists(String documentId) {
+    RemoveOptions options = removeOptions();
+    durabilitySetter.accept(options);
     return collection.reactive()
-        .remove(documentId, removeOptions().durability(persistTo, replicateTo))
+        .remove(documentId, options)
         .onErrorResume(DocumentNotFoundException.class, throwable -> Mono.empty())
         .then();
   }

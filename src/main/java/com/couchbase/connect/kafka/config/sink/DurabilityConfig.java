@@ -16,19 +16,43 @@
 
 package com.couchbase.connect.kafka.config.sink;
 
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 
 public interface DurabilityConfig {
   /**
-   * Durability setting for Couchbase persistence.
+   * The preferred way to specify an enhanced durability requirement
+   * when using Couchbase Server 6.5 or later.
+   * <p>
+   * The default value of `NONE` means a write is considered
+   * successful as soon as it reaches the memory of the active node.
+   * <p>
+   * NOTE: If you set this to anything other than `NONE`, then you
+   * must not set `couchbase.persist.to` or `couchbase.replicate.to`.
+   */
+  @Default("NONE")
+  DurabilityLevel durability();
+
+  /**
+   * For Couchbase Server versions prior to 6.5, this is how you require
+   * the connector to verify a write is persisted to disk on a certain
+   * number of replicas before considering the write successful.
+   * <p>
+   * If you're using Couchbase Server 6.5 or later, we recommend
+   * using the `couchbase.durability` property instead.
    */
   @Default("NONE")
   PersistTo persistTo();
 
   /**
-   * Durability setting for Couchbase replication.
+   * For Couchbase Server versions prior to 6.5, this is how you require
+   * the connector to verify a write has reached the memory of a certain
+   * number of replicas before considering the write successful.
+   * <p>
+   * If you're using Couchbase Server 6.5 or later, we recommend
+   * using the `couchbase.durability` property instead.
    */
   @Default("NONE")
   ReplicateTo replicateTo();

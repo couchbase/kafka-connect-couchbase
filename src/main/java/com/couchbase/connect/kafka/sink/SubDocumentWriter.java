@@ -4,11 +4,11 @@ import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ArrayAppend;
 import com.couchbase.client.java.kv.ArrayPrepend;
+import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInSpec;
-import com.couchbase.client.java.kv.PersistTo;
-import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.kv.Upsert;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
+import com.couchbase.connect.kafka.util.DurabilitySetter;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +78,7 @@ public class SubDocumentWriter {
     this.documentExpiry = requireNonNull(expiry);
   }
 
-  public Mono<Void> write(final ReactiveCollection bucket, final JsonBinaryDocument document, PersistTo persistTo, ReplicateTo replicateTo) {
+  public Mono<Void> write(final ReactiveCollection bucket, final JsonBinaryDocument document, DurabilitySetter durabilitySetter) {
     SubdocOperation operation = getOperation(document);
 
     MutateInSpec mutation;
@@ -109,11 +109,12 @@ public class SubDocumentWriter {
         throw new RuntimeException("Unsupported subdoc mode: " + mode);
     }
 
-    return bucket.mutateIn(document.id(), singletonList(mutation),
-        mutateInOptions()
-            .expiry(documentExpiry)
-            .durability(persistTo, replicateTo)
-            .storeSemantics(createDocuments ? UPSERT : REPLACE))
+    MutateInOptions options = mutateInOptions()
+        .expiry(documentExpiry)
+        .storeSemantics(createDocuments ? UPSERT : REPLACE);
+    durabilitySetter.accept(options);
+
+    return bucket.mutateIn(document.id(), singletonList(mutation), options)
         .then();
   }
 
