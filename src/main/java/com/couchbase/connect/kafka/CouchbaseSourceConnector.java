@@ -67,7 +67,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
       CouchbaseSourceConfig config = ConfigHelper.parse(CouchbaseSourceConfig.class, properties);
 
       try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
-        Bucket bucket = client.cluster().bucket(config.bucket());
+        Bucket bucket = client.bucket();
         bucketConfig = (CouchbaseBucketConfig) getConfig(bucket, config.bootstrapTimeout());
         seedNodes = getSeedNodes(client.cluster().core(), config.bootstrapTimeout());
       }

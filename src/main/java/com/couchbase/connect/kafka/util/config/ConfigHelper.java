@@ -17,6 +17,7 @@
 package com.couchbase.connect.kafka.util.config;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -39,5 +40,28 @@ public class ConfigHelper {
 
   public static <T> String keyName(Class<T> configClass, Consumer<T> methodInvoker) {
     return factory.keyName(configClass, methodInvoker);
+  }
+
+  public interface SimpleValidator<T> {
+    void validate(T value) throws Exception;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> ConfigDef.Validator validate(SimpleValidator<T> validator, String description) {
+    return new ConfigDef.Validator() {
+      @Override
+      public String toString() {
+        return description;
+      }
+
+      @Override
+      public void ensureValid(String name, Object value) {
+        try {
+          validator.validate((T) value);
+        } catch (Exception e) {
+          throw new ConfigException(name, value, e.getMessage());
+        }
+      }
+    };
   }
 }

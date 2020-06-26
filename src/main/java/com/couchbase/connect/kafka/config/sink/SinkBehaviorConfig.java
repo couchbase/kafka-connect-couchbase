@@ -19,12 +19,51 @@ package com.couchbase.connect.kafka.config.sink;
 import com.couchbase.connect.kafka.sink.DocumentMode;
 import com.couchbase.connect.kafka.sink.N1qlMode;
 import com.couchbase.connect.kafka.sink.SubDocumentMode;
+import com.couchbase.connect.kafka.util.ScopeAndCollection;
+import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
+import org.apache.kafka.common.config.ConfigDef;
 
 import java.time.Duration;
 import java.util.List;
 
+import static com.couchbase.connect.kafka.util.config.ConfigHelper.validate;
+
 public interface SinkBehaviorConfig {
+
+  /**
+   * Qualified name (scope.collection) of the destination collection for messages
+   * from topics that don't have a "topic to collection" map entry.
+   */
+  @Default("_default._default")
+  String defaultCollection();
+
+  @SuppressWarnings("unused")
+  static ConfigDef.Validator defaultCollectionValidator() {
+    return validate(ScopeAndCollection::parse, "A collection name qualified by a scope name (scope.collection)");
+  }
+
+  /**
+   * A map from Kafka topic to Couchbase collection.
+   * <p>
+   * Topic and collection are joined by an equals sign.
+   * Map entries are delimited by commas.
+   * <p>
+   * For example, if you want to write messages from topic "topic1"
+   * to collection "scope-a.invoices", and messages from topic "topic2"
+   * to collection "scope-a.widgets", you would write:
+   * "topic1=scope-a.invoices,topic2=scope-a.widgets".
+   * <p>
+   * Defaults to an empty map, with all documents going to the collection
+   * specified by `couchbase.default.collection`.
+   */
+  @Default
+  List<String> topicToCollection();
+
+  @SuppressWarnings("unused")
+  static ConfigDef.Validator topicToCollectionValidator() {
+    return validate(TopicMap::parse, "topic=scope.collection,...");
+  }
 
   /**
    * Format string to use for the Couchbase document ID (overriding the message key).

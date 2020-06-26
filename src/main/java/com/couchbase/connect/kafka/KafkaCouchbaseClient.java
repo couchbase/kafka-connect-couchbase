@@ -18,9 +18,12 @@ package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.connect.kafka.config.common.CommonConfig;
+import com.couchbase.connect.kafka.util.ScopeAndCollection;
 
 import java.io.Closeable;
 import java.io.File;
@@ -35,6 +38,7 @@ import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 public class KafkaCouchbaseClient implements Closeable {
   private final ClusterEnvironment env;
   private final Cluster cluster;
+  private final Bucket bucket;
 
   public KafkaCouchbaseClient(CommonConfig config) {
     List<String> clusterAddress = config.seedNodes();
@@ -56,6 +60,8 @@ public class KafkaCouchbaseClient implements Closeable {
     cluster = Cluster.connect(connectionString,
         clusterOptions(config.username(), config.password().value())
             .environment(env));
+
+    bucket = cluster.bucket(config.bucket());
   }
 
   public ClusterEnvironment env() {
@@ -64,6 +70,16 @@ public class KafkaCouchbaseClient implements Closeable {
 
   public Cluster cluster() {
     return cluster;
+  }
+
+  public Bucket bucket() {
+    return bucket;
+  }
+
+  public Collection collection(ScopeAndCollection scopeAndCollection) {
+    return bucket()
+        .scope(scopeAndCollection.getScope())
+        .collection(scopeAndCollection.getCollection());
   }
 
   @Override

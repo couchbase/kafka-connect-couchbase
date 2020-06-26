@@ -32,6 +32,8 @@ import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
 import com.couchbase.connect.kafka.util.DurabilitySetter;
 import com.couchbase.connect.kafka.util.JsonBinaryDocument;
+import com.couchbase.connect.kafka.util.ScopeAndCollection;
+import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -56,12 +58,14 @@ import java.util.Map;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 public class CouchbaseSinkTask extends SinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
 
   private String bucketName;
-  private Collection collection;
+  private ScopeAndCollection defaultDestCollection;
+  private Map<String, ScopeAndCollection> topicToCollection;
   private KafkaCouchbaseClient client;
   private JsonConverter converter;
   private DocumentIdExtractor documentIdExtractor;
@@ -91,9 +95,8 @@ public class CouchbaseSinkTask extends SinkTask {
     LogRedaction.setRedactionLevel(config.logRedaction());
     client = new KafkaCouchbaseClient(config);
     bucketName = config.bucket();
-    collection = client.cluster()
-        .bucket(bucketName)
-        .defaultCollection();
+    defaultDestCollection = ScopeAndCollection.parse(config.defaultCollection());
+    topicToCollection = TopicMap.parse(config.topicToCollection());
 
     converter = new JsonConverter();
     converter.configure(mapOf("schemas.enable", false), false);
@@ -128,6 +131,16 @@ public class CouchbaseSinkTask extends SinkTask {
     }
   }
 
+  private static class SinkRecordAndDocument {
+    private final SinkRecord sinkRecord;
+    private final JsonBinaryDocument document;
+
+    public SinkRecordAndDocument(SinkRecord sinkRecord, JsonBinaryDocument document) {
+      this.sinkRecord = requireNonNull(sinkRecord);
+      this.document = document; // nullable
+    }
+  }
+
   @Override
   public void put(java.util.Collection<SinkRecord> records) {
     if (records.isEmpty()) {
@@ -138,22 +151,27 @@ public class CouchbaseSinkTask extends SinkTask {
     LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
         recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
 
-    Map<String, JsonBinaryDocument> idToDocumentOrNull = toJsonBinaryDocuments(records);
+    Map<String, SinkRecordAndDocument> idToDocumentOrNull = toJsonBinaryDocuments(records);
 
     Flux.fromIterable(idToDocumentOrNull.entrySet())
         .flatMap(entry -> {
-          if (entry.getValue() == null) {
-            return removeIfExists(entry.getKey());
-          }
+          SinkRecordAndDocument sinkRecordAndDocument = entry.getValue();
+          SinkRecord sinkRecord = sinkRecordAndDocument.sinkRecord;
+          JsonBinaryDocument doc = sinkRecordAndDocument.document;
 
-          JsonBinaryDocument doc = entry.getValue();
+          ScopeAndCollection destCollectionSpec = topicToCollection.getOrDefault(sinkRecord.topic(), defaultDestCollection);
+          Collection destCollection = client.collection(destCollectionSpec);
+
+          if (doc == null) {
+            return removeIfExists(destCollection, entry.getKey());
+          }
 
           switch (documentMode) {
             case N1QL: {
               return n1qlWriter.write(client.cluster(), bucketName, doc);
             }
             case SUBDOCUMENT: {
-              return subDocumentWriter.write(collection.reactive(), doc, durabilitySetter);
+              return subDocumentWriter.write(destCollection.reactive(), doc, durabilitySetter);
             }
             default: {
               UpsertOptions options = UpsertOptions.upsertOptions()
@@ -161,7 +179,7 @@ public class CouchbaseSinkTask extends SinkTask {
                   .transcoder(RawJsonTranscoder.INSTANCE);
               durabilitySetter.accept(options);
 
-              return collection.reactive()
+              return destCollection.reactive()
                   .upsert(doc.id(), doc.content(), options)
                   .then();
             }
@@ -179,28 +197,28 @@ public class CouchbaseSinkTask extends SinkTask {
    * @return a map where the key is the ID of a document, and the value is the document.
    * A null value indicates the document should be deleted.
    */
-  private Map<String, JsonBinaryDocument> toJsonBinaryDocuments(java.util.Collection<SinkRecord> records) {
-    Map<String, JsonBinaryDocument> idToDocumentOrNull = new HashMap<>();
+  private Map<String, SinkRecordAndDocument> toJsonBinaryDocuments(java.util.Collection<SinkRecord> records) {
+    Map<String, SinkRecordAndDocument> idToSourceRecordAndDocument = new HashMap<>();
     for (SinkRecord record : records) {
       if (record.value() == null) {
         String documentId = documentIdFromKafkaMetadata(record);
-        idToDocumentOrNull.put(documentId, null);
+        idToSourceRecordAndDocument.put(documentId, new SinkRecordAndDocument(record, null));
         continue;
       }
 
       JsonBinaryDocument doc = convert(record);
-      idToDocumentOrNull.put(doc.id(), doc);
+      idToSourceRecordAndDocument.put(doc.id(), new SinkRecordAndDocument(record, doc));
     }
 
-    int deduplicatedRecords = records.size() - idToDocumentOrNull.size();
+    int deduplicatedRecords = records.size() - idToSourceRecordAndDocument.size();
     if (deduplicatedRecords != 0) {
       LOGGER.debug("Batch contained {} redundant Kafka records.", deduplicatedRecords);
     }
 
-    return idToDocumentOrNull;
+    return idToSourceRecordAndDocument;
   }
 
-  private Mono<Void> removeIfExists(String documentId) {
+  private Mono<Void> removeIfExists(Collection collection, String documentId) {
     RemoveOptions options = removeOptions();
     durabilitySetter.accept(options);
     return collection.reactive()
