@@ -40,8 +40,11 @@ public interface SourceBehaviorConfig {
   /**
    * The class name of the source handler to use.
    * The source handler determines how the Couchbase document is converted into a Kafka record.
+   * <p>
+   * To publish JSON messages identical to the Couchbase documents, use
+   * `com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler`
+   * and set `value.converter` to `org.apache.kafka.connect.converters.ByteArrayConverter`.
    */
-  @Default("com.couchbase.connect.kafka.handler.source.DefaultSchemaSourceHandler")
   Class<? extends SourceHandler> sourceHandler();
 
   /**
@@ -88,8 +91,8 @@ public interface SourceBehaviorConfig {
   String scope();
 
   /**
-   * If you wish to stream from specific collections, specify the fully qualified collection
-   * names here, separated by commas. A fully qualified name is the name of the scope
+   * If you wish to stream from specific collections, specify the qualified collection
+   * names here, separated by commas. A qualified name is the name of the scope
    * followed by a dot (.) and then the name of the collection. For example:
    * "tenant-foo.invoices".
    * <p>

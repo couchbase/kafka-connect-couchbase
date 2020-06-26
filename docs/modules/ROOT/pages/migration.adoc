@@ -80,7 +80,7 @@ Now defaults to `${bucket}.${scope}.${collection}`
 
 | `dcp.message.converter.class`
 | `couchbase.source.handler`
-|
+| No longer has a default value.
 
 | `event.filter.class`
 | `couchbase.event.filter`
