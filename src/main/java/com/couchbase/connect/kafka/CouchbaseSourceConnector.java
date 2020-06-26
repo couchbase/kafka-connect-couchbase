@@ -24,7 +24,7 @@ import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
-import com.couchbase.connect.kafka.util.Config;
+import com.couchbase.connect.kafka.util.ListHelper;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigDef;
@@ -42,14 +42,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static com.couchbase.connect.kafka.util.config.ConfigHelper.keyName;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public class CouchbaseSourceConnector extends SourceConnector {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
+
   private Map<String, String> configProperties;
-  private Config bucketConfig;
+  private CouchbaseBucketConfig bucketConfig;
   private Set<SeedNode> seedNodes;
 
   @Override
@@ -65,7 +68,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
       try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
         Bucket bucket = client.cluster().bucket(config.bucket());
-        bucketConfig = new Config((CouchbaseBucketConfig) getConfig(bucket, config.bootstrapTimeout()));
+        bucketConfig = (CouchbaseBucketConfig) getConfig(bucket, config.bootstrapTimeout());
         seedNodes = getSeedNodes(client.cluster().core(), config.bootstrapTimeout());
       }
 
@@ -80,7 +83,16 @@ public class CouchbaseSourceConnector extends SourceConnector {
         .configs()
         .flatMap(clusterConfig ->
             Mono.justOrEmpty(clusterConfig.bucketConfig(bucket.name())))
+        .filter(CouchbaseSourceConnector::hasPartitionInfo)
         .blockFirst(timeout);
+  }
+
+  /**
+   * Returns true unless the config is from a newly-created bucket
+   * whose partition count is not yet available.
+   */
+  private static boolean hasPartitionInfo(BucketConfig config) {
+    return ((CouchbaseBucketConfig) config).numberOfPartitions() > 0;
   }
 
   private static Set<SeedNode> getSeedNodes(Core core, Duration timeout) {
@@ -95,6 +107,16 @@ public class CouchbaseSourceConnector extends SourceConnector {
     return CouchbaseSourceTask.class;
   }
 
+  private List<List<Integer>> splitPartitions(int maxTasks) {
+    List<Integer> partitions = IntStream.range(0, bucketConfig.numberOfPartitions())
+        .boxed()
+        .collect(toList());
+
+    return ListHelper.chunks(partitions, maxTasks).stream()
+        .filter(list -> !list.isEmpty()) // remove empty chunks (no work for task to do)
+        .collect(toList());
+  }
+
   @Override
   public List<Map<String, String>> taskConfigs(int maxTasks) {
     String seedNodes = this.seedNodes.stream()
@@ -104,14 +126,19 @@ public class CouchbaseSourceConnector extends SourceConnector {
         })
         .collect(joining(","));
 
-    List<List<String>> partitionsGrouped = bucketConfig.groupGreedyToString(maxTasks);
-    List<Map<String, String>> taskConfigs = new ArrayList<>(partitionsGrouped.size());
-    for (List<String> taskPartitions : partitionsGrouped) {
-      String partitionsKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::partitions);
-      String dcpSeedNodesKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::dcpSeedNodes);
+    List<List<Integer>> partitionsGrouped = splitPartitions(maxTasks);
+
+    String partitionsKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::partitions);
+    String dcpSeedNodesKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::dcpSeedNodes);
+
+    List<Map<String, String>> taskConfigs = new ArrayList<>();
+    for (List<Integer> taskPartitions : partitionsGrouped) {
+      String commaDelimitedPartitions = taskPartitions.stream()
+          .map(Object::toString)
+          .collect(joining(","));
 
       Map<String, String> taskProps = new HashMap<>(configProperties);
-      taskProps.put(partitionsKey, String.join(",", taskPartitions));
+      taskProps.put(partitionsKey, commaDelimitedPartitions);
       taskProps.put(dcpSeedNodesKey, seedNodes);
       taskConfigs.add(taskProps);
     }
