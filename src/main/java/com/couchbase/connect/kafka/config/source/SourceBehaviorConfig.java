@@ -61,6 +61,17 @@ public interface SourceBehaviorConfig {
   int batchSizeMax();
 
   /**
+   * If true, Couchbase Server will omit the document content when telling the
+   * connector about a change. The document key and metadata will still be present.
+   * <p>
+   * If you don't care about the content of changed documents, enabling
+   * this option is a great way to reduce the connector's network bandwidth
+   * and memory usage.
+   */
+  @Default("false")
+  boolean noValue();
+
+  /**
    * When true, the connector's offsets are saved under a key that
    * includes the connector name. This is redundant, since the Kafka Connect
    * framework already isolates the offsets of connectors with different names.

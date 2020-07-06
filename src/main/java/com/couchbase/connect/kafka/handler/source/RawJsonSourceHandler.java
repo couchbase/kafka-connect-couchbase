@@ -136,6 +136,11 @@ public class RawJsonSourceHandler implements SourceHandler {
         return true;
 
       case MUTATION:
+        if (params.noValue()) {
+          builder.value(null, null);
+          return true;
+        }
+
         final byte[] document = docEvent.content();
         if (!isValidJson(document)) {
           LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());

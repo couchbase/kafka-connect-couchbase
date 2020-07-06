@@ -96,7 +96,7 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
 
     try {
       byte[] value = objectMapper.writeValueAsBytes(metadata);
-      if (docEvent.isMutation()) {
+      if (docEvent.isMutation() && !params.noValue()) {
         value = withContentField(value, docEvent.content());
       }
       builder.value(null, value);

@@ -22,10 +22,12 @@ package com.couchbase.connect.kafka.handler.source;
 public class SourceHandlerParams {
   private final DocumentEvent documentEvent;
   private final String topic;
+  private final boolean noValue;
 
-  public SourceHandlerParams(DocumentEvent documentEvent, String topic) {
+  public SourceHandlerParams(DocumentEvent documentEvent, String topic, boolean noValue) {
     this.documentEvent = documentEvent;
     this.topic = topic;
+    this.noValue = noValue;
   }
 
   /**
@@ -40,5 +42,12 @@ public class SourceHandlerParams {
    */
   public String topic() {
     return topic;
+  }
+
+  /**
+   * Returns true if the connector was configured to omit document values.
+   */
+  public boolean noValue() {
+    return noValue;
   }
 }

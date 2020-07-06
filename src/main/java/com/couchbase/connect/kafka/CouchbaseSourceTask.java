@@ -65,6 +65,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private SourceHandler sourceHandler;
   private int batchSizeMax;
   private boolean connectorNameInOffsets;
+  private boolean noValue;
 
   @Override
   public String version() {
@@ -95,6 +96,7 @@ public class CouchbaseSourceTask extends SourceTask {
     bucket = config.bucket();
     connectorNameInOffsets = config.connectorNameInOffsets();
     batchSizeMax = config.batchSizeMax();
+    noValue = config.noValue();
 
     Short[] partitions = toBoxedShortArray(config.partitions());
     Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno = readSourceOffsets(partitions);
@@ -173,7 +175,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private SourceRecord convertToSourceRecord(DocumentEvent docEvent) {
     String defaultTopic = getDefaultTopic(docEvent);
 
-    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, defaultTopic));
+    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, defaultTopic, noValue));
     if (builder == null) {
       return null;
     }

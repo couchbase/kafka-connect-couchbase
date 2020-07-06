@@ -65,6 +65,7 @@ public class CouchbaseReader extends Thread {
         .collectionsAware(true)
         .scopeName(config.scope())
         .collectionNames(config.collections())
+        .noValue(config.noValue())
         .compression(config.compression())
         .mitigateRollbacks(config.persistencePollingInterval().toMillis(), TimeUnit.MILLISECONDS)
         .flowControl(config.flowControlBuffer().getByteCountAsSaturatedInt())
