@@ -29,7 +29,7 @@ Include the connector's Java API in your custom component Maven project by addin
 
 https://packages.couchbase.com/clients/kafka/4.0.0-dp.3/couchbaseinc-kafka-connect-couchbase-4.0.0-dp.3.zip[Download]
 
-In this second developer preview, both the Sink and Source connector now support Couchbase collections.
+In this developer preview, both the Sink and Source connector now support Couchbase collections.
 This preview also brings a handful of fixes and new features, including support for enhanced durability, and optionally omitting document contents.
 
 NOTE: The new features in this pre-release version should be considered "volatile" and may change before the 4.0.0 GA release.
