@@ -24,6 +24,57 @@ Include the connector's Java API in your custom component Maven project by addin
 </dependency>
 ----
 
+[[v4.0.0-dp.2]]
+== Version 4.0.0-dp.2 (21 July 2020)
+
+https://packages.couchbase.com/clients/kafka/4.0.0-dp.2/couchbaseinc-kafka-connect-couchbase-4.0.0-dp.2.zip[Download]
+
+In this second developer preview, both the Sink and Source connector now support Couchbase collections.
+This preview also brings a handful of fixes and new features, including support for enhanced durability, and optionally omitting document contents.
+
+NOTE: The new features in this pre-release version should be considered "volatile" and may change before the 4.0.0 GA release.
+
+== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-197[KAFKAC-197]:
+*Sink* - Added config property `couchbase.topic.to.collection` which maps Kafka topics to Couchbase collections.
+Added config property `couchbase.default.collection` which is used when a message's topic is not present in the map.
+
+* https://issues.couchbase.com/browse/KAFKAC-207[KAFKAC-207]:
+*Sink* - You can now specify an "enhanced durability" requirement with the new `couchbase.durability` config property.
+Enhanced durability requires Couchbase Server 6.5 or later.
+
+* https://issues.couchbase.com/browse/KAFKAC-206[KAFKAC-206]:
+*Source* - Config property `couchbase.connector.name.in.offsets` now defaults to false again.
+This property doesn't do anything useful, and should only be set to `true` if you previously had `compat.connector_name_in_offsets` set to `true`.
+
+* https://issues.couchbase.com/browse/KAFKAC-177[KAFKAC-177]:
+*Source* - The example config files now use `RawJsonSourceHandler` and publish Kafka messages whose contents are the same as the Couchbase documents.
+
+* https://issues.couchbase.com/browse/KAFKAC-209[KAFKAC-209]:
+*Source* - The connector now evenly distributes the workload among all tasks, instead of trying to minimize the total number of Couchbase connections.
+
+* https://issues.couchbase.com/browse/KAFKAC-212[KAFKAC-212]:
+*Source* - If you don't care about the content of the Couchbase document, you can set the new `couchbase.no.value` config property to `true`, and the connector will omit the document content from Kafka messages.
+
+* https://issues.couchbase.com/browse/KAFKAC-205[KAFKAC-205]:
+Removed the unused `couchbase.force.ipv4` config property.
+
+== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-169[KAFKAC-169]:
+*Sink* - If two Kafka messages with the same key arrive in rapid succession, it's no longer theoretically possible for them to be written to Couchbase in the wrong order.
+
+* https://issues.couchbase.com/browse/KAFKAC-214[KAFKAC-214]:
+*Sink* - The Couchbase Java SDK has been updated from 3.0.5 to 3.0.6.
+As a result, setting `couchbase.document.expiration` to longer than 30 days now works correctly instead of causing immediate expiration.
+(This was a regression in 4.0.0-dp.1.)
+
+* https://issues.couchbase.com/browse/KAFKAC-203[KAFKAC-203]:
+*Source* - The 3.x -> 4.0 migration script now properly converts the old `couchbase.flow_control_buffer` property to the new name: `couchbase.flow.control.buffer.size`.
+
+* https://issues.couchbase.com/browse/KAFKAC-204[KAFKAC-204]:
+*Source* - Fixed the invalid value for `couchbase.bootstrap.timeout` in the `quickstart-couchbase-source.json` example config file.
 
 [[v4.0.0-dp.1]]
 == Version 4.0.0-dp.1 (17 June 2020)
