@@ -23,7 +23,7 @@
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
     <packaging>jar</packaging>
-    <version>4.0.0-dp.2</version>
+    <version>4.0.0-dp.3</version>
     <name>Kafka Connector for Couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
@@ -70,7 +70,7 @@
     <properties>
         <java-compat.version>1.8</java-compat.version>
         <kafka.version>2.5.0</kafka.version>
-        <dcp-client.version>0.29.0-SNAPSHOT</dcp-client.version>
+        <dcp-client.version>0.29.0</dcp-client.version>
         <java-client.version>3.0.6</java-client.version>
         <runtime.javadoc.version>0.9.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

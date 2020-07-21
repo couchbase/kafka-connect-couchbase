@@ -1,6 +1,6 @@
 name: kafka-connector
 title: Kafka Connector
 version: '4.0'
-prerelease: -dp.2
+prerelease: -dp.3
 nav:
 - modules/ROOT/nav.adoc
