@@ -116,5 +116,5 @@ After every passing nightly build, a snapshot should be published to the Sonatyp
 * [This gist](https://gist.github.com/danieleggert/b029d44d4a54b328c0bac65d46ba4c65) has
 some tips for making git and gpg play nice together.
 * If deployment fails because the artifacts are missing PGP signatures, make sure your Maven
-command line includes `-Prelease` (or `-Pstage`) when running `mvn deploy`.
+command line includes `-Prelease` when running `mvn deploy`.
 Note that this is a *profile* so it's specified with `-P`.
