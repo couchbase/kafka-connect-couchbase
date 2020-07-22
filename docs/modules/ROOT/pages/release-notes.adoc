@@ -34,7 +34,7 @@ This preview also brings a handful of fixes and new features, including support 
 
 NOTE: The new features in this pre-release version should be considered "volatile" and may change before the 4.0.0 GA release.
 
-== Enhancements
+=== Enhancements
 
 * https://issues.couchbase.com/browse/KAFKAC-197[KAFKAC-197]:
 *Sink* - Added config property `couchbase.topic.to.collection` which maps Kafka topics to Couchbase collections.
@@ -60,7 +60,7 @@ This property doesn't do anything useful, and should only be set to `true` if yo
 * https://issues.couchbase.com/browse/KAFKAC-205[KAFKAC-205]:
 Removed the unused `couchbase.force.ipv4` config property.
 
-== Bug Fixes
+=== Bug Fixes
 
 * https://issues.couchbase.com/browse/KAFKAC-169[KAFKAC-169]:
 *Sink* - If two Kafka messages with the same key arrive in rapid succession, it's no longer theoretically possible for them to be written to Couchbase in the wrong order.
