@@ -118,6 +118,9 @@ NONE = no tagging; PARTIAL = user data is tagged; FULL = user, meta, and system 
 
 Qualified name (scope.collection) of the destination collection for messages from topics that don't have a "topic to collection" map entry.
 
+UNCOMMITTED.
+This feature may change in a patch release without advance notice.
+
 * Type: string
 * Default: `_default._default`
 * Valid Values: A collection name qualified by a scope name (scope.collection)
@@ -134,6 +137,9 @@ Map entries are delimited by commas.
 For example, if you want to write messages from topic "topic1" to collection "scope-a.invoices", and messages from topic "topic2" to collection "scope-a.widgets", you would write: "topic1=scope-a.invoices,topic2=scope-a.widgets".
 
 Defaults to an empty map, with all documents going to the collection specified by `couchbase.default.collection`.
+
+UNCOMMITTED.
+This feature may change in a patch release without advance notice.
 
 * Type: list
 * Default: `""`
@@ -281,3 +287,5 @@ If you're using Couchbase Server 6.5 or later, we recommend using the `couchbase
 * Default: `NONE`
 * Valid Values: One of [NONE, ONE, TWO, THREE]
 * Importance: medium
+
+

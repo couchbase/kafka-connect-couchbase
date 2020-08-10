@@ -125,6 +125,8 @@ ${scope} refers to the scope containing the document.
 
 ${collection} refers to the collection containing the document.
 
+UNCOMMITTED; the behavior of the "scope" and "collection" placeholders may change in a patch release without advance notice.
+
 * Type: string
 * Default: `${bucket}.${scope}.${collection}`
 * Importance: medium
@@ -203,6 +205,9 @@ If you specify neither "couchbase.scope" nor "couchbase.collections", the connec
 
 Requires Couchbase Server 7.0 or later.
 
+UNCOMMITTED.
+This feature may change in a patch release without advance notice.
+
 * Type: string
 * Default: `""`
 * Importance: medium
@@ -217,6 +222,9 @@ For example: "tenant-foo.invoices".
 If you specify neither "couchbase.scope" nor "couchbase.collections", the connector will stream from all collections of all scopes in the bucket.
 
 Requires Couchbase Server 7.0 or later.
+
+UNCOMMITTED.
+This feature may change in a patch release without advance notice.
 
 * Type: list
 * Default: `""`
@@ -256,3 +264,5 @@ Specify an integer followed by a size qualifier (example: 128m)
 * Default: `128m`
 * Valid Values: An integer followed by a size unit (b = bytes, k = kilobytes, m = megabytes, g = gigabytes). For example, to specify 64 megabytes: 64m
 * Importance: medium
+
+

@@ -65,7 +65,7 @@ public class AsciiDocGenerator {
 
       if (key.dependents != null && key.dependents.size() > 0) {
         int j = 0;
-        b.append("  * Dependents: ");
+        b.append("* Dependents: ");
         for (String dependent : key.dependents) {
           b.append("`");
           b.append("<<").append(dependent).append(">>");
@@ -91,14 +91,14 @@ public class AsciiDocGenerator {
       }
       b.append(docLine.replace(". ", ".\n")).append("\n\n");
     }
-    b.append("  * Type: ").append(getConfigValue(key, "Type")).append("\n");
+    b.append("* Type: ").append(getConfigValue(key, "Type")).append("\n");
     if (key.hasDefault()) {
-      b.append("  * Default: `").append(getConfigValue(key, "Default")).append("`\n");
+      b.append("* Default: `").append(getConfigValue(key, "Default")).append("`\n");
     }
     if (key.validator != null) {
-      b.append("  * Valid Values: ").append(getConfigValue(key, "Valid Values")).append("\n");
+      b.append("* Valid Values: ").append(getConfigValue(key, "Valid Values")).append("\n");
     }
-    b.append("  * Importance: ").append(getConfigValue(key, "Importance")).append("\n");
+    b.append("* Importance: ").append(getConfigValue(key, "Importance")).append("\n");
   }
 
   protected static String getConfigValue(ConfigDef.ConfigKey key, String headerName) {

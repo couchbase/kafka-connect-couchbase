@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.config.sink;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.sink.DocumentMode;
 import com.couchbase.connect.kafka.sink.N1qlMode;
 import com.couchbase.connect.kafka.sink.SubDocumentMode;
@@ -34,8 +35,11 @@ public interface SinkBehaviorConfig {
   /**
    * Qualified name (scope.collection) of the destination collection for messages
    * from topics that don't have a "topic to collection" map entry.
+   * <p>
+   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default("_default._default")
+  @Stability.Uncommitted
   String defaultCollection();
 
   @SuppressWarnings("unused")
@@ -56,8 +60,11 @@ public interface SinkBehaviorConfig {
    * <p>
    * Defaults to an empty map, with all documents going to the collection
    * specified by `couchbase.default.collection`.
+   * <p>
+   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default
+  @Stability.Uncommitted
   List<String> topicToCollection();
 
   @SuppressWarnings("unused")

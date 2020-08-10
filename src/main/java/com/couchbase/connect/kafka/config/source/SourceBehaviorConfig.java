@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.config.source;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
@@ -33,8 +34,12 @@ public interface SourceBehaviorConfig {
    * ${scope} refers to the scope containing the document.
    * <p>
    * ${collection} refers to the collection containing the document.
+   * <p>
+   * UNCOMMITTED; the behavior of the "scope" and "collection" placeholders
+   * may change in a patch release without advance notice.
    */
   @Default("${bucket}.${scope}.${collection}")
+  @Stability.Uncommitted
   String topic();
 
   /**
@@ -97,8 +102,11 @@ public interface SourceBehaviorConfig {
    * the connector will stream from all collections of all scopes in the bucket.
    * <p>
    * Requires Couchbase Server 7.0 or later.
+   * <p>
+   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default
+  @Stability.Uncommitted
   String scope();
 
   /**
@@ -111,7 +119,10 @@ public interface SourceBehaviorConfig {
    * the connector will stream from all collections of all scopes in the bucket.
    * <p>
    * Requires Couchbase Server 7.0 or later.
+   * <p>
+   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default
+  @Stability.Uncommitted
   List<String> collections();
 }
