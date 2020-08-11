@@ -148,4 +148,8 @@ public class DocumentEvent {
     }
     return UNKNOWN;
   }
+
+  public String toString() {
+    return change.toString();
+  }
 }

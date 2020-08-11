@@ -19,10 +19,20 @@ package com.couchbase.connect.kafka.filter;
 
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 
+import java.util.Map;
+
 /**
  * Determines which Couchbase document changes get published to Kafka.
  */
 public interface Filter {
+  /**
+   * Called when the filter is instantiated.
+   *
+   * @param configProperties the connector configuration.
+   */
+  default void init(Map<String, String> configProperties) {
+  }
+
   /**
    * Returns true if the event should be published to Kafka, otherwise false.
    */

@@ -46,6 +46,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 
@@ -89,8 +90,13 @@ public class CouchbaseSourceTask extends SourceTask {
     LogRedaction.setRedactionLevel(config.logRedaction());
     RedactionLevel.set(toDcp(config.logRedaction()));
 
+    Map<String, String> unmodifiableProperties = unmodifiableMap(properties);
+
     filter = Utils.newInstance(config.eventFilter());
+    filter.init(unmodifiableProperties);
+
     sourceHandler = Utils.newInstance(config.sourceHandler());
+    sourceHandler.init(unmodifiableProperties);
 
     topic = config.topic();
     bucket = config.bucket();

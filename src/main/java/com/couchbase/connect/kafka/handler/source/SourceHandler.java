@@ -16,10 +16,20 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
+import java.util.Map;
+
 /**
  * Primary extension point for customizing how the Source Connector publishes messages to Kafka.
  */
 public interface SourceHandler {
+  /**
+   * Called one time when the filter is instantiated.
+   *
+   * @param configProperties the connector configuration.
+   */
+  default void init(Map<String, String> configProperties) {
+  }
+
   /**
    * Translates a DocumentEvent into a SourceRecord for publication to a Kafka topic.
    * <p>
