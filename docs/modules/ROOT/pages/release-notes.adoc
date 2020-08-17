@@ -13,7 +13,7 @@ Refer to the xref:quickstart.adoc[Quickstart Guide] for detailed installation in
 
 === Java API Maven Coordinates
 You can optionally extend the connector's functionality by writing custom components.
-Include the connector's Java API in your custom component Maven project by adding this dependency to your POM:
+When developing a custom component, include the connector's Java API in your Maven project by adding this dependency to your POM:
 
 [source,xml]
 ----
@@ -23,6 +23,116 @@ Include the connector's Java API in your custom component Maven project by addin
     <version><!-- connector version --></version>
 </dependency>
 ----
+
+[[v4.0.0]]
+== Version 4.0.0 (18 August 2020)
+
+https://packages.couchbase.com/clients/kafka/4.0.0/couchbaseinc-kafka-connect-couchbase-4.0.0.zip[Download]
+
+Version 4.0 is a major update that changes how you configure and extend the connector.
+If you are upgrading from a previous version of the connector, be sure to read the xref:migration.adoc[Migration Guide] which will help with the upgrade process.
+
+The leap to 4.0 brings many new features, most notably:
+
+* Enhanced durability options (requires Couchbase 6.5)
+* Better workload distribution
+* More flexible API for extensions
+* Option to omit document contents
+* Support for Couchbase collections and scopes (planned for Couchbase 7.0)
+
+The notes below describe these features, and more.
+
+WARNING: The new configuration properties related to Couchbase scopes and collections are "uncommitted" and may change without notice in a patch release.
+
+=== Enhancements
+[abstract]
+Complete list of changes since version 3.4.8
+
+* https://issues.couchbase.com/browse/KAFKAC-192[KAFKAC-192]:
+Renamed the connector config properties to follow the standard Kafka naming convention ("lowercase.with.dots.between.words").
+See the xref:migration.adoc[Migration Guide] for a comprehensive list of changes, and a shell script that can help upgrade your 3.x config files to use the new property names.
+
+* https://issues.couchbase.com/browse/KAFKAC-157[KAFKAC-157]:
+The connector is now packaged as a Confluent Hub component.
+Confluent Platform users can easily install the connector using the `confluent-hub install` command.
+The xref:quickstart.adoc[Quickstart Guide] has been updated to show how Apache Kafka users can install the connector.
+
+* https://issues.couchbase.com/browse/KAFKAC-167[KAFKAC-167]:
+You can now specify custom ports in the list of Couchbase seed nodes.
+If you specify a port, it must be the port of the Key/Value service (which defaults to 11210 for unencrypted connections).
+
+* https://issues.couchbase.com/browse/KAFKAC-207[KAFKAC-207]:
+*Sink* - You can now specify an "enhanced durability" requirement with the new `couchbase.durability` config property.
+Enhanced durability requires Couchbase Server 6.5 or later.
+
+* https://issues.couchbase.com/browse/KAFKAC-197[KAFKAC-197]:
+*Sink* - Added config property `couchbase.topic.to.collection` which maps Kafka topics to Couchbase collections.
+Added config property `couchbase.default.collection` which is used when a message's topic is not present in the map.
+
+* https://issues.couchbase.com/browse/KAFKAC-209[KAFKAC-209]:
+*Source* - The connector now evenly distributes the workload among all tasks, instead of trying to minimize the total number of Couchbase connections.
+
+* https://issues.couchbase.com/browse/KAFKAC-177[KAFKAC-177]:
+*Source* - The example config files now use `RawJsonSourceHandler` and publish Kafka messages whose contents are the same as the Couchbase documents.
+
+* https://issues.couchbase.com/browse/KAFKAC-212[KAFKAC-212]:
+*Source* - If you don't care about the content of the Couchbase document, you can set the new `couchbase.no.value` config property to `true`, and the connector will omit the document content from Kafka messages.
+
+* https://issues.couchbase.com/browse/KAFKAC-194[KAFKAC-194]:
+*Source* - A custom `SourceHandler` can now set headers on the Kafka record.
+
+* https://issues.couchbase.com/browse/KAFKAC-223[KAFKAC-223]:
+*Source* - The connector is now more responsive to "pause" requests.
+
+* https://issues.couchbase.com/browse/KAFKAC-220[KAFKAC-220]:
+*Source* - Custom `Filter` and `SourceHandler` components can now access connector configuration properties.
+These interfaces now have an `init(Map<String, String>)` method.
+The connector config is passed to this method when the component is created.
+
+* https://issues.couchbase.com/browse/KAFKAC-222[KAFKAC-222]:
+The `custom-extensions` example project now includes a `CustomFilter` class that demonstrates how to read properties from the connector config.
+This example filter accepts or rejects documents based on a field of the document.
+The target field and the list of acceptable values are both configurable.
+
+* https://issues.couchbase.com/browse/KAFKAC-196[KAFKAC-196]:
+*Source* - Added `couchbase.scope` and `couchbase.collection` config properties that let you stream from a specific scope or set of collections.
+
+* https://issues.couchbase.com/browse/KAFKAC-195[KAFKAC-195]:
+*Source* - Modified the `couchbase.topic` config property to be a format string that supports `${bucket}`, `${scope}`, and `${collection}` placeholders.
+This makes it easy to publish to different Kafka topics depending on the Couchbase document's parent collection.
+The default value is `${bucket}.${scope}.${collection}`.
+
+* https://issues.couchbase.com/browse/KAFKAC-171[KAFKAC-171]:
+The `couchbase.password` config property (previously called `connection.password`) no longer defaults to an empty string.
+
+* https://issues.couchbase.com/browse/KAFKAC-175[KAFKAC-175]:
+APIs deprecated in version 3.x have been removed.
+
+* Upgraded Kafka Connect API from 1.0.2 to 2.5.0.
+
+* Upgraded Couchbase client from 2.7.13 to 3.0.6.
+
+* Upgraded DCP client from 0.26.0 to 0.29.0.
+
+=== Bug Fixes
+
+[abstract]
+Complete list of changes since version 3.4.8
+
+* https://issues.couchbase.com/browse/KAFKAC-169[KAFKAC-169]:
+*Sink* - If two Kafka messages with the same key arrive in rapid succession, it's no longer theoretically possible for them to be written to Couchbase in the wrong order.
+
+=== Changes since 4.0.0-dp.3
+
+* https://issues.couchbase.com/browse/KAFKAC-220[KAFKAC-220]:
+*Source* - Custom `Filter` and `SourceHandler` components can now access connector configuration properties.
+These interfaces now have an `init(Map<String, String>)` method.
+The connector config is passed to this method when the component is created.
+
+* https://issues.couchbase.com/browse/KAFKAC-222[KAFKAC-222]:
+The `custom-extensions` example project now includes a `CustomFilter` class that demonstrates how to read properties from the connector config.
+This example filter accepts or rejects documents based on a field of the document.
+The target field and the list of acceptable values are both configurable.
 
 [[v4.0.0-dp.3]]
 == Version 4.0.0-dp.3 (21 July 2020)
