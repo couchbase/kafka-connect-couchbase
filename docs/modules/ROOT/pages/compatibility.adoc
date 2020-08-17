@@ -1,7 +1,7 @@
 = Compatibility
 
 [abstract]
-Compatiblity information for kafka-connect-couchbase version 4.0.
+Compatibility information for kafka-connect-couchbase version 4.0.
 
 [%autowidth,cols="3*^"]
 |===
