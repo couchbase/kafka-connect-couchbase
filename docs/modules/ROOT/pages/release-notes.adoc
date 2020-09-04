@@ -242,6 +242,12 @@ The `couchbase.connector.name.in.offsets` config property (previously called `co
 * https://issues.couchbase.com/browse/KAFKAC-175[KAFKAC-175]:
 APIs deprecated in version 3.x have been removed.
 
+
+
+== Older Releases
+
+Although https://www.couchbase.com/support-policy/enterprise-software[no longer supported], documentation for older releases continues to be available in our https://docs-archive.couchbase.com/home/index.html[docs archive].
+
 *Parent topic:* xref:index.adoc[Kafka Connector]
 
 *Previous topic:* xref:streams-sample.adoc[Couchbase Sample with Kafka Streams]
