@@ -16,15 +16,16 @@
 package com.couchbase.connect.kafka;
 
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
+import com.couchbase.connect.kafka.util.CouchbaseHelper;
 import com.couchbase.connect.kafka.util.ListHelper;
+import com.couchbase.connect.kafka.util.SeedNodeHelper;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigDef;
@@ -34,9 +35,7 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,38 +67,15 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
       try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
         Bucket bucket = client.bucket();
-        bucketConfig = (CouchbaseBucketConfig) getConfig(bucket, config.bootstrapTimeout());
-        seedNodes = getSeedNodes(client.cluster().core(), config.bootstrapTimeout());
+        bucketConfig = (CouchbaseBucketConfig) CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout());
+        String connectionString = String.join(",", config.seedNodes());
+        NetworkResolution network = NetworkResolution.valueOf(config.network());
+        seedNodes = SeedNodeHelper.getKvNodes(bucket, connectionString, config.enableTls(), network, config.bootstrapTimeout());
       }
 
     } catch (ConfigException e) {
       throw new ConnectException("Cannot start CouchbaseSourceConnector due to configuration error", e);
     }
-  }
-
-  private static BucketConfig getConfig(Bucket bucket, Duration timeout) {
-    return bucket.core()
-        .configurationProvider()
-        .configs()
-        .flatMap(clusterConfig ->
-            Mono.justOrEmpty(clusterConfig.bucketConfig(bucket.name())))
-        .filter(CouchbaseSourceConnector::hasPartitionInfo)
-        .blockFirst(timeout);
-  }
-
-  /**
-   * Returns true unless the config is from a newly-created bucket
-   * whose partition count is not yet available.
-   */
-  private static boolean hasPartitionInfo(BucketConfig config) {
-    return ((CouchbaseBucketConfig) config).numberOfPartitions() > 0;
-  }
-
-  private static Set<SeedNode> getSeedNodes(Core core, Duration timeout) {
-    return core
-        .configurationProvider()
-        .seedNodes()
-        .blockFirst(timeout);
   }
 
   @Override
