@@ -265,4 +265,18 @@ Specify an integer followed by a size qualifier (example: 128m)
 * Valid Values: An integer followed by a size unit (b = bytes, k = kilobytes, m = megabytes, g = gigabytes). For example, to specify 64 megabytes: 64m
 * Importance: medium
 
+[[couchbase.xattrs]]
+=== `couchbase.xattrs`
+
+Should filters and source handlers have access to a document's extended attributes?
+
+Since: 4.0.1
+
+UNCOMMITTED.
+This feature may change in a patch release without advance notice.
+
+* Type: boolean
+* Default: `false`
+* Importance: medium
+
 

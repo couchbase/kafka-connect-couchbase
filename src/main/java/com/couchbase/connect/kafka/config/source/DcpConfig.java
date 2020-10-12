@@ -16,7 +16,9 @@
 
 package com.couchbase.connect.kafka.config.source;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.dcp.config.CompressionMode;
+import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.util.config.DataSize;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import com.couchbase.connect.kafka.util.config.annotation.Group;
@@ -47,4 +49,18 @@ public interface DcpConfig {
    */
   @Default("128m")
   DataSize flowControlBuffer();
+
+  /**
+   * Should filters and source handlers have access to a document's extended attributes?
+   * <p>
+   * Since: 4.0.1
+   * <p>
+   * UNCOMMITTED. This feature may change in a patch release without advance notice.
+   *
+   * @since 4.0.1
+   * @see DocumentEvent#xattrs()
+   */
+  @Stability.Uncommitted
+  @Default("false")
+  boolean xattrs();
 }

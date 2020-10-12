@@ -16,11 +16,14 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.dcp.highlevel.Deletion;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.client.dcp.highlevel.Mutation;
+import com.couchbase.connect.kafka.config.source.DcpConfig;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.couchbase.connect.kafka.handler.source.DocumentEvent.Type.DELETION;
@@ -60,6 +63,22 @@ public class DocumentEvent {
   private DocumentEvent(DocumentChange change, String bucket) {
     this.change = requireNonNull(change);
     this.bucket = requireNonNull(bucket);
+  }
+
+  /**
+   * Returns the document's extended attributes.
+   * <p>
+   * The map keys are the attribute names, and the values are the
+   * corresponding attribute values encoded as JSON.
+   * <p>
+   * <b>NOTE:</b>This method always returns an empty map unless the
+   * {@code couchbase.xattrs} config property is set to true.
+   *
+   * @see DcpConfig#xattrs()
+   */
+  @Stability.Uncommitted
+  public Map<String, String> xattrs() {
+    return change.getXattrs();
   }
 
   /**
