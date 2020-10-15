@@ -85,7 +85,7 @@ Remember, you can add `-DskipITs` to either command to skip integration tests if
 If publishing to Maven Central was successful, you're ready to publish the distribution archive to S3 with this shell command:
 
     VERS=x.y.z
-    ARTIFACT=couchbaseinc-kafka-connect-couchbase-${VERS}.zip
+    ARTIFACT=couchbase-kafka-connect-couchbase-${VERS}.zip
     aws s3 cp target/components/packages/${ARTIFACT} \
         s3://packages.couchbase.com/clients/kafka/${VERS}/${ARTIFACT} \
         --acl public-read
