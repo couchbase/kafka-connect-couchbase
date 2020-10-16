@@ -90,6 +90,11 @@ If publishing to Maven Central was successful, you're ready to publish the distr
         s3://packages.couchbase.com/clients/kafka/${VERS}/${ARTIFACT} \
         --acl public-read
 
+    gpg --detach-sign --armor target/components/packages/${ARTIFACT}
+    aws s3 cp target/components/packages/${ARTIFACT}.asc \
+            s3://packages.couchbase.com/clients/kafka/${VERS}/${ARTIFACT}.asc \
+            --acl public-read
+
 Whew, you did it! Or the build failed and you're looking at a cryptic error message, in which
 case you might want to check out the Troubleshooting section below.
 
