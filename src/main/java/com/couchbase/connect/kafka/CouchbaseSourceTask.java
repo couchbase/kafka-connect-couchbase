@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Collections.unmodifiableMap;
@@ -104,8 +105,8 @@ public class CouchbaseSourceTask extends SourceTask {
     batchSizeMax = config.batchSizeMax();
     noValue = config.noValue();
 
-    Short[] partitions = toBoxedShortArray(config.partitions());
-    Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno = readSourceOffsets(partitions);
+    List<Integer> partitions = parseInts(config.partitions());
+    Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno = readSourceOffsets(partitions);
 
     running = true;
     queue = new LinkedBlockingQueue<>();
@@ -213,8 +214,8 @@ public class CouchbaseSourceTask extends SourceTask {
    *
    * @return a map of partitions to sequence numbers.
    */
-  private Map<Short, SeqnoAndVbucketUuid> readSourceOffsets(Short[] partitions) {
-    Map<Short, SeqnoAndVbucketUuid> partitionToSequenceNumber = new HashMap<>();
+  private Map<Integer, SeqnoAndVbucketUuid> readSourceOffsets(Collection<Integer> partitions) {
+    Map<Integer, SeqnoAndVbucketUuid> partitionToSequenceNumber = new HashMap<>();
 
     Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
         sourcePartitions(partitions));
@@ -227,7 +228,7 @@ public class CouchbaseSourceTask extends SourceTask {
       if (offset == null) {
         continue;
       }
-      short partition = Short.parseShort((String) partitionIdentifier.get("partition"));
+      int partition = Integer.parseInt((String) partitionIdentifier.get("partition"));
       long seqno = (Long) offset.get("bySeqno");
       Long vbuuid = (Long) offset.get("vbuuid"); // might be absent if upgrading from older version
       partitionToSequenceNumber.put(partition, new SeqnoAndVbucketUuid(seqno, vbuuid));
@@ -238,9 +239,9 @@ public class CouchbaseSourceTask extends SourceTask {
     return partitionToSequenceNumber;
   }
 
-  private List<Map<String, Object>> sourcePartitions(Short[] partitions) {
+  private List<Map<String, Object>> sourcePartitions(Collection<Integer> partitions) {
     List<Map<String, Object>> sourcePartitions = new ArrayList<>();
-    for (Short partition : partitions) {
+    for (Integer partition : partitions) {
       sourcePartitions.add(sourcePartition(partition));
     }
     return sourcePartitions;
@@ -249,7 +250,7 @@ public class CouchbaseSourceTask extends SourceTask {
   /**
    * Converts a Couchbase DCP partition (also known as a vBucket) into the Map format required by Kafka Connect.
    */
-  private Map<String, Object> sourcePartition(short partition) {
+  private Map<String, Object> sourcePartition(int partition) {
     final Map<String, Object> sourcePartition = new HashMap<>(3);
     sourcePartition.put("bucket", bucket);
     sourcePartition.put("partition", String.valueOf(partition)); // Stringify for robust round-tripping across Kafka [de]serialization
@@ -269,9 +270,9 @@ public class CouchbaseSourceTask extends SourceTask {
     return offset;
   }
 
-  private static Short[] toBoxedShortArray(Collection<String> stringifiedShorts) {
-    return stringifiedShorts.stream()
-        .map(Short::valueOf)
-        .toArray(Short[]::new);
+  private static List<Integer> parseInts(Collection<String> stringifiedInts) {
+    return stringifiedInts.stream()
+        .map(Integer::valueOf)
+        .collect(Collectors.toList());
   }
 }

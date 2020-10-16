@@ -33,6 +33,7 @@ import com.couchbase.connect.kafka.util.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -43,14 +44,14 @@ public class CouchbaseReader extends Thread {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseReader.class);
 
   private final Client client;
-  private final Short[] partitions;
-  private final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno;
+  private final List<Integer> partitions;
+  private final Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno;
   private final StreamFrom streamFrom;
   private final BlockingQueue<Throwable> errorQueue;
 
   public CouchbaseReader(CouchbaseSourceTaskConfig config, final String connectorName,
                          final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
-                         final Short[] partitions, final Map<Short, SeqnoAndVbucketUuid> partitionToSavedSeqno) {
+                         final List<Integer> partitions, final Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno) {
     this.partitions = partitions;
     this.partitionToSavedSeqno = partitionToSavedSeqno;
     this.streamFrom = config.streamFrom();
@@ -134,10 +135,10 @@ public class CouchbaseReader extends Thread {
 
   private void restoreSavedOffsets() {
     LOGGER.info("Resuming from saved offsets for {} of {} partitions",
-        partitionToSavedSeqno.size(), partitions.length);
+        partitionToSavedSeqno.size(), partitions.size());
 
-    for (Map.Entry<Short, SeqnoAndVbucketUuid> entry : partitionToSavedSeqno.entrySet()) {
-      final short partition = entry.getKey();
+    for (Map.Entry<Integer, SeqnoAndVbucketUuid> entry : partitionToSavedSeqno.entrySet()) {
+      final int partition = entry.getKey();
       final SeqnoAndVbucketUuid offset = entry.getValue();
       final long savedSeqno = offset.seqno();
 
@@ -168,7 +169,7 @@ public class CouchbaseReader extends Thread {
 
   private void initFailoverLogs() {
     client.failoverLogs(partitions).toBlocking().forEach(event -> {
-      short partition = DcpFailoverLogResponse.vbucket(event);
+      int partition = DcpFailoverLogResponse.vbucket(event);
       PartitionState ps = client.sessionState().get(partition);
       ps.setFailoverLog(DcpFailoverLogResponse.entries(event));
       client.sessionState().set(partition, ps);
