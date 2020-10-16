@@ -24,6 +24,36 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.0.1]]
+== Version 4.0.1 (20 October 2020)
+
+https://packages.couchbase.com/clients/kafka/4.0.1/couchbase-kafka-connect-couchbase-4.0.1.zip[Download]
+
+This release improves compatibility with Couchbase Cloud, and exposes extended attributes (XATTRS) to custom components.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-227[KAFKAC-227]:
+*Source* - Added config property `couchbase.xattrs` (boolean, defaults to false).
+If set to true, a custom `Filter` or `SourceHandler` may inspect a document's extended attributes by calling `DocumentEvent.xattrs()`.
+
+* https://issues.couchbase.com/browse/KAFKAC-226[KAFKAC-226]:
+Renamed the ZIP archive from `couchbaseinc-kafka-connect-couchbase` to `couchbase-kafka-connect-couchbase` (removed the "inc" from "couchbaseinc").
+This made it easier to publish the connector on https://www.confluent.io/hub/couchbase/kafka-connect-couchbase[Confluent Hub].
+
+* https://issues.couchbase.com/browse/KAFKAC-228[KAFKAC-228]:
+Upgraded the Couchbase Java SDK from 3.0.6 to 3.0.9.
+Bootstrap performance is improved when specifying custom ports, and the connector no longer logs spurious warnings about being unable to fetch collections manifests.
+
+* https://issues.couchbase.com/browse/KAFKAC-229[KAFKAC-229]:
+Upgraded the DCP client from 0.29.0 to 0.30.0, adding support for XATTRs.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-225[KAFKAC-225]:
+Fixed a regression in version 4.0.0 that broke alternate address resolution.
+The connector now handles DNS SRV and alternate addresses correctly, and can connect to Couchbase Cloud or other network environments that use alternate addresses.
+
 [[v4.0.0]]
 == Version 4.0.0 (18 August 2020)
 
