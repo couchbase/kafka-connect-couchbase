@@ -2,6 +2,7 @@
 * xref:quickstart.adoc[Quickstart]
 * xref:source-configuration-options.adoc[Source Configuration Options]
 * xref:sink-configuration-options.adoc[Sink Configuration Options]
+* xref:monitoring.adoc[Monitoring]
 * xref:streams-sample.adoc[Couchbase Sample with Kafka Streams]
 * xref:migration.adoc[Migration Guide]
 * xref:compatibility.adoc[Compatibility]
