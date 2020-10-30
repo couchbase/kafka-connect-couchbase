@@ -109,12 +109,12 @@ public class CouchbaseReader extends Thread {
   @Override
   public void run() {
     try {
-      client.connect().await();
+      client.connect().block();
 
       // Apply the fallback state to all partitions. As of DCP client version 0.12.0,
       // this is the only way to set the sequence number to "now".
       StreamFrom fallbackStreamFrom = streamFrom.withoutSavedOffset();
-      client.initializeState(fallbackStreamFrom.asDcpStreamFrom(), StreamTo.INFINITY).await();
+      client.initializeState(fallbackStreamFrom.asDcpStreamFrom(), StreamTo.INFINITY).block();
 
       // Overlay any saved offsets (might have saved offsets for only some partitions).
       if (streamFrom.isSavedOffset()) {
@@ -126,7 +126,7 @@ public class CouchbaseReader extends Thread {
         restoreSavedOffsets();
       }
 
-      client.startStreaming(partitions).await();
+      client.startStreaming(partitions).block();
 
     } catch (Throwable t) {
       errorQueue.offer(t);
@@ -168,15 +168,15 @@ public class CouchbaseReader extends Thread {
   }
 
   private void initFailoverLogs() {
-    client.failoverLogs(partitions).toBlocking().forEach(event -> {
+    client.failoverLogs(partitions).doOnNext(event -> {
       int partition = DcpFailoverLogResponse.vbucket(event);
       PartitionState ps = client.sessionState().get(partition);
       ps.setFailoverLog(DcpFailoverLogResponse.entries(event));
       client.sessionState().set(partition, ps);
-    });
+    }).blockLast();
   }
 
   public void shutdown() {
-    client.disconnect().await();
+    client.disconnect().block();
   }
 }
