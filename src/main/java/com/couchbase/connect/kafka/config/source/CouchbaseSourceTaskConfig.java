@@ -31,4 +31,12 @@ public interface CouchbaseSourceTaskConfig extends CouchbaseSourceConfig {
    * and other complexities have already been handled.
    */
   List<String> dcpSeedNodes();
+
+  /**
+   * The task ID... probably. Kafka 2.3.0 and later expose the task ID
+   * in the logging context, but for earlier versions we have to assume
+   * the task IDs are assigned in the same order as the configs returned
+   * by Connector.taskConfigs(int).
+   */
+  String maybeTaskId();
 }

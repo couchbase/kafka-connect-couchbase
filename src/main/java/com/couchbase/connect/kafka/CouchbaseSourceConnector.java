@@ -106,8 +106,10 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
     String partitionsKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::partitions);
     String dcpSeedNodesKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::dcpSeedNodes);
+    String taskIdKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::maybeTaskId);
 
     List<Map<String, String>> taskConfigs = new ArrayList<>();
+    int taskId = 0;
     for (List<Integer> taskPartitions : partitionsGrouped) {
       String commaDelimitedPartitions = taskPartitions.stream()
           .map(Object::toString)
@@ -116,6 +118,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
       Map<String, String> taskProps = new HashMap<>(configProperties);
       taskProps.put(partitionsKey, commaDelimitedPartitions);
       taskProps.put(dcpSeedNodesKey, seedNodes);
+      taskProps.put(taskIdKey, "maybe-" + taskId++);
       taskConfigs.add(taskProps);
     }
     return taskConfigs;

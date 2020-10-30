@@ -29,15 +29,20 @@ import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
+import com.couchbase.connect.kafka.util.ConnectHelper;
 import com.couchbase.connect.kafka.util.Version;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
 import static java.util.Collections.singletonList;
 
 public class CouchbaseReader extends Thread {
@@ -75,6 +80,7 @@ public class CouchbaseReader extends Thread {
         .sslEnabled(config.enableTls())
         .sslKeystoreFile(config.trustStorePath())
         .sslKeystorePassword(config.trustStorePassword().value())
+        .meterRegistry(newMeterRegistry(connectorName, config))
         .build();
 
     client.nonBlockingListener(new DatabaseChangeListener() {
@@ -104,6 +110,14 @@ public class CouchbaseReader extends Thread {
         errorQueue.offer(streamFailure.getCause());
       }
     });
+  }
+
+  private static MeterRegistry newMeterRegistry(String connectorName, CouchbaseSourceTaskConfig config) {
+    String taskId = ConnectHelper.getTaskIdFromLoggingContext().orElse(config.maybeTaskId());
+    LinkedHashMap<String, String> commonKeyProperties = new LinkedHashMap<>();
+    commonKeyProperties.put("connector", ObjectName.quote(connectorName));
+    commonKeyProperties.put("task", taskId);
+    return newJmxMeterRegistry("kafka.connect.couchbase", commonKeyProperties);
   }
 
   @Override
