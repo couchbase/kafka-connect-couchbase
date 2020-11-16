@@ -24,6 +24,27 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.0.2]]
+== Version 4.0.2 (17 November 2020)
+
+https://packages.couchbase.com/clients/kafka/4.0.2/couchbase-kafka-connect-couchbase-4.0.2.zip[Download]
+
+In this release, the connector publishes metrics via JMX to facilitate monitoring.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-152[KAFKAC-152]:
+*Documentation* - Added a "Monitoring" page which refers users to the Kafka Connect framework documentation for monitoring connectors via JMX.
+
+* https://issues.couchbase.com/browse/KAFKAC-232[KAFKAC-232]:
+*Source* - Metrics specific to the Couchbase source connector are now exposed via JMX under the `kafka.connect.couchbase` domain.
+
+* https://issues.couchbase.com/browse/KAFKAC-110[KAFKAC-110]:
+*Source* - Added a gauge that reports the Couchbase connection status.
+
+* https://issues.couchbase.com/browse/KAFKAC-231[KAFKAC-231]:
+*Source* - Upgrade DCP client from 0.30.0 to 0.31.0
+
 [[v4.0.1]]
 == Version 4.0.1 (20 October 2020)
 
