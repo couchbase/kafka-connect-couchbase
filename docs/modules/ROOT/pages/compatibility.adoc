@@ -9,6 +9,10 @@ h| Couchbase Server h| Apache Kafka   h| Confluent Platform
 | 5.0.0 or later     | 1.1.0 or later  | 4.1.0 or later
 |===
 
+== Couchbase Cloud
+
+Couchbase Cloud Server instances is supported by connector versions 4.0.1 and later.
+
 == Known Incompatibilities
 
 Not compatible with the Istio service mesh.
