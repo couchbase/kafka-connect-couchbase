@@ -60,10 +60,10 @@ Your keystore contains 1 entry
 
 Now that your keystore contains the cloud certificate, the last step is to provide Kafka `Security` configurations.
 
- Enable tls by setting *couchbase.enable.tls* to `true`.
+Enable tls by setting *couchbase.enable.tls* to `true`.
 
- Set keystore path *couchbase.trust.store.path* as absolute filesystem path to `truststore.jks`.
+Set keystore path *couchbase.trust.store.path* as absolute filesystem path to `truststore.jks`.
 
- Configure *couchbase.trust.store.password*  by providing the keystore password.
+Configure *couchbase.trust.store.password*  by providing the keystore password.
 
 After everything is configured, you can use all the APIs like you would against a regular Couchbase Server installation.
