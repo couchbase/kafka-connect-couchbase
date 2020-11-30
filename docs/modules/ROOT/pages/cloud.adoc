@@ -1,0 +1,63 @@
+= Couchbase Cloud Support
+:page-topic-type: concept
+
+[abstract]
+Connecting to Couchbase Cloud is very similar to connecting to any Couchbase cluster over an encrypted connection.
+This section explains how.
+
+[IMPORTANT]
+====
+You must use a Kafka connector version of *4.0.1 or higher*.
+Earlier versions will not work.
+====
+
+== Certificate Download
+
+Once you have created a Cluster in Couchbase Cloud, navigate to the `Connect` tab and download the security certificate.
+
+image::cloud-ui.png[Cloud UI]
+
+Rename the downloaded file to `couchbase.pem`.
+(The name doesn't really matter, but the rest of this guide refers to the Couchbase certificate file by that name.)
+
+[#trust-store]
+== Add Certificate to a Trust Store
+
+The connector's trust store is a Java keystore file containing the certificates the connector should trust.
+We'll use the Java `keytool` command to create a keystore and populate it with the root certificates for Couchbase Cloud.
+
+To add the Couchbase Cloud root certificate:
+
+[source]
+----
+$ keytool -importcert -keystore truststore.jks -file couchbase.pem
+----
+If the keystore file `truststore.jks` does not yet exist, you will be prompted to choose a password for the new keystore.
+Otherwise, you will be prompted for the password of the existing keystore.
+
+You will then be presented with a summary of the information in the certificate, and asked if you want to trust the certificate.
+If the information is correct, enter `y` to confirm.
+
+You can verify that it has been stored with `keytool -list`:
+
+[source]
+----
+$ keytool -list
+Enter keystore password:
+Keystore type: PKCS12
+Keystore provider: SUN
+
+Your keystore contains 1 entry
+----
+
+== Connector Configuration
+
+Now that you have a trust store containing the cloud certificate, the last step is to configure the connector to use it for secure connections.
+
+Enable TLS by setting `*couchbase.enable.tls*` to `true`.
+
+Set the `*couchbase.trust.store.path*` property to the absolute filesystem path to `truststore.jks`.
+
+Configure `*couchbase.trust.store.password*` by providing the keystore password.
+
+Now you're ready to connect to your Couchbase Cloud cluster.
