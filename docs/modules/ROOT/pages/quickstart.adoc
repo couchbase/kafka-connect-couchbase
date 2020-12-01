@@ -52,7 +52,7 @@ If you're using Confluent Platform Kafka, you can use the `confluent` command to
 
 [source,bash]
 ----
-confluent local start
+confluent local services schema-registry start
 ----
 
 If you're not using Confluent, the commands are slightly different, but the idea is the same.

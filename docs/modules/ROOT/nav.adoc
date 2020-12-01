@@ -7,4 +7,5 @@
 * xref:migration.adoc[Migration Guide]
 * xref:compatibility.adoc[Compatibility]
 * xref:cloud.adoc[Couchbase Cloud Support]
+* xref:troubleshooting.adoc[Troubleshooting]
 * xref:release-notes.adoc[Release Notes]
