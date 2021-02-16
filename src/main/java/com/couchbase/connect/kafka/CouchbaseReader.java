@@ -16,8 +16,12 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.dcp.Authenticator;
+import com.couchbase.client.dcp.CertificateAuthenticator;
 import com.couchbase.client.dcp.Client;
+import com.couchbase.client.dcp.PasswordAuthenticator;
 import com.couchbase.client.dcp.SecurityConfig;
+import com.couchbase.client.dcp.StaticCredentialsProvider;
 import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.core.env.NetworkResolution;
 import com.couchbase.client.dcp.highlevel.DatabaseChangeListener;
@@ -44,6 +48,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
 import static java.util.Collections.singletonList;
 
@@ -63,13 +68,18 @@ public class CouchbaseReader extends Thread {
     this.partitionToSavedSeqno = partitionToSavedSeqno;
     this.streamFrom = config.streamFrom();
     this.errorQueue = errorQueue;
+
+    Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
+        ? new PasswordAuthenticator(new StaticCredentialsProvider(config.username(), config.password().value()))
+        : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value());
+
     client = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .connectTimeout(config.bootstrapTimeout().toMillis())
         .seedNodes(config.dcpSeedNodes())
         .networkResolution(NetworkResolution.valueOf(config.network()))
         .bucket(config.bucket())
-        .credentials(config.username(), config.password().value())
+        .authenticator(authenticator)
         .collectionsAware(true)
         .scopeName(config.scope())
         .collectionNames(config.collections())
@@ -81,7 +91,7 @@ public class CouchbaseReader extends Thread {
         .bufferAckWatermark(60)
         .securityConfig(SecurityConfig.builder()
             .enableTls(config.enableTls())
-//            .enableNativeTls(config.enableNativeTls())
+            .enableHostnameVerification(config.enableHostnameVerification())
             .trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value())
             .build())
         .meterRegistry(newMeterRegistry(connectorName, config))

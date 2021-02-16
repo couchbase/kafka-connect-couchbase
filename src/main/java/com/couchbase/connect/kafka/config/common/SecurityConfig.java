@@ -30,22 +30,67 @@ public interface SecurityConfig {
    * Use secure connection to Couchbase Server.
    * If true, 'couchbase.trust.store.path' and 'couchbase.trust.store.password' must also be provided.
    */
-  @Dependents({"couchbase.trust.store.path", "couchbase.trust.store.password"})
+  @Dependents({
+      "couchbase.trust.store.path",
+      "couchbase.trust.store.password",
+      "couchbase.enable.hostname.verification",
+      "couchbase.client.certificate.path",
+      "couchbase.client.certificate.password",
+  })
   @Default("false")
   @DisplayName("Enable TLS")
   boolean enableTls();
 
   /**
-   * Absolute filesystem path to the Java KeyStore with the CA certificate used by Couchbase Server.
+   * Set this to `false` to disable TLS hostname verification for Couchbase
+   * connections. Less secure, but might be required if for some reason you
+   * can't issue a certificate whose Subject Alternative Names match the
+   * hostname used to connect to the server. Only disable if you understand
+   * the impact and can accept the risks.
+   * <p>
+   * Since 4.0.3.
+   */
+  @Default("true")
+  @DisplayName("Enable TLS Hostname Verification")
+  boolean enableHostnameVerification();
+
+  /**
+   * Absolute filesystem path to the Java keystore holding the CA certificate
+   * used by Couchbase Server.
    */
   @Width(LONG)
   @Default
   String trustStorePath();
 
   /**
-   * Password to verify the integrity of the trust store.
+   * Password for accessing the trust store.
    */
   @EnvironmentVariable("KAFKA_COUCHBASE_TRUST_STORE_PASSWORD")
   @Default
   Password trustStorePassword();
+
+  /**
+   * Absolute filesystem path to a Java keystore or PKCS12 bundle holding
+   * the private key and certificate chain to use for client certificate
+   * authentication (mutual TLS).
+   * <p>
+   * If you supply a value for this config property, the `couchbase.username`
+   * and `couchbase.password` properties will be ignored.
+   * <p>
+   * Since 4.0.3.
+   * UNCOMMITTED.
+   */
+  @Width(LONG)
+  @Default
+  String clientCertificatePath();
+
+  /**
+   * Password for accessing the client certificate.
+   * <p>
+   * Since 4.0.3.
+   * UNCOMMITTED.
+   */
+  @EnvironmentVariable("KAFKA_COUCHBASE_CLIENT_CERTIFICATE_PASSWORD")
+  @Default
+  Password clientCertificatePassword();
 }

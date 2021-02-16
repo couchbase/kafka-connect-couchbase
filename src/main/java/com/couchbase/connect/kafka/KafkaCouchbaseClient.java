@@ -16,7 +16,10 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CertificateAuthenticator;
 import com.couchbase.client.core.env.NetworkResolution;
+import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -27,6 +30,7 @@ import com.couchbase.connect.kafka.util.ScopeAndCollection;
 
 import java.io.Closeable;
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,7 +50,8 @@ public class KafkaCouchbaseClient implements Closeable {
     NetworkResolution networkResolution = NetworkResolution.valueOf(config.network());
 
     SecurityConfig.Builder securityConfig = SecurityConfig.builder()
-        .enableTls(config.enableTls());
+        .enableTls(config.enableTls())
+        .enableHostnameVerification(config.enableHostnameVerification());
     if (!isNullOrEmpty(config.trustStorePath())) {
       securityConfig.trustStore(new File(config.trustStorePath()).toPath(), config.trustStorePassword().value(), Optional.empty());
     }
@@ -57,8 +62,12 @@ public class KafkaCouchbaseClient implements Closeable {
         .timeoutConfig(connectTimeout(config.bootstrapTimeout()))
         .build();
 
+    Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
+        ? PasswordAuthenticator.create(config.username(), config.password().value())
+        : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value(), Optional.empty());
+
     cluster = Cluster.connect(connectionString,
-        clusterOptions(config.username(), config.password().value())
+        clusterOptions(authenticator)
             .environment(env));
 
     bucket = cluster.bucket(config.bucket());

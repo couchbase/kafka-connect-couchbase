@@ -76,12 +76,25 @@ If true, 'couchbase.trust.store.path' and 'couchbase.trust.store.password' must 
 * Type: boolean
 * Default: `false`
 * Importance: medium
-* Dependents: `<<couchbase.trust.store.path>>`, `<<couchbase.trust.store.password>>`
+* Dependents: `<<couchbase.trust.store.path>>`, `<<couchbase.trust.store.password>>`, `<<couchbase.enable.hostname.verification>>`, `<<couchbase.client.certificate.path>>`, `<<couchbase.client.certificate.password>>`
+
+[[couchbase.enable.hostname.verification]]
+=== `couchbase.enable.hostname.verification`
+
+Set this to `false` to disable TLS hostname verification for Couchbase connections.
+Less secure, but might be required if for some reason you can't issue a certificate whose Subject Alternative Names match the hostname used to connect to the server.
+Only disable if you understand the impact and can accept the risks.
+
+Since 4.0.3.
+
+* Type: boolean
+* Default: `true`
+* Importance: medium
 
 [[couchbase.trust.store.path]]
 === `couchbase.trust.store.path`
 
-Absolute filesystem path to the Java KeyStore with the CA certificate used by Couchbase Server.
+Absolute filesystem path to the Java keystore holding the CA certificate used by Couchbase Server.
 
 * Type: string
 * Default: `""`
@@ -90,9 +103,37 @@ Absolute filesystem path to the Java KeyStore with the CA certificate used by Co
 [[couchbase.trust.store.password]]
 === `couchbase.trust.store.password`
 
-Password to verify the integrity of the trust store.
+Password for accessing the trust store.
 
 May be overridden with the KAFKA_COUCHBASE_TRUST_STORE_PASSWORD environment variable.
+
+* Type: password
+* Default: `[hidden]`
+* Importance: medium
+
+[[couchbase.client.certificate.path]]
+=== `couchbase.client.certificate.path`
+
+Absolute filesystem path to a Java keystore or PKCS12 bundle holding the private key and certificate chain to use for client certificate authentication (mutual TLS).
+
+If you supply a value for this config property, the `couchbase.username` and `couchbase.password` properties will be ignored.
+
+Since 4.0.3.
+UNCOMMITTED.
+
+* Type: string
+* Default: `""`
+* Importance: medium
+
+[[couchbase.client.certificate.password]]
+=== `couchbase.client.certificate.password`
+
+Password for accessing the client certificate.
+
+Since 4.0.3.
+UNCOMMITTED.
+
+May be overridden with the KAFKA_COUCHBASE_CLIENT_CERTIFICATE_PASSWORD environment variable.
 
 * Type: password
 * Default: `[hidden]`
