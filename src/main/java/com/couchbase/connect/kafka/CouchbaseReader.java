@@ -17,6 +17,7 @@
 package com.couchbase.connect.kafka;
 
 import com.couchbase.client.dcp.Client;
+import com.couchbase.client.dcp.SecurityConfig;
 import com.couchbase.client.dcp.StreamTo;
 import com.couchbase.client.dcp.core.env.NetworkResolution;
 import com.couchbase.client.dcp.highlevel.DatabaseChangeListener;
@@ -36,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,9 +79,11 @@ public class CouchbaseReader extends Thread {
         .mitigateRollbacks(config.persistencePollingInterval().toMillis(), TimeUnit.MILLISECONDS)
         .flowControl(config.flowControlBuffer().getByteCountAsSaturatedInt())
         .bufferAckWatermark(60)
-        .sslEnabled(config.enableTls())
-        .sslKeystoreFile(config.trustStorePath())
-        .sslKeystorePassword(config.trustStorePassword().value())
+        .securityConfig(SecurityConfig.builder()
+            .enableTls(config.enableTls())
+//            .enableNativeTls(config.enableNativeTls())
+            .trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value())
+            .build())
         .meterRegistry(newMeterRegistry(connectorName, config))
         .build();
 
