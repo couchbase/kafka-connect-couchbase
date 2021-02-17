@@ -24,38 +24,6 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
-[[v4.0.3]]
-== Version 4.0.3 (16 February 2021)
-
-https://packages.couchbase.com/clients/kafka/4.0.3/couchbase-kafka-connect-couchbase-4.0.3.zip[Download]
-
-This release adds uncommitted support for client certificate authentication (mTLS), adds hostname verification for secure DCP connections, and improves the stability of the connector.
-
-=== Enhancements
-
-* https://issues.couchbase.com/browse/KAFKAC-241[KAFKAC-241]:
-When secure connections are enabled, it is now possible to authenticate with Couchbase using an X.509 certificate instead of a username & password.
-See https://docs.couchbase.com/kafka-connector/4.0/source-configuration-options.html#couchbase.client.certificate.path[couchbase.client.certificate.path]
-and https://docs.couchbase.com/kafka-connector/4.0/source-configuration-options.html#couchbase.client.certificate.password[couchbase.client.certificate.password]
-for details. (This feature is added as "uncommitted", meaning it may change without notice.)
-
-* https://issues.couchbase.com/browse/KAFKAC-238[KAFKAC-238]:
-*Sink* Upgraded Couchbase client from 3.0.9 to 3.1.2.
-
-* https://issues.couchbase.com/browse/KAFKAC-239[KAFKAC-239]:
-*Source* Upgraded DCP client to from 0.31.0 to 0.32.0.
-Previously, TLS hostname verification was done only for the Couchbase Java client connection; now the DCP client connection is verified as well.
-If for some reason you need to disable TLS hostname verification, this is now possible by setting the
-https://docs.couchbase.com/kafka-connector/4.0/source-configuration-options.html#couchbase.enable.hostname.verification[couchbase.enable.hostname.verification] config property to `false`.
-
-=== Bug Fixes
-
-** https://issues.couchbase.com/browse/JDCP-183[JDCP-183]:
-If an invalid stream offset is detected, the connector will now fail fast instead of potentially corrupting the saved checkpoint.
-
-** https://issues.couchbase.com/browse/JDCP-184[JDCP-184]:
-Resolved an issue that could cause a flow control deadlock when streaming from a subset of a bucket's collections or scopes.
-
 [[v4.0.2]]
 == Version 4.0.2 (17 November 2020)
 
