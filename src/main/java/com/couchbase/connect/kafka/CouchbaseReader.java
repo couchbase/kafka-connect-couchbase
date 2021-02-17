@@ -73,6 +73,13 @@ public class CouchbaseReader extends Thread {
         ? new PasswordAuthenticator(new StaticCredentialsProvider(config.username(), config.password().value()))
         : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value());
 
+    SecurityConfig.Builder securityConfig = SecurityConfig.builder()
+        .enableTls(config.enableTls())
+        .enableHostnameVerification(config.enableHostnameVerification());
+    if (!isNullOrEmpty(config.trustStorePath())) {
+      securityConfig.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value());
+    }
+
     client = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .connectTimeout(config.bootstrapTimeout().toMillis())
@@ -89,11 +96,7 @@ public class CouchbaseReader extends Thread {
         .mitigateRollbacks(config.persistencePollingInterval().toMillis(), TimeUnit.MILLISECONDS)
         .flowControl(config.flowControlBuffer().getByteCountAsSaturatedInt())
         .bufferAckWatermark(60)
-        .securityConfig(SecurityConfig.builder()
-            .enableTls(config.enableTls())
-            .enableHostnameVerification(config.enableHostnameVerification())
-            .trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value())
-            .build())
+        .securityConfig(securityConfig)
         .meterRegistry(newMeterRegistry(connectorName, config))
         .build();
 
