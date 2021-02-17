@@ -184,6 +184,19 @@
 
     <build>
         <plugins>
+            <!--
+                To refresh the generated docs, run:
+                    mvn clean test-compile exec:java
+             -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <mainClass>com.couchbase.connect.kafka.util.config.AsciiDocGenerator</mainClass>
+                    <classpathScope>test</classpathScope>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
