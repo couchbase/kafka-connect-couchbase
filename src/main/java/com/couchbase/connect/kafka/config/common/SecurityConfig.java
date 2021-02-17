@@ -48,7 +48,7 @@ public interface SecurityConfig {
    * hostname used to connect to the server. Only disable if you understand
    * the impact and can accept the risks.
    * <p>
-   * Since 4.0.3.
+   * Since 4.0.4.
    */
   @Default("true")
   @DisplayName("Enable TLS Hostname Verification")
@@ -77,7 +77,7 @@ public interface SecurityConfig {
    * If you supply a value for this config property, the `couchbase.username`
    * and `couchbase.password` properties will be ignored.
    * <p>
-   * Since 4.0.3.
+   * Since 4.0.4.
    * UNCOMMITTED.
    */
   @Width(LONG)
@@ -87,7 +87,7 @@ public interface SecurityConfig {
   /**
    * Password for accessing the client certificate.
    * <p>
-   * Since 4.0.3.
+   * Since 4.0.4.
    * UNCOMMITTED.
    */
   @EnvironmentVariable("KAFKA_COUCHBASE_CLIENT_CERTIFICATE_PASSWORD")
