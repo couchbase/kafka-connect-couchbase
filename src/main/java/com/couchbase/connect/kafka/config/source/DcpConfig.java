@@ -52,13 +52,9 @@ public interface DcpConfig {
 
   /**
    * Should filters and source handlers have access to a document's extended attributes?
-   * <p>
-   * Since: 4.0.1
-   * <p>
-   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    *
-   * @since 4.0.1
    * @see DocumentEvent#xattrs()
+   * @since 4.0.1
    */
   @Stability.Uncommitted
   @Default("false")

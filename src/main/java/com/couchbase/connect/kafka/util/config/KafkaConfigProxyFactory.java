@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.util.config;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import com.couchbase.connect.kafka.util.config.annotation.Dependents;
 import com.couchbase.connect.kafka.util.config.annotation.DisplayName;
@@ -25,6 +26,7 @@ import com.couchbase.connect.kafka.util.config.annotation.Importance;
 import com.couchbase.connect.kafka.util.config.annotation.Width;
 import com.github.therapi.runtimejavadoc.ClassJavadoc;
 import com.github.therapi.runtimejavadoc.MethodJavadoc;
+import com.github.therapi.runtimejavadoc.OtherJavadoc;
 import com.github.therapi.runtimejavadoc.RuntimeJavadoc;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -40,6 +42,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -356,12 +359,36 @@ public class KafkaConfigProxyFactory {
         removeSuffix(method.getDeclaringClass().getSimpleName(), "Config"));
   }
 
+  protected List<String> since(MethodJavadoc methodJavadoc) {
+    List<String> result = new ArrayList<>();
+    for (OtherJavadoc other : methodJavadoc.getOther()) {
+      if ("since".equals(other.getName())) {
+        result.add(other.getComment().toString());
+      }
+    }
+    return result;
+  }
+
   protected String getDocumentation(Method method) {
-    String javadoc = RuntimeJavadoc.getJavadoc(method).getComment().toString();
-    String suffix = getEnvironmentVariableName(method)
-        .map(envar -> "<p>May be overridden with the " + envar + " environment variable.")
-        .orElse("");
-    return htmlToPlaintext(javadoc + suffix);
+    MethodJavadoc methodJavadoc = RuntimeJavadoc.getJavadoc(method);
+    String javadoc = methodJavadoc.getComment().toString();
+
+    String envar = getEnvironmentVariableName(method).orElse(null);
+    if (envar != null) {
+      javadoc += "<p>May be overridden with the " + envar + " environment variable.";
+    }
+
+    Stability.Uncommitted uncommitted = method.getAnnotation(Stability.Uncommitted.class);
+    if (uncommitted != null) {
+      javadoc += "<p>UNCOMMITTED; this feature may change in a patch release without notice.";
+    }
+
+    List<String> since = since(methodJavadoc);
+    if (!since.isEmpty()) {
+      javadoc += "<p>* Since: " + String.join(", ", since);
+    }
+
+    return htmlToPlaintext(javadoc);
   }
 
   protected Optional<String> getEnvironmentVariableName(Method method) {

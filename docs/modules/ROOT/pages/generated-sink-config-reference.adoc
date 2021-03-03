@@ -85,7 +85,7 @@ Set this to `false` to disable TLS hostname verification for Couchbase connectio
 Less secure, but might be required if for some reason you can't issue a certificate whose Subject Alternative Names match the hostname used to connect to the server.
 Only disable if you understand the impact and can accept the risks.
 
-Since 4.0.4.
+* Since: 4.0.4
 
 * Type: boolean
 * Default: `true`
@@ -118,8 +118,9 @@ Absolute filesystem path to a Java keystore or PKCS12 bundle holding the private
 
 If you supply a value for this config property, the `couchbase.username` and `couchbase.password` properties will be ignored.
 
-Since 4.0.4.
-UNCOMMITTED.
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.0.4
 
 * Type: string
 * Default: `""`
@@ -130,10 +131,11 @@ UNCOMMITTED.
 
 Password for accessing the client certificate.
 
-Since 4.0.4.
-UNCOMMITTED.
-
 May be overridden with the KAFKA_COUCHBASE_CLIENT_CERTIFICATE_PASSWORD environment variable.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.0.4
 
 * Type: password
 * Default: `[hidden]`
@@ -159,8 +161,7 @@ NONE = no tagging; PARTIAL = user data is tagged; FULL = user, meta, and system 
 
 Qualified name (scope.collection) of the destination collection for messages from topics that don't have a "topic to collection" map entry.
 
-UNCOMMITTED.
-This feature may change in a patch release without advance notice.
+UNCOMMITTED; this feature may change in a patch release without notice.
 
 * Type: string
 * Default: `_default._default`
@@ -179,8 +180,7 @@ For example, if you want to write messages from topic "topic1" to collection "sc
 
 Defaults to an empty map, with all documents going to the collection specified by `couchbase.default.collection`.
 
-UNCOMMITTED.
-This feature may change in a patch release without advance notice.
+UNCOMMITTED; this feature may change in a patch release without notice.
 
 * Type: list
 * Default: `""`

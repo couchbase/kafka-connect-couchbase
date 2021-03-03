@@ -35,8 +35,8 @@ public interface SourceBehaviorConfig {
    * <p>
    * ${collection} refers to the collection containing the document.
    * <p>
-   * UNCOMMITTED; the behavior of the "scope" and "collection" placeholders
-   * may change in a patch release without advance notice.
+   * The behavior of the "scope" and "collection" placeholders
+   * may change in a patch release without notice.
    */
   @Default("${bucket}.${scope}.${collection}")
   @Stability.Uncommitted
@@ -102,8 +102,6 @@ public interface SourceBehaviorConfig {
    * the connector will stream from all collections of all scopes in the bucket.
    * <p>
    * Requires Couchbase Server 7.0 or later.
-   * <p>
-   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default
   @Stability.Uncommitted
@@ -119,8 +117,6 @@ public interface SourceBehaviorConfig {
    * the connector will stream from all collections of all scopes in the bucket.
    * <p>
    * Requires Couchbase Server 7.0 or later.
-   * <p>
-   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default
   @Stability.Uncommitted

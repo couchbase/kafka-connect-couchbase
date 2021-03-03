@@ -35,8 +35,6 @@ public interface SinkBehaviorConfig {
   /**
    * Qualified name (scope.collection) of the destination collection for messages
    * from topics that don't have a "topic to collection" map entry.
-   * <p>
-   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default("_default._default")
   @Stability.Uncommitted
@@ -60,8 +58,6 @@ public interface SinkBehaviorConfig {
    * <p>
    * Defaults to an empty map, with all documents going to the collection
    * specified by `couchbase.default.collection`.
-   * <p>
-   * UNCOMMITTED. This feature may change in a patch release without advance notice.
    */
   @Default
   @Stability.Uncommitted
