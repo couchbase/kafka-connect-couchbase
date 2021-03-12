@@ -50,6 +50,8 @@ public class SourceDocumentLifecycle {
   }
 
   private static final Logger log = LoggerFactory.getLogger(SourceDocumentLifecycle.class);
+
+  private final String taskId = getTaskIdFromLoggingContext().orElse("?");
   private final LogLevel logLevel;
 
   public boolean enabled() {
@@ -68,6 +70,7 @@ public class SourceDocumentLifecycle {
   public void logReceivedFromCouchbase(DocumentChange event) {
     if (enabled()) {
       LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+      details.put("connectTaskId", taskId);
       details.put("revision", event.getRevision());
       details.put("type", event.isMutation() ? "mutation" : "deletion");
       details.put("partition", event.getVbucket());
@@ -89,7 +92,6 @@ public class SourceDocumentLifecycle {
   public void logConvertedToKafkaRecord(DocumentChange event, SourceRecord record) {
     if (enabled()) {
       LinkedHashMap<String, Object> details = new LinkedHashMap<>();
-      getTaskIdFromLoggingContext().ifPresent(taskId -> details.put("connectTaskId", taskId));
       details.put("topic", record.topic());
       details.put("key", record.key());
       details.put("kafkaPartition", record.kafkaPartition());
