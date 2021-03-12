@@ -82,6 +82,9 @@ public class CouchbaseReader extends Thread {
     if (!isNullOrEmpty(config.trustStorePath())) {
       securityConfig.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value());
     }
+    if (!isNullOrEmpty(config.trustCertificatePath())) {
+      securityConfig.trustCertificate(Paths.get(config.trustCertificatePath()));
+    }
 
     client = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)

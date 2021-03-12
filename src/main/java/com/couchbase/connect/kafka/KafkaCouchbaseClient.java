@@ -29,7 +29,6 @@ import com.couchbase.connect.kafka.config.common.CommonConfig;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 
 import java.io.Closeable;
-import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
@@ -53,7 +52,10 @@ public class KafkaCouchbaseClient implements Closeable {
         .enableTls(config.enableTls())
         .enableHostnameVerification(config.enableHostnameVerification());
     if (!isNullOrEmpty(config.trustStorePath())) {
-      securityConfig.trustStore(new File(config.trustStorePath()).toPath(), config.trustStorePassword().value(), Optional.empty());
+      securityConfig.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value(), Optional.empty());
+    }
+    if (!isNullOrEmpty(config.trustCertificatePath())) {
+      securityConfig.trustCertificate(Paths.get(config.trustCertificatePath()));
     }
 
     env = ClusterEnvironment.builder()

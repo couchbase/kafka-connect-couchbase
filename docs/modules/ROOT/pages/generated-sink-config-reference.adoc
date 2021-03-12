@@ -76,7 +76,7 @@ If true, 'couchbase.trust.store.path' and 'couchbase.trust.store.password' must 
 * Type: boolean
 * Default: `false`
 * Importance: medium
-* Dependents: `<<couchbase.trust.store.path>>`, `<<couchbase.trust.store.password>>`, `<<couchbase.enable.hostname.verification>>`, `<<couchbase.client.certificate.path>>`, `<<couchbase.client.certificate.password>>`
+* Dependents: `<<couchbase.trust.certificate.path>>`, `<<couchbase.trust.store.path>>`, `<<couchbase.trust.store.password>>`, `<<couchbase.enable.hostname.verification>>`, `<<couchbase.client.certificate.path>>`, `<<couchbase.client.certificate.password>>`
 
 [[couchbase.enable.hostname.verification]]
 === `couchbase.enable.hostname.verification`
@@ -96,6 +96,8 @@ Only disable if you understand the impact and can accept the risks.
 
 Absolute filesystem path to the Java keystore holding the CA certificate used by Couchbase Server.
 
+If you want to use a PEM file instead of a Java keystore, specify `couchbase.trust.certificate.path` instead.
+
 * Type: string
 * Default: `""`
 * Importance: medium
@@ -109,6 +111,21 @@ May be overridden with the KAFKA_COUCHBASE_TRUST_STORE_PASSWORD environment vari
 
 * Type: password
 * Default: `[hidden]`
+* Importance: medium
+
+[[couchbase.trust.certificate.path]]
+=== `couchbase.trust.certificate.path`
+
+Absolute filesystem path to the PEM file containing the CA certificate used by Couchbase Server.
+
+If you want to use a Java keystore instead of a PEM file, specify `couchbase.trust.store.path` instead.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.0.5
+
+* Type: string
+* Default: `""`
 * Importance: medium
 
 [[couchbase.client.certificate.path]]
@@ -158,7 +175,7 @@ NONE = no tagging; PARTIAL = user data is tagged; FULL = user, meta, and system 
 === `couchbase.log.document.lifecycle`
 
 If true, document lifecycle milestones will be logged at INFO level instead of DEBUG.
-Enabling this features lets you see how documents flow through the connector.
+Enabling this feature lets you watch documents flow through the connector.
 Disabled by default because it generates many log messages.
 
 UNCOMMITTED; this feature may change in a patch release without notice.

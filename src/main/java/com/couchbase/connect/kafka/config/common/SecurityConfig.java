@@ -32,6 +32,7 @@ public interface SecurityConfig {
    * If true, 'couchbase.trust.store.path' and 'couchbase.trust.store.password' must also be provided.
    */
   @Dependents({
+      "couchbase.trust.certificate.path",
       "couchbase.trust.store.path",
       "couchbase.trust.store.password",
       "couchbase.enable.hostname.verification",
@@ -58,6 +59,9 @@ public interface SecurityConfig {
   /**
    * Absolute filesystem path to the Java keystore holding the CA certificate
    * used by Couchbase Server.
+   * <p>
+   * If you want to use a PEM file instead of a Java keystore,
+   * specify `couchbase.trust.certificate.path` instead.
    */
   @Width(LONG)
   @Default
@@ -69,6 +73,20 @@ public interface SecurityConfig {
   @EnvironmentVariable("KAFKA_COUCHBASE_TRUST_STORE_PASSWORD")
   @Default
   Password trustStorePassword();
+
+  /**
+   * Absolute filesystem path to the PEM file containing the
+   * CA certificate used by Couchbase Server.
+   * <p>
+   * If you want to use a Java keystore instead of a PEM file,
+   * specify `couchbase.trust.store.path` instead.
+   *
+   * @since 4.0.5
+   */
+  @Stability.Uncommitted
+  @Width(LONG)
+  @Default
+  String trustCertificatePath();
 
   /**
    * Absolute filesystem path to a Java keystore or PKCS12 bundle holding
