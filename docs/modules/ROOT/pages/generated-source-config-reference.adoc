@@ -154,6 +154,21 @@ NONE = no tagging; PARTIAL = user data is tagged; FULL = user, meta, and system 
 * Valid Values: One of [NONE, PARTIAL, FULL]
 * Importance: medium
 
+[[couchbase.log.document.lifecycle]]
+=== `couchbase.log.document.lifecycle`
+
+If true, document lifecycle milestones will be logged at INFO level instead of DEBUG.
+Enabling this features lets you see how documents flow through the connector.
+Disabled by default because it generates many log messages.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.0.5
+
+* Type: boolean
+* Default: `false`
+* Importance: medium
+
 == Source Behavior
 
 [[couchbase.topic]]

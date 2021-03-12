@@ -17,6 +17,7 @@
 package com.couchbase.connect.kafka.handler.source;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.dcp.highlevel.DocumentChange;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.header.ConnectHeaders;
 import org.apache.kafka.connect.header.Headers;
@@ -149,10 +150,12 @@ public class SourceRecordBuilder {
   }
 
   @Stability.Internal
-  public SourceRecord build(Map<String, ?> sourcePartition,
-                            Map<String, ?> sourceOffset,
-                            String defaultTopic) {
-    return new SourceRecord(
+  public CouchbaseSourceRecord build(DocumentChange change,
+                                     Map<String, ?> sourcePartition,
+                                     Map<String, ?> sourceOffset,
+                                     String defaultTopic) {
+    return new CouchbaseSourceRecord(
+        change,
         sourcePartition,
         sourceOffset,
         defaultIfNull(topic, defaultTopic),

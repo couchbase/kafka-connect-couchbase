@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.config.common;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 
@@ -27,4 +28,16 @@ public interface LoggingConfig {
    */
   @Default("NONE")
   RedactionLevel logRedaction();
+
+  /**
+   * If true, document lifecycle milestones will be logged at INFO level
+   * instead of DEBUG. Enabling this feature lets you watch documents
+   * flow through the connector. Disabled by default because it generates
+   * many log messages.
+   *
+   * @since 4.0.5
+   */
+  @Stability.Uncommitted
+  @Default("false")
+  boolean logDocumentLifecycle();
 }

@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
 import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 
 public class CouchbaseReader extends Thread {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseReader.class);
@@ -63,7 +64,9 @@ public class CouchbaseReader extends Thread {
 
   public CouchbaseReader(CouchbaseSourceTaskConfig config, final String connectorName,
                          final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
-                         final List<Integer> partitions, final Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno) {
+                         final List<Integer> partitions, final Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno,
+                         final SourceDocumentLifecycle lifecycle) {
+    requireNonNull(lifecycle);
     this.partitions = partitions;
     this.partitionToSavedSeqno = partitionToSavedSeqno;
     this.streamFrom = config.streamFrom();
@@ -113,6 +116,7 @@ public class CouchbaseReader extends Thread {
 
       private void onChange(DocumentChange change) {
         try {
+          lifecycle.logReceivedFromCouchbase(change);
           queue.put(change);
 
         } catch (Throwable t) {

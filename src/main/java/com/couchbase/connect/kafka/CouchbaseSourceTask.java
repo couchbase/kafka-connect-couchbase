@@ -22,6 +22,7 @@ import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CollectionMetadata;
+import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
@@ -41,7 +42,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
@@ -49,7 +49,6 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
 
 public class CouchbaseSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
@@ -68,6 +67,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private int batchSizeMax;
   private boolean connectorNameInOffsets;
   private boolean noValue;
+  private SourceDocumentLifecycle lifecycle;
 
   @Override
   public String version() {
@@ -93,6 +93,8 @@ public class CouchbaseSourceTask extends SourceTask {
 
     Map<String, String> unmodifiableProperties = unmodifiableMap(properties);
 
+    lifecycle = SourceDocumentLifecycle.create(config);
+
     filter = Utils.newInstance(config.eventFilter());
     filter.init(unmodifiableProperties);
 
@@ -111,7 +113,7 @@ public class CouchbaseSourceTask extends SourceTask {
     running = true;
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
-    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno);
+    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle);
     couchbaseReader.start();
   }
 
@@ -147,12 +149,7 @@ public class CouchbaseSourceTask extends SourceTask {
       events.add(firstEvent);
       queue.drainTo(events, batchSizeMax - 1);
 
-      List<SourceRecord> results = events.stream()
-          .map(e -> DocumentEvent.create(e, bucket))
-          .filter(e -> filter.pass(e))
-          .map(this::convertToSourceRecord)
-          .filter(Objects::nonNull)
-          .collect(toList());
+      List<SourceRecord> results = convertToSourceRecords(events);
 
       int excluded = events.size() - results.size();
       LOGGER.info("Poll returns {} result(s) (filtered out {})", results.size(), excluded);
@@ -160,6 +157,15 @@ public class CouchbaseSourceTask extends SourceTask {
 
     } finally {
       events.forEach(DocumentChange::flowControlAck);
+    }
+  }
+
+  @Override
+  public void commitRecord(SourceRecord record) {
+    if (record instanceof CouchbaseSourceRecord) {
+      lifecycle.logCommittedToKafkaTopic((CouchbaseSourceRecord) record);
+    } else {
+      LOGGER.warn("Committed a record we didn't create? Record key {}", record.key());
     }
   }
 
@@ -179,14 +185,38 @@ public class CouchbaseSourceTask extends SourceTask {
         .replace("%", "_"); // % is valid in Couchbase name but not Kafka topic name
   }
 
-  private SourceRecord convertToSourceRecord(DocumentEvent docEvent) {
+  private List<SourceRecord> convertToSourceRecords(List<DocumentChange> events) {
+    List<SourceRecord> results = new ArrayList<>(events.size());
+
+    for (DocumentChange e : events) {
+      DocumentEvent docEvent = DocumentEvent.create(e, bucket);
+
+      if (!filter.pass(docEvent)) {
+        lifecycle.logSkippedBecauseFilterSaysIgnore(e);
+        continue;
+      }
+
+      SourceRecord sourceRecord = convertToSourceRecord(e, docEvent);
+      if (sourceRecord == null) {
+        lifecycle.logSkippedBecauseHandlerSaysIgnore(e);
+        continue;
+      }
+
+      lifecycle.logConvertedToKafkaRecord(e, sourceRecord);
+      results.add(sourceRecord);
+    }
+
+    return results;
+  }
+
+  private CouchbaseSourceRecord convertToSourceRecord(DocumentChange change, DocumentEvent docEvent) {
     String defaultTopic = getDefaultTopic(docEvent);
 
     SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, defaultTopic, noValue));
     if (builder == null) {
       return null;
     }
-    return builder.build(
+    return builder.build(change,
         sourcePartition(docEvent.partition()),
         sourceOffset(docEvent),
         defaultTopic);
