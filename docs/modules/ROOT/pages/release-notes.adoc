@@ -24,6 +24,29 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.0.5]]
+== Version 4.0.5 (16 March 2021)
+
+https://packages.couchbase.com/clients/kafka/4.0.5/couchbase-kafka-connect-couchbase-4.0.5.zip[Download]
+
+This release improves diagnostic logging and simplifies Couchbase Cloud configuration.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-234[KAFKAC-234]:
+The Couchbase root CA certificate can now be read directly from a PEM file; it's no longer necessary to add it to a Java keystore first.
+The new `couchbase.trust.certificate.path` config property points to the PEM file.
+
+* https://issues.couchbase.com/browse/KAFKAC-242[KAFKAC-242]:
+*Source* When the new `couchbase.log.document.lifecycle` config property is set to true, the connector writes detailed log entries as each document flows through the connector.
+
+* https://issues.couchbase.com/browse/KAFKAC-245[KAFKAC-245]:
+*Sink* Upgraded Couchbase client from 3.1.2 to https://docs.couchbase.com/java-sdk/3.1/project-docs/sdk-release-notes.html#version-3-1-3-2-march-2021[3.1.3].
+
+* https://issues.couchbase.com/browse/KAFKAC-246[KAFKAC-246]:
+*Source* Upgraded DCP client to from 0.32.0 to 0.33.0.
+OBSERVE_SEQNO events are now logged at TRACE level instead of DEBUG.
+
 [[v4.0.4]]
 == Version 4.0.4 (17 February 2021)
 
