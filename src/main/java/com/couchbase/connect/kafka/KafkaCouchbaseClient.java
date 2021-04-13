@@ -16,8 +16,11 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.env.AbstractMapPropertyLoader;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CertificateAuthenticator;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
@@ -27,16 +30,20 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.connect.kafka.config.common.CommonConfig;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
+import org.apache.kafka.common.config.ConfigException;
 
 import java.io.Closeable;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.couchbase.client.core.env.IoConfig.networkResolution;
 import static com.couchbase.client.core.env.TimeoutConfig.connectTimeout;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
+import static java.util.Collections.emptyMap;
 
 public class KafkaCouchbaseClient implements Closeable {
   private final ClusterEnvironment env;
@@ -44,6 +51,10 @@ public class KafkaCouchbaseClient implements Closeable {
   private final Bucket bucket;
 
   public KafkaCouchbaseClient(CommonConfig config) {
+    this(config, emptyMap());
+  }
+
+  public KafkaCouchbaseClient(CommonConfig config, Map<String, String> clusterEnvProps) {
     List<String> clusterAddress = config.seedNodes();
     String connectionString = String.join(",", clusterAddress);
     NetworkResolution networkResolution = NetworkResolution.valueOf(config.network());
@@ -58,11 +69,14 @@ public class KafkaCouchbaseClient implements Closeable {
       securityConfig.trustCertificate(Paths.get(config.trustCertificatePath()));
     }
 
-    env = ClusterEnvironment.builder()
+    ClusterEnvironment.Builder envBuilder = ClusterEnvironment.builder()
         .securityConfig(securityConfig)
         .ioConfig(networkResolution(networkResolution))
-        .timeoutConfig(connectTimeout(config.bootstrapTimeout()))
-        .build();
+        .timeoutConfig(connectTimeout(config.bootstrapTimeout()));
+
+    applyCustomEnvironmentProperties(envBuilder, clusterEnvProps);
+
+    env = envBuilder.build();
 
     Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
         ? PasswordAuthenticator.create(config.username(), config.password().value())
@@ -73,6 +87,35 @@ public class KafkaCouchbaseClient implements Closeable {
             .environment(env));
 
     bucket = cluster.bucket(config.bucket());
+  }
+
+  private static void applyCustomEnvironmentProperties(ClusterEnvironment.Builder envBuilder, Map<String, String> config) {
+    // Begin workaround for IoEnvironment config.
+    // Prior to Java client 3.1.5, IoEnvironment isn't configurable
+    // via system properties. Until then, handle it manually.
+    Map<String, String> envProps = new HashMap<>(config);
+    IoEnvironment.Builder ioEnvBuilder = IoEnvironment.builder();
+    String nativeIoEnabled = envProps.remove("ioEnvironment.enableNativeIo");
+    if (nativeIoEnabled != null) {
+      ioEnvBuilder.enableNativeIo(Boolean.parseBoolean(nativeIoEnabled));
+    }
+    String eventLoopThreadCount = envProps.remove("ioEnvironment.eventLoopThreadCount");
+    if (eventLoopThreadCount != null) {
+      ioEnvBuilder.eventLoopThreadCount(Integer.parseInt(eventLoopThreadCount));
+    }
+    envBuilder.ioEnvironment(ioEnvBuilder);
+    // End workaround for IoEnvironment config.
+
+    try {
+      envBuilder.load(new AbstractMapPropertyLoader<CoreEnvironment.Builder>() {
+        @Override
+        protected Map<String, String> propertyMap() {
+          return envProps;
+        }
+      });
+    } catch (Exception e) {
+      throw new ConfigException("Failed to apply Couchbase environment properties; " + e.getMessage());
+    }
   }
 
   public ClusterEnvironment env() {

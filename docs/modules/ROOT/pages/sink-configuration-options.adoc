@@ -4,6 +4,22 @@ Reference of the sink connector options.
 
 include::generated-sink-config-reference.adoc[]
 
+== Couchbase Java SDK Settings
+
+[[couchbase.env]]
+=== `couchbase.env.*`
+
+Any system property recognized by the Couchbase Java SDK may be specified in the Sink connector config if you omit the `com.` prefix from the system property name.
+
+For example, the Couchbase Java SDK recognizes the system property `com.couchbase.env.timeout.kvTimeout`.
+To specify this setting in the connector config, use the property name `couchbase.env.timeout.kvTimeout`.
+
+For a list of recognized properties, see xref:java-sdk:ref:client-settings.adoc[Java SDK Client Settings].
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.0.6
+
 *Parent topic:* xref:index.adoc[Kafka Connector]
 
 *Previous topic:* xref:source-configuration-options.adoc[Source Configuration Options]

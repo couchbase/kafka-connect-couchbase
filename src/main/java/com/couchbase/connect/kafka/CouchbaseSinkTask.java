@@ -56,6 +56,8 @@ import java.util.List;
 import java.util.Map;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static com.couchbase.client.core.util.CbStrings.removeStart;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -92,8 +94,17 @@ public class CouchbaseSinkTask extends SinkTask {
       throw new ConnectException("Couldn't start CouchbaseSinkTask due to configuration error", e);
     }
 
+    Map<String, String> clusterEnvProperties = new HashMap<>();
+    properties.forEach((key, value) -> {
+      if (key.startsWith("couchbase.env.") && !isNullOrEmpty(value)) {
+        clusterEnvProperties.put(removeStart(key, "couchbase.env."), value);
+      }
+    });
+
+    LOGGER.info("Custom ClusterEnvironment properties: {}", clusterEnvProperties);
+
     LogRedaction.setRedactionLevel(config.logRedaction());
-    client = new KafkaCouchbaseClient(config);
+    client = new KafkaCouchbaseClient(config, clusterEnvProperties);
     bucketName = config.bucket();
     defaultDestCollection = ScopeAndCollection.parse(config.defaultCollection());
     topicToCollection = TopicMap.parse(config.topicToCollection());
@@ -286,6 +297,9 @@ public class CouchbaseSinkTask extends SinkTask {
 
   @Override
   public void stop() {
-    client.close();
+    if (client != null) {
+      client.close();
+      client = null;
+    }
   }
 }
