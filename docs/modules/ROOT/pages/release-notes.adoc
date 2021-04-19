@@ -24,6 +24,27 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.0.6]]
+== Version 4.0.6 (20 April 2021)
+
+https://packages.couchbase.com/clients/kafka/4.0.6/couchbase-kafka-connect-couchbase-4.0.6.zip[Download]
+
+This release adds new Sink configuration options, and addresses a long-standing issue that caused the Source connector to fail when a rollback occurred in Couchbase.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-250[KAFKAC-250]:
+*Sink* You can now xref:sink-configuration-options.adoc#couchbase.env[configure Couchbase Java SDK Settings] in the connector config file.
+This includes KV timeout durations, Response Time Observability settings, and lots more.
+
+* https://issues.couchbase.com/browse/KAFKAC-251[KAFKAC-251]:
+*Source* Upgraded DCP client from 0.33.0 to 0.34.0.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-211[KAFKAC-211]:
+*Source* A rollback in Couchbase no longer causes the connector to fail.
+
 [[v4.0.5]]
 == Version 4.0.5 (16 March 2021)
 
@@ -44,7 +65,7 @@ The new `couchbase.trust.certificate.path` config property points to the PEM fil
 *Sink* Upgraded Couchbase client from 3.1.2 to https://docs.couchbase.com/java-sdk/3.1/project-docs/sdk-release-notes.html#version-3-1-3-2-march-2021[3.1.3].
 
 * https://issues.couchbase.com/browse/KAFKAC-246[KAFKAC-246]:
-*Source* Upgraded DCP client to from 0.32.0 to 0.33.0.
+*Source* Upgraded DCP client from 0.32.0 to 0.33.0.
 OBSERVE_SEQNO events are now logged at TRACE level instead of DEBUG.
 
 [[v4.0.4]]
@@ -66,7 +87,7 @@ for details. (This feature is added as "uncommitted", meaning it may change with
 *Sink* Upgraded Couchbase client from 3.0.9 to 3.1.2.
 
 * https://issues.couchbase.com/browse/KAFKAC-239[KAFKAC-239]:
-*Source* Upgraded DCP client to from 0.31.0 to 0.32.0.
+*Source* Upgraded DCP client from 0.31.0 to 0.32.0.
 Previously, TLS hostname verification was done only for the Couchbase Java client connection; now the DCP client connection is verified as well.
 If for some reason you need to disable TLS hostname verification, this is now possible by setting the
 https://docs.couchbase.com/kafka-connector/4.0/source-configuration-options.html#couchbase.enable.hostname.verification[couchbase.enable.hostname.verification] config property to `false`.
