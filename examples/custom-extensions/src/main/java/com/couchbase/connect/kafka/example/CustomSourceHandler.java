@@ -21,6 +21,8 @@ import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 /**
  * An example of extending {@link RawJsonSourceHandler} to add custom behavior.
  * To use this handler, build this project and move the resulting JAR to
@@ -36,6 +38,16 @@ import org.slf4j.LoggerFactory;
 public class CustomSourceHandler extends RawJsonSourceHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CustomSourceHandler.class);
 
+  private String specialKeyPrefix;
+
+  @Override
+  public void init(Map<String, String> connectorConfig) {
+    super.init(connectorConfig);
+
+    // read a value from the connector config and save it for later
+    specialKeyPrefix = connectorConfig.getOrDefault("example.special.key.prefix", "xyzzy");
+  }
+
   @Override
   protected boolean passesFilter(SourceHandlerParams params) {
     // Ignore deletions and expirations instead of sending message with null value.
@@ -46,8 +58,8 @@ public class CustomSourceHandler extends RawJsonSourceHandler {
   @Override
   protected String getTopic(SourceHandlerParams params) {
     // Alter the topic based on document key / content:
-    if (params.documentEvent().key().startsWith("xyzzy")) {
-      return params.topic() + "-xyzzy";
+    if (params.documentEvent().key().startsWith(specialKeyPrefix)) {
+      return params.topic() + "-" + specialKeyPrefix;
     }
 
     // Or use the default topic
