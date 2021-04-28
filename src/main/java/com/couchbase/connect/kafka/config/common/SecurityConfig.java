@@ -29,7 +29,11 @@ import static org.apache.kafka.common.config.ConfigDef.Width.LONG;
 public interface SecurityConfig {
   /**
    * Use secure connection to Couchbase Server.
-   * If true, 'couchbase.trust.store.path' and 'couchbase.trust.store.password' must also be provided.
+   * <p>
+   * If true, you must also tell the connector which certificate to trust.
+   * Specify a certificate file with 'couchbase.trust.certificate.path',
+   * or a Java keystore file with 'couchbase.trust.store.path' and
+   * 'couchbase.trust.store.password'.
    */
   @Dependents({
       "couchbase.trust.certificate.path",

@@ -71,7 +71,9 @@ If a connection is not established before the timeout expires, the connector wil
 === `couchbase.enable.tls`
 
 Use secure connection to Couchbase Server.
-If true, 'couchbase.trust.store.path' and 'couchbase.trust.store.password' must also be provided.
+
+If true, you must also tell the connector which certificate to trust.
+Specify a certificate file with 'couchbase.trust.certificate.path', or a Java keystore file with 'couchbase.trust.store.path' and 'couchbase.trust.store.password'.
 
 * Type: boolean
 * Default: `false`
