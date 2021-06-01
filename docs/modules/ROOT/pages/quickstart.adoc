@@ -234,7 +234,7 @@ transforms.deserializeJson.type=com.couchbase.connect.kafka.transform.Deserializ
 transforms.someOtherTransform.type=...
 ----
 
-==== RawJsonSourceHandlerWithMetadata
+==== RawJsonWithMetadataSourceHandler
 
 This source handler is similar to `RawJsonSourceHandler`, but it wraps the
 Couchbase document content in an envelope that includes document metadata.
@@ -243,7 +243,7 @@ Like `RawJsonSourceHandler`, it requires the `ByteArrayConverter` value converte
 [source]
 ----
 key.converter=org.apache.kafka.connect.storage.StringConverter
-couchbase.source.handler=com.couchbase.connect.kafka.handler.source.RawJsonSourceHandlerWithMetadata
+couchbase.source.handler=com.couchbase.connect.kafka.handler.source.RawJsonWithMetadataSourceHandler
 value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
 ----
 
@@ -258,7 +258,7 @@ For mutation messages, the entire content of the Couchbase document is present a
 
 ==== DefaultSchemaSourceHandler
 
-This source handler generates records whose values contain the same kind of metadata envelope as `RawJsonSourceHandlerWithMetadata`.
+This source handler generates records whose values contain the same kind of metadata envelope as `RawJsonWithMetadataSourceHandler`.
 It differs in that it defines a schema for the envelope.
 You can use this source handler with any value converter; specify whichever converter matches your desired publication format.
 
