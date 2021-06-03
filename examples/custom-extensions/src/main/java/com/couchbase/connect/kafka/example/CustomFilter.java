@@ -33,6 +33,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.TokenFilter.Inclusion.ONLY_INCLUDE_ALL;
+
 /**
  * An example Filter implementation that looks at a field of the document, and skips
  * the document if the field value is not one of the accepted values.
@@ -90,7 +92,7 @@ public class CustomFilter implements Filter {
 
     try {
       final JsonParser parser = new FilteringParserDelegate(
-          jsonFactory.createParser(event.content()), new JsonPointerBasedFilter(filterField), false, false);
+          jsonFactory.createParser(event.content()), new JsonPointerBasedFilter(filterField), ONLY_INCLUDE_ALL, false);
 
       if (parser.nextToken() == null) {
         log.debug("Rejecting document '{}' because it has no field at location '{}'.",

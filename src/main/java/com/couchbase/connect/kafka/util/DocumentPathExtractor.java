@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.TokenFilter.Inclusion.ONLY_INCLUDE_ALL;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 
@@ -142,7 +143,7 @@ public class DocumentPathExtractor {
       final JsonPointer documentIdPointer = idComponent.getValue();
 
       final JsonParser parser = new FilteringParserDelegate(
-          factory.createParser(json), new JsonPointerBasedFilter(documentIdPointer), false, false);
+          factory.createParser(json), new JsonPointerBasedFilter(documentIdPointer), ONLY_INCLUDE_ALL, false);
 
       if (parser.nextToken() == null) {
         throw new DocumentPathNotFoundException("Document has no value matching JSON pointer '" + documentIdPointer + "'");
