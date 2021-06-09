@@ -23,11 +23,7 @@ import com.couchbase.client.java.codec.RawJsonTranscoder;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
-import com.couchbase.connect.kafka.sink.DocumentMode;
-import com.couchbase.connect.kafka.sink.N1qlMode;
-import com.couchbase.connect.kafka.sink.N1qlWriter;
-import com.couchbase.connect.kafka.sink.SubDocumentMode;
-import com.couchbase.connect.kafka.sink.SubDocumentWriter;
+import com.couchbase.connect.kafka.sink.*;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
 import com.couchbase.connect.kafka.util.DurabilitySetter;
@@ -74,6 +70,7 @@ public class CouchbaseSinkTask extends SinkTask {
   private DocumentMode documentMode;
 
   private SubDocumentWriter subDocumentWriter;
+  private TargetedDocWriter targetedDocWriter;
   private N1qlWriter n1qlWriter;
 
   private DurabilitySetter durabilitySetter;
@@ -122,6 +119,11 @@ public class CouchbaseSinkTask extends SinkTask {
     documentExpiry = config.documentExpiration();
 
     switch (documentMode) {
+      case TARGETED: {
+        String path = config.subdocumentPath();
+        targetedDocWriter = new TargetedDocWriter(path);
+        break;
+      }
       case SUBDOCUMENT: {
         SubDocumentMode subDocumentMode = config.subdocumentOperation();
         String path = config.subdocumentPath();
@@ -178,6 +180,9 @@ public class CouchbaseSinkTask extends SinkTask {
           }
 
           switch (documentMode) {
+            case TARGETED: {
+              return targetedDocWriter.write(destCollection.reactive(), doc, durabilitySetter);
+            }
             case N1QL: {
               return n1qlWriter.write(client.cluster(), bucketName, doc);
             }
