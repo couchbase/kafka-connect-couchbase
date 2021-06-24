@@ -19,9 +19,11 @@ package com.couchbase.connect.kafka.util;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.connect.kafka.handler.sink.SinkDocument;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
@@ -45,13 +47,13 @@ public class DocumentIdExtractorTest {
     document = toValidJson(document);
     expectedResultDocument = toValidJson(expectedResultDocument);
 
-    JsonBinaryDocument result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
-    assertEquals(expectedDocumentId, result.id());
+    SinkDocument result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
+    assertEquals(Optional.ofNullable(expectedDocumentId), result.id());
     assertJsonEquals(expectedResultDocument, result);
 
     // and again without removing the document id
     result = new DocumentIdExtractor(pointer, false).extractDocumentId(document.getBytes(UTF_8));
-    assertEquals(expectedDocumentId, result.id());
+    assertEquals(Optional.ofNullable(expectedDocumentId), result.id());
     assertEquals(document, new String(result.content(), UTF_8));
 
     // and one last time with lots of extra whitespace
@@ -59,7 +61,7 @@ public class DocumentIdExtractorTest {
       document = document.replace(Character.toString(c), "  " + c + "  ");
     }
     result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
-    assertEquals(expectedDocumentId, result.id());
+    assertEquals(Optional.ofNullable(expectedDocumentId), result.id());
     assertJsonEquals(expectedResultDocument, result);
   }
 
@@ -84,11 +86,11 @@ public class DocumentIdExtractorTest {
     assertEquals(parsedExpected, parsedActual);
   }
 
-  private static void assertJsonEquals(String expected, JsonBinaryDocument actual) throws IOException {
+  private static void assertJsonEquals(String expected, SinkDocument actual) throws IOException {
     assertJsonEquals(expected, new String(actual.content(), UTF_8));
   }
 
-  private static JsonBinaryDocument extract(DocumentIdExtractor extractor, String s) throws Exception {
+  private static SinkDocument extract(DocumentIdExtractor extractor, String s) throws Exception {
     return extractor.extractDocumentId(toValidJson(s).getBytes(UTF_8));
   }
 
@@ -100,8 +102,8 @@ public class DocumentIdExtractorTest {
   public void extractorIsReusable() throws Exception {
     DocumentIdExtractor extractor = new DocumentIdExtractor("/id", true);
     for (int i = 0; i < 2; i++) {
-      JsonBinaryDocument result = extract(extractor, "{'id':1}");
-      assertEquals("1", result.id());
+      SinkDocument result = extract(extractor, "{'id':1}");
+      assertEquals(Optional.of("1"), result.id());
       assertJsonEquals("{}", result);
     }
   }

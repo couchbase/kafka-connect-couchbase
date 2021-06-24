@@ -17,9 +17,9 @@
 package com.couchbase.connect.kafka.config.sink;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.connect.kafka.sink.DocumentMode;
-import com.couchbase.connect.kafka.sink.N1qlMode;
-import com.couchbase.connect.kafka.sink.SubDocumentMode;
+import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
+import com.couchbase.connect.kafka.handler.sink.SinkHandler;
+import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
@@ -69,6 +69,32 @@ public interface SinkBehaviorConfig {
   }
 
   /**
+   * The fully-qualified class name of the sink handler to use.
+   * The sink handler determines how the Kafka record is translated into actions on Couchbase documents.
+   * <p>
+   * The built-in handlers are:
+   * `com.couchbase.connect.kafka.handler.sink.UpsertSinkHandler`,
+   * `com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler`, and
+   * `com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler`.
+   * <p>
+   * You can customize the sink connector's behavior by implementing your own SinkHandler.
+   */
+  @Default("com.couchbase.connect.kafka.handler.sink.UpsertSinkHandler")
+  Class<? extends SinkHandler> sinkHandler();
+
+  /**
+   * Overrides the `couchbase.sink.handler` property.
+   * <p>
+   * A value of `N1QL` forces the handler to `com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler`.
+   * A value of `SUBDOCUMENT` forces the handler to `com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler`.
+   *
+   * @deprecated Please set the `couchbase.sink.handler` property instead.
+   */
+  @Default("DOCUMENT")
+  @Deprecated
+  DocumentMode documentMode();
+
+  /**
    * Format string to use for the Couchbase document ID (overriding the message key).
    * May refer to document fields via placeholders like ${/path/to/field}
    */
@@ -82,59 +108,34 @@ public interface SinkBehaviorConfig {
   boolean removeDocumentId();
 
   /**
-   * Setting to indicate an update to the entire document or a sub-document.
-   */
-  @Default("DOCUMENT")
-  DocumentMode documentMode();
-
-  /**
-   * JSON Pointer to the property of the Kafka message whose value is
-   * the subdocument path to use when modifying the Couchbase document.
-   */
-  @Default
-  String subdocumentPath();
-
-  /**
-   * Setting to indicate the type of update to a sub-document.
-   */
-  @Default("UPSERT")
-  SubDocumentMode subdocumentOperation();
-
-  /**
-   * Setting to indicate the type of update to use when 'couchbase.documentMode' is 'N1QL'.
-   */
-  @Default("UPDATE")
-  N1qlMode n1qlOperation();
-
-  /**
-   * When using the UPDATE_WHERE operation, this is the list of document fields that must match the Kafka message in order for the document to be updated with the remaining message fields.
-   * To match against a literal value instead of a message field, use a colon to delimit the document field name and the target value.
-   * For example, "type:widget,color" matches documents whose 'type' field  is 'widget' and whose 'color' field matches the 'color' field of the Kafka message.
-   */
-  @Default
-  List<String> n1qlWhereFields();
-
-  /**
-   * Whether to add the parent paths if they are missing in the document.
-   */
-  @Default("true")
-  boolean subdocumentCreatePath();
-
-  /**
-   * When `couchbase.documentMode` is SUBDOCUMENT or N1QL, this property controls
-   * whether to create the document if it does not exist.
-   */
-  @Default("true")
-  boolean createDocument();
-
-  /**
    * Document expiration time specified as an integer followed by a time unit (s = seconds, m = minutes, h = hours, d = days).
    * For example, to have documents expire after 30 minutes, set this value to "30m".
    * <p>
-   * By default, documents do not expire.
-   * <p>
-   * Only Applies only to the DOCUMENT and SUBDOCUMENT modes.
+   * A value of "0" (the default) means documents never expire.
    */
   @Default("0")
   Duration documentExpiration();
+
+  /**
+   * @deprecated in favor of using the `couchbase.sink.handler` config property
+   * to specify the sink handler.
+   */
+  @Deprecated
+  enum DocumentMode {
+    /**
+     * Honors the sink handler specified by the `couchbase.sink.handler`
+     * config property.
+     */
+    DOCUMENT,
+
+    /**
+     * Forces the sink handler to be {@link SubDocumentSinkHandler}.
+     */
+    SUBDOCUMENT,
+
+    /**
+     * Forces the sink handler to be {@link N1qlSinkHandler}.
+     */
+    N1QL;
+  }
 }

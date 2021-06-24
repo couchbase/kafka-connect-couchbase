@@ -44,7 +44,7 @@ public interface SourceHandler {
    *
    * @param params A parameter block containing input to the handler,
    * most notably the {@link DocumentEvent}.
-   * @return The record to publish to Kafka, or {@code null} to skip this event.
+   * @return (nullable) The record to publish to Kafka, or {@code null} to skip this event.
    */
   SourceRecordBuilder handle(SourceHandlerParams params);
 }

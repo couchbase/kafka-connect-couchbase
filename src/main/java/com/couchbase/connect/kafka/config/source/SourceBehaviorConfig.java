@@ -43,7 +43,7 @@ public interface SourceBehaviorConfig {
   String topic();
 
   /**
-   * The class name of the source handler to use.
+   * The fully-qualified class name of the source handler to use.
    * The source handler determines how the Couchbase document is converted into a Kafka record.
    * <p>
    * To publish JSON messages identical to the Couchbase documents, use

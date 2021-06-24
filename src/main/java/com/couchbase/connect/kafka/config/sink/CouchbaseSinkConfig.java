@@ -21,5 +21,7 @@ import com.couchbase.connect.kafka.config.common.CommonConfig;
 public interface CouchbaseSinkConfig extends
     CommonConfig,
     SinkBehaviorConfig,
-    DurabilityConfig {
+    DurabilityConfig,
+    N1qlSinkHandlerConfig,
+    SubDocumentSinkHandlerConfig {
 }

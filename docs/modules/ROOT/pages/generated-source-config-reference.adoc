@@ -213,7 +213,7 @@ UNCOMMITTED; this feature may change in a patch release without notice.
 [[couchbase.source.handler]]
 === `couchbase.source.handler`
 
-The class name of the source handler to use.
+The fully-qualified class name of the source handler to use.
 The source handler determines how the Couchbase document is converted into a Kafka record.
 
 To publish JSON messages identical to the Couchbase documents, use `com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler` and set `value.converter` to `org.apache.kafka.connect.converters.ByteArrayConverter`.

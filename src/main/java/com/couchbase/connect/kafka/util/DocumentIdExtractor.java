@@ -16,6 +16,8 @@
 
 package com.couchbase.connect.kafka.util;
 
+import com.couchbase.connect.kafka.handler.sink.SinkDocument;
+
 import java.io.IOException;
 
 /**
@@ -35,8 +37,8 @@ public class DocumentIdExtractor {
    * @param json The document content encoded as UTF-8. If this method returns normally,
    * it may modify the contents of the array to remove the fields used by the document ID.
    */
-  public JsonBinaryDocument extractDocumentId(final byte[] json) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException {
+  public SinkDocument extractDocumentId(final byte[] json) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException {
     DocumentPathExtractor.DocumentExtraction extraction = pathExtractor.extractDocumentPath(json);
-    return new JsonBinaryDocument(extraction.getPathValue(), extraction.getData());
+    return new SinkDocument(extraction.getPathValue(), extraction.getData());
   }
 }

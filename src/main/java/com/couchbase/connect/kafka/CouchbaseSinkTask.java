@@ -16,22 +16,21 @@
 
 package com.couchbase.connect.kafka;
 
-import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.codec.RawJsonTranscoder;
-import com.couchbase.client.java.kv.RemoveOptions;
-import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
-import com.couchbase.connect.kafka.sink.DocumentMode;
-import com.couchbase.connect.kafka.sink.N1qlMode;
-import com.couchbase.connect.kafka.sink.N1qlWriter;
-import com.couchbase.connect.kafka.sink.SubDocumentMode;
-import com.couchbase.connect.kafka.sink.SubDocumentWriter;
+import com.couchbase.connect.kafka.config.sink.SinkBehaviorConfig.DocumentMode;
+import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
+import com.couchbase.connect.kafka.handler.sink.SinkAction;
+import com.couchbase.connect.kafka.handler.sink.SinkDocument;
+import com.couchbase.connect.kafka.handler.sink.SinkHandler;
+import com.couchbase.connect.kafka.handler.sink.SinkHandlerContext;
+import com.couchbase.connect.kafka.handler.sink.SinkHandlerParams;
+import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
+import com.couchbase.connect.kafka.util.BatchBuilder;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
 import com.couchbase.connect.kafka.util.DurabilitySetter;
-import com.couchbase.connect.kafka.util.JsonBinaryDocument;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
@@ -39,6 +38,7 @@ import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -49,36 +49,33 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
-import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
+import static java.util.Collections.unmodifiableMap;
 
 public class CouchbaseSinkTask extends SinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
 
-  private String bucketName;
   private ScopeAndCollection defaultDestCollection;
   private Map<String, ScopeAndCollection> topicToCollection;
   private KafkaCouchbaseClient client;
   private JsonConverter converter;
   private DocumentIdExtractor documentIdExtractor;
-  private DocumentMode documentMode;
-
-  private SubDocumentWriter subDocumentWriter;
-  private N1qlWriter n1qlWriter;
+  private SinkHandler sinkHandler;
 
   private DurabilitySetter durabilitySetter;
 
-  private Duration documentExpiry;
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private Optional<Duration> documentExpiry;
 
   @Override
   public String version() {
@@ -105,7 +102,6 @@ public class CouchbaseSinkTask extends SinkTask {
 
     LogRedaction.setRedactionLevel(config.logRedaction());
     client = new KafkaCouchbaseClient(config, clusterEnvProperties);
-    bucketName = config.bucket();
     defaultDestCollection = ScopeAndCollection.parse(config.defaultCollection());
     topicToCollection = TopicMap.parse(config.topicToCollection());
 
@@ -117,39 +113,28 @@ public class CouchbaseSinkTask extends SinkTask {
       documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.removeDocumentId());
     }
 
-    documentMode = config.documentMode();
+    Class<? extends SinkHandler> sinkHandlerClass = config.sinkHandler();
+
+    DocumentMode documentMode = config.documentMode();
+    if (documentMode != DocumentMode.DOCUMENT) {
+      sinkHandlerClass = documentMode == DocumentMode.N1QL
+          ? N1qlSinkHandler.class
+          : SubDocumentSinkHandler.class;
+      LOGGER.warn("Forcing sink handler to {} because document mode is {}." +
+              " The `couchbase.document.mode` config property is deprecated;" +
+              " please use `couchbase.sink.handler` instead.",
+          sinkHandlerClass, documentMode);
+    }
+
+    sinkHandler = Utils.newInstance(sinkHandlerClass);
+    sinkHandler.init(new SinkHandlerContext(client.cluster().reactive(), unmodifiableMap(properties)));
+
+    LOGGER.info("Using sink handler: {}", sinkHandler);
+
     durabilitySetter = DurabilitySetter.create(config);
-    documentExpiry = config.documentExpiration();
-
-    switch (documentMode) {
-      case SUBDOCUMENT: {
-        SubDocumentMode subDocumentMode = config.subdocumentOperation();
-        String path = config.subdocumentPath();
-        boolean createPaths = config.subdocumentCreatePath();
-        boolean createDocuments = config.createDocument();
-
-        subDocumentWriter = new SubDocumentWriter(subDocumentMode, path, createPaths, createDocuments, documentExpiry);
-        break;
-      }
-      case N1QL: {
-        N1qlMode n1qlMode = config.n1qlOperation();
-        boolean createDocuments = config.createDocument();
-        List<String> n1qlWhereFields = config.n1qlWhereFields();
-
-        n1qlWriter = new N1qlWriter(n1qlMode, n1qlWhereFields, createDocuments);
-        break;
-      }
-    }
-  }
-
-  private static class SinkRecordAndDocument {
-    private final SinkRecord sinkRecord;
-    private final JsonBinaryDocument document;
-
-    public SinkRecordAndDocument(SinkRecord sinkRecord, JsonBinaryDocument document) {
-      this.sinkRecord = requireNonNull(sinkRecord);
-      this.document = document; // nullable
-    }
+    documentExpiry = config.documentExpiration().isZero()
+        ? Optional.empty()
+        : Optional.of(config.documentExpiration());
   }
 
   @Override
@@ -162,133 +147,81 @@ public class CouchbaseSinkTask extends SinkTask {
     LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
         recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
 
-    Map<String, SinkRecordAndDocument> idToDocumentOrNull = toJsonBinaryDocuments(records);
+    List<SinkAction> actions = new ArrayList<>(records.size());
+    for (SinkRecord record : records) {
+      ScopeAndCollection destCollectionSpec = topicToCollection.getOrDefault(record.topic(), defaultDestCollection);
+      Collection destCollection = client.collection(destCollectionSpec);
 
-    Flux.fromIterable(idToDocumentOrNull.entrySet())
-        .flatMap(entry -> {
-          SinkRecordAndDocument sinkRecordAndDocument = entry.getValue();
-          SinkRecord sinkRecord = sinkRecordAndDocument.sinkRecord;
-          JsonBinaryDocument doc = sinkRecordAndDocument.document;
+      SinkAction action = sinkHandler.handle(
+          new SinkHandlerParams(
+              client.cluster().reactive(),
+              destCollection.reactive(),
+              record,
+              toSinkDocument(record),
+              documentExpiry,
+              durabilitySetter));
 
-          ScopeAndCollection destCollectionSpec = topicToCollection.getOrDefault(sinkRecord.topic(), defaultDestCollection);
-          Collection destCollection = client.collection(destCollectionSpec);
+      if (action != null) {
+        actions.add(action);
+      }
+    }
 
-          if (doc == null) {
-            return removeIfExists(destCollection, entry.getKey());
-          }
+    execute(actions);
+  }
 
-          switch (documentMode) {
-            case N1QL: {
-              return n1qlWriter.write(client.cluster(), bucketName, doc);
-            }
-            case SUBDOCUMENT: {
-              return subDocumentWriter.write(destCollection.reactive(), doc, durabilitySetter);
-            }
-            default: {
-              UpsertOptions options = UpsertOptions.upsertOptions()
-                  .expiry(documentExpiry)
-                  .transcoder(RawJsonTranscoder.INSTANCE);
-              durabilitySetter.accept(options);
+  private static void execute(List<SinkAction> actions) {
+    // The Kafka consumer session will probably expire long before this.
+    // This is just a failsafe so we don't end up waiting for Godot.
+    Duration timeout = Duration.ofMinutes(10);
 
-              return destCollection.reactive()
-                  .upsert(doc.id(), doc.content(), options)
-                  .then();
-            }
-          }
-        }).blockLast();
+    toMono(actions).block(timeout);
+  }
+
+  // visible for testing
+  static Mono<Void> toMono(List<SinkAction> actions) {
+    // Use concurrency hints to group the actions into batches
+    BatchBuilder<Mono<Void>> batchBuilder = new BatchBuilder<>();
+    for (SinkAction action : actions) {
+      batchBuilder.add(action.action(), action.concurrencyHint());
+    }
+
+    // Transform each batch of actions into a Flux that runs the actions
+    // in the batch concurrently (up to the default flatMap concurrency limit).
+    Stream<Mono<Void>> batches = batchBuilder.build().stream()
+        .map(batch -> Flux.fromIterable(batch)
+            .flatMap(it -> it)
+            .then()); // Just for clarity, convert the Flux<Void> into a Mono<Void>.
+
+    // Now we have a stream of Mono<Void>s where each mono represents a batch.
+    // Concatenate them so we end up waiting for each batch to complete
+    // before starting the next one.
+    return Flux.fromStream(batches)
+        .concatMap(it -> it)
+        .then(); // We only care about the final completion signal.
   }
 
   /**
-   * Converts Kafka records to documents and indexes them by document ID.
-   * <p>
-   * If there are duplicate document IDs, ignores all but the last. This
-   * prevents a stale version of the document from "winning" by being the
-   * last one written to Couchbase.
-   *
-   * @return a map where the key is the ID of a document, and the value is the document.
-   * A null value indicates the document should be deleted.
+   * @return (nullable)
    */
-  private Map<String, SinkRecordAndDocument> toJsonBinaryDocuments(java.util.Collection<SinkRecord> records) {
-    Map<String, SinkRecordAndDocument> idToSourceRecordAndDocument = new HashMap<>();
-    for (SinkRecord record : records) {
-      if (record.value() == null) {
-        String documentId = documentIdFromKafkaMetadata(record);
-        idToSourceRecordAndDocument.put(documentId, new SinkRecordAndDocument(record, null));
-        continue;
-      }
-
-      JsonBinaryDocument doc = convert(record);
-      idToSourceRecordAndDocument.put(doc.id(), new SinkRecordAndDocument(record, doc));
+  private SinkDocument toSinkDocument(SinkRecord record) {
+    if (record.value() == null) {
+      return null;
     }
-
-    int deduplicatedRecords = records.size() - idToSourceRecordAndDocument.size();
-    if (deduplicatedRecords != 0) {
-      LOGGER.debug("Batch contained {} redundant Kafka records.", deduplicatedRecords);
-    }
-
-    return idToSourceRecordAndDocument;
-  }
-
-  private Mono<Void> removeIfExists(Collection collection, String documentId) {
-    RemoveOptions options = removeOptions();
-    durabilitySetter.accept(options);
-    return collection.reactive()
-        .remove(documentId, options)
-        .onErrorResume(DocumentNotFoundException.class, throwable -> Mono.empty())
-        .then();
-  }
-
-  private static String toString(ByteBuffer byteBuffer) {
-    final ByteBuffer sliced = byteBuffer.slice();
-    byte[] bytes = new byte[sliced.remaining()];
-    sliced.get(bytes);
-    return new String(bytes, UTF_8);
-  }
-
-  private static String documentIdFromKafkaMetadata(SinkRecord record) {
-    Object key = record.key();
-
-    if (key instanceof String
-        || key instanceof Number
-        || key instanceof Boolean) {
-      return key.toString();
-    }
-
-    if (key instanceof byte[]) {
-      return new String((byte[]) key, UTF_8);
-    }
-
-    if (key instanceof ByteBuffer) {
-      return toString((ByteBuffer) key);
-    }
-
-    return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
-  }
-
-
-  private JsonBinaryDocument convert(SinkRecord record) {
 
     byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
-    String defaultId = null;
-
     try {
       if (documentIdExtractor != null) {
         return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
       }
 
     } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
-      defaultId = documentIdFromKafkaMetadata(record);
-      LOGGER.warn(e.getMessage() + "; using fallback ID '{}'", defaultId);
+      LOGGER.warn(e.getMessage() + "; letting sink handler use fallback ID");
 
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
 
-    if (defaultId == null) {
-      defaultId = documentIdFromKafkaMetadata(record);
-    }
-
-    return new JsonBinaryDocument(defaultId, valueAsJsonBytes);
+    return new SinkDocument(null, valueAsJsonBytes);
   }
 
   @Override

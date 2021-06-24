@@ -221,6 +221,35 @@ UNCOMMITTED; this feature may change in a patch release without notice.
 * Valid Values: topic=scope.collection,...
 * Importance: medium
 
+[[couchbase.sink.handler]]
+=== `couchbase.sink.handler`
+
+The fully-qualified class name of the sink handler to use.
+The sink handler determines how the Kafka record is translated into actions on Couchbase documents.
+
+The built-in handlers are: `com.couchbase.connect.kafka.handler.sink.UpsertSinkHandler`, `com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler`, and `com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler`.
+
+You can customize the sink connector's behavior by implementing your own SinkHandler.
+
+* Type: class
+* Default: `com.couchbase.connect.kafka.handler.sink.UpsertSinkHandler`
+* Importance: medium
+
+[[couchbase.document.mode]]
+=== `couchbase.document.mode`
+
+Overrides the `couchbase.sink.handler` property.
+
+A value of `N1QL` forces the handler to `com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler`.
+A value of `SUBDOCUMENT` forces the handler to `com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler`.
+
+WARNING: *DEPRECATED.* Please set the `couchbase.sink.handler` property instead.
+
+* Type: string
+* Default: `DOCUMENT`
+* Valid Values: One of [DOCUMENT, SUBDOCUMENT, N1QL]
+* Importance: medium
+
 [[couchbase.document.id]]
 === `couchbase.document.id`
 
@@ -240,83 +269,13 @@ Whether to remove the ID identified by 'couchbase.documentId' from the document 
 * Default: `false`
 * Importance: medium
 
-[[couchbase.document.mode]]
-=== `couchbase.document.mode`
-
-Setting to indicate an update to the entire document or a sub-document.
-
-* Type: string
-* Default: `DOCUMENT`
-* Valid Values: One of [DOCUMENT, SUBDOCUMENT, N1QL]
-* Importance: medium
-
-[[couchbase.subdocument.path]]
-=== `couchbase.subdocument.path`
-
-JSON Pointer to the property of the Kafka message whose value is the subdocument path to use when modifying the Couchbase document.
-
-* Type: string
-* Default: `""`
-* Importance: medium
-
-[[couchbase.subdocument.operation]]
-=== `couchbase.subdocument.operation`
-
-Setting to indicate the type of update to a sub-document.
-
-* Type: string
-* Default: `UPSERT`
-* Valid Values: One of [UPSERT, ARRAY_PREPEND, ARRAY_APPEND]
-* Importance: medium
-
-[[couchbase.n1ql.operation]]
-=== `couchbase.n1ql.operation`
-
-Setting to indicate the type of update to use when 'couchbase.documentMode' is 'N1QL'.
-
-* Type: string
-* Default: `UPDATE`
-* Valid Values: One of [UPDATE, UPDATE_WHERE]
-* Importance: medium
-
-[[couchbase.n1ql.where.fields]]
-=== `couchbase.n1ql.where.fields`
-
-When using the UPDATE_WHERE operation, this is the list of document fields that must match the Kafka message in order for the document to be updated with the remaining message fields.
-To match against a literal value instead of a message field, use a colon to delimit the document field name and the target value.
-For example, "type:widget,color" matches documents whose 'type' field is 'widget' and whose 'color' field matches the 'color' field of the Kafka message.
-
-* Type: list
-* Default: `""`
-* Importance: medium
-
-[[couchbase.subdocument.create.path]]
-=== `couchbase.subdocument.create.path`
-
-Whether to add the parent paths if they are missing in the document.
-
-* Type: boolean
-* Default: `true`
-* Importance: medium
-
-[[couchbase.create.document]]
-=== `couchbase.create.document`
-
-When `couchbase.documentMode` is SUBDOCUMENT or N1QL, this property controls whether to create the document if it does not exist.
-
-* Type: boolean
-* Default: `true`
-* Importance: medium
-
 [[couchbase.document.expiration]]
 === `couchbase.document.expiration`
 
 Document expiration time specified as an integer followed by a time unit (s = seconds, m = minutes, h = hours, d = days).
 For example, to have documents expire after 30 minutes, set this value to "30m".
 
-By default, documents do not expire.
-
-Only Applies only to the DOCUMENT and SUBDOCUMENT modes.
+A value of "0" (the default) means documents never expire.
 
 * Type: string
 * Default: `0`
@@ -361,6 +320,91 @@ If you're using Couchbase Server 6.5 or later, we recommend using the `couchbase
 * Type: string
 * Default: `NONE`
 * Valid Values: One of [NONE, ONE, TWO, THREE]
+* Importance: medium
+
+== N1ql Sink Handler
+
+[[couchbase.n1ql.operation]]
+=== `couchbase.n1ql.operation`
+
+The type of update to use when `couchbase.sink.handler` is set to `com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler`.
+
+This property is specific to `N1qlSinkHandler`.
+
+* Type: string
+* Default: `UPDATE`
+* Valid Values: One of [UPDATE, UPDATE_WHERE]
+* Importance: medium
+
+[[couchbase.n1ql.where.fields]]
+=== `couchbase.n1ql.where.fields`
+
+When using the UPDATE_WHERE operation, this is the list of document fields that must match the Kafka message in order for the document to be updated with the remaining message fields.
+To match against a literal value instead of a message field, use a colon to delimit the document field name and the target value.
+For example, "type:widget,color" matches documents whose 'type' field is 'widget' and whose 'color' field matches the 'color' field of the Kafka message.
+
+This property is specific to `N1qlSinkHandler`.
+
+* Type: list
+* Default: `""`
+* Importance: medium
+
+[[couchbase.n1ql.create.document]]
+=== `couchbase.n1ql.create.document`
+
+Controls whether to create the document if it does not exist.
+
+This property is specific to `N1qlSinkHandler`.
+
+* Type: boolean
+* Default: `true`
+* Importance: medium
+
+== Sub Document Sink Handler
+
+[[couchbase.subdocument.path]]
+=== `couchbase.subdocument.path`
+
+JSON Pointer to the property of the Kafka message whose value is the subdocument path to use when modifying the Couchbase document.
+
+This property is specific to `SubDocumentSinkHandler`.
+
+* Type: string
+* Default: `""`
+* Importance: medium
+
+[[couchbase.subdocument.operation]]
+=== `couchbase.subdocument.operation`
+
+Setting to indicate the type of update to a sub-document.
+
+This property is specific to `SubDocumentSinkHandler`.
+
+* Type: string
+* Default: `UPSERT`
+* Valid Values: One of [UPSERT, ARRAY_PREPEND, ARRAY_APPEND]
+* Importance: medium
+
+[[couchbase.subdocument.create.path]]
+=== `couchbase.subdocument.create.path`
+
+Whether to add the parent paths if they are missing in the document.
+
+This property is specific to `SubDocumentSinkHandler`.
+
+* Type: boolean
+* Default: `true`
+* Importance: medium
+
+[[couchbase.subdocument.create.document]]
+=== `couchbase.subdocument.create.document`
+
+This property controls whether to create the document if it does not exist.
+
+This property is specific to `SubDocumentSinkHandler`.
+
+* Type: boolean
+* Default: `true`
 * Importance: medium
 
 

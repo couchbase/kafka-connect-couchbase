@@ -369,26 +369,39 @@ public class KafkaConfigProxyFactory {
     return result;
   }
 
-  protected String getDocumentation(Method method) {
-    MethodJavadoc methodJavadoc = RuntimeJavadoc.getJavadoc(method);
-    String javadoc = methodJavadoc.getComment().toString();
-
-    String envar = getEnvironmentVariableName(method).orElse(null);
-    if (envar != null) {
-      javadoc += "<p>May be overridden with the " + envar + " environment variable.";
+  protected Optional<String> deprecated(MethodJavadoc methodJavadoc) {
+    for (OtherJavadoc other : methodJavadoc.getOther()) {
+      if ("deprecated".equals(other.getName())) {
+        return Optional.of(other.getComment().toString());
+      }
     }
+    return Optional.empty();
+  }
+
+  @SuppressWarnings("StringConcatenationInsideStringBufferAppend")
+  protected String getDocumentation(Method method) {
+    StringBuilder javadoc = new StringBuilder();
+
+    MethodJavadoc methodJavadoc = RuntimeJavadoc.getJavadoc(method);
+    javadoc.append(methodJavadoc.getComment().toString());
+
+    getEnvironmentVariableName(method).ifPresent(envar ->
+        javadoc.append("<p>May be overridden with the " + envar + " environment variable."));
 
     Stability.Uncommitted uncommitted = method.getAnnotation(Stability.Uncommitted.class);
     if (uncommitted != null) {
-      javadoc += "<p>UNCOMMITTED; this feature may change in a patch release without notice.";
+      javadoc.append("<p>UNCOMMITTED; this feature may change in a patch release without notice.");
     }
+
+    deprecated(methodJavadoc).ifPresent(message ->
+        javadoc.append("<p>WARNING: *DEPRECATED.* " + message));
 
     List<String> since = since(methodJavadoc);
     if (!since.isEmpty()) {
-      javadoc += "<p>* Since: " + String.join(", ", since);
+      javadoc.append("<p>* Since: " + String.join(", ", since));
     }
 
-    return htmlToPlaintext(javadoc);
+    return htmlToPlaintext(javadoc.toString());
   }
 
   protected Optional<String> getEnvironmentVariableName(Method method) {
