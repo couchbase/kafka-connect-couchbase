@@ -89,23 +89,7 @@ public class KafkaCouchbaseClient implements Closeable {
     bucket = cluster.bucket(config.bucket());
   }
 
-  private static void applyCustomEnvironmentProperties(ClusterEnvironment.Builder envBuilder, Map<String, String> config) {
-    // Begin workaround for IoEnvironment config.
-    // Prior to Java client 3.1.5, IoEnvironment isn't configurable
-    // via system properties. Until then, handle it manually.
-    Map<String, String> envProps = new HashMap<>(config);
-    IoEnvironment.Builder ioEnvBuilder = IoEnvironment.builder();
-    String nativeIoEnabled = envProps.remove("ioEnvironment.enableNativeIo");
-    if (nativeIoEnabled != null) {
-      ioEnvBuilder.enableNativeIo(Boolean.parseBoolean(nativeIoEnabled));
-    }
-    String eventLoopThreadCount = envProps.remove("ioEnvironment.eventLoopThreadCount");
-    if (eventLoopThreadCount != null) {
-      ioEnvBuilder.eventLoopThreadCount(Integer.parseInt(eventLoopThreadCount));
-    }
-    envBuilder.ioEnvironment(ioEnvBuilder);
-    // End workaround for IoEnvironment config.
-
+  private static void applyCustomEnvironmentProperties(ClusterEnvironment.Builder envBuilder, Map<String, String> envProps) {
     try {
       envBuilder.load(new AbstractMapPropertyLoader<CoreEnvironment.Builder>() {
         @Override
