@@ -3,7 +3,7 @@
 [abstract]
 Release notes, installation instructions, and download archive for the Couchbase Kafka Connector.
 
-This page covers version 4.0.x of the Couchbase Kafka Connector.
+This page covers version 4.x of the Couchbase Kafka Connector.
 For earlier versions, please see the xref:3.4@release-notes.adoc[3.x Release Notes].
 
 == Installation

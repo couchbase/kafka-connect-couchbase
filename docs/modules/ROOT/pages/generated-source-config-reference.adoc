@@ -87,8 +87,6 @@ Set this to `false` to disable TLS hostname verification for Couchbase connectio
 Less secure, but might be required if for some reason you can't issue a certificate whose Subject Alternative Names match the hostname used to connect to the server.
 Only disable if you understand the impact and can accept the risks.
 
-* Since: 4.0.4
-
 * Type: boolean
 * Default: `true`
 * Importance: medium
@@ -122,10 +120,6 @@ Absolute filesystem path to the PEM file containing the CA certificate used by C
 
 If you want to use a Java keystore instead of a PEM file, specify `couchbase.trust.store.path` instead.
 
-UNCOMMITTED; this feature may change in a patch release without notice.
-
-* Since: 4.0.5
-
 * Type: string
 * Default: `""`
 * Importance: medium
@@ -137,10 +131,6 @@ Absolute filesystem path to a Java keystore or PKCS12 bundle holding the private
 
 If you supply a value for this config property, the `couchbase.username` and `couchbase.password` properties will be ignored.
 
-UNCOMMITTED; this feature may change in a patch release without notice.
-
-* Since: 4.0.4
-
 * Type: string
 * Default: `""`
 * Importance: medium
@@ -151,10 +141,6 @@ UNCOMMITTED; this feature may change in a patch release without notice.
 Password for accessing the client certificate.
 
 May be overridden with the KAFKA_COUCHBASE_CLIENT_CERTIFICATE_PASSWORD environment variable.
-
-UNCOMMITTED; this feature may change in a patch release without notice.
-
-* Since: 4.0.4
 
 * Type: password
 * Default: `[hidden]`
@@ -180,10 +166,6 @@ If true, document lifecycle milestones will be logged at INFO level instead of D
 Enabling this feature lets you watch documents flow through the connector.
 Disabled by default because it generates many log messages.
 
-UNCOMMITTED; this feature may change in a patch release without notice.
-
-* Since: 4.0.5
-
 * Type: boolean
 * Default: `false`
 * Importance: medium
@@ -203,8 +185,6 @@ ${scope} refers to the scope containing the document.
 ${collection} refers to the collection containing the document.
 
 The behavior of the "scope" and "collection" placeholders may change in a patch release without notice.
-
-UNCOMMITTED; this feature may change in a patch release without notice.
 
 * Type: string
 * Default: `${bucket}.${scope}.${collection}`
@@ -284,8 +264,6 @@ If you specify neither "couchbase.scope" nor "couchbase.collections", the connec
 
 Requires Couchbase Server 7.0 or later.
 
-UNCOMMITTED; this feature may change in a patch release without notice.
-
 * Type: string
 * Default: `""`
 * Importance: medium
@@ -300,8 +278,6 @@ For example: "tenant-foo.invoices".
 If you specify neither "couchbase.scope" nor "couchbase.collections", the connector will stream from all collections of all scopes in the bucket.
 
 Requires Couchbase Server 7.0 or later.
-
-UNCOMMITTED; this feature may change in a patch release without notice.
 
 * Type: list
 * Default: `""`
@@ -346,10 +322,6 @@ Specify an integer followed by a size qualifier (example: 128m)
 === `couchbase.xattrs`
 
 Should filters and source handlers have access to a document's extended attributes?
-
-UNCOMMITTED; this feature may change in a patch release without notice.
-
-* Since: 4.0.1
 
 * Type: boolean
 * Default: `false`

@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.config.source;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.util.config.DataSize;
@@ -54,9 +53,7 @@ public interface DcpConfig {
    * Should filters and source handlers have access to a document's extended attributes?
    *
    * @see DocumentEvent#xattrs()
-   * @since 4.0.1
    */
-  @Stability.Uncommitted
   @Default("false")
   boolean xattrs();
 }

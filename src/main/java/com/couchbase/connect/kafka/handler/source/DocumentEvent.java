@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.dcp.highlevel.Deletion;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.client.dcp.highlevel.Mutation;
@@ -76,7 +75,6 @@ public class DocumentEvent {
    *
    * @see DcpConfig#xattrs()
    */
-  @Stability.Uncommitted
   public Map<String, String> xattrs() {
     return change.getXattrs();
   }

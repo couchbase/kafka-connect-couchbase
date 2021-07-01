@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.config.common;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import com.couchbase.connect.kafka.util.config.annotation.Dependents;
 import com.couchbase.connect.kafka.util.config.annotation.DisplayName;
@@ -53,8 +52,6 @@ public interface SecurityConfig {
    * can't issue a certificate whose Subject Alternative Names match the
    * hostname used to connect to the server. Only disable if you understand
    * the impact and can accept the risks.
-   *
-   * @since 4.0.4
    */
   @Default("true")
   @DisplayName("Enable TLS Hostname Verification")
@@ -84,10 +81,7 @@ public interface SecurityConfig {
    * <p>
    * If you want to use a Java keystore instead of a PEM file,
    * specify `couchbase.trust.store.path` instead.
-   *
-   * @since 4.0.5
    */
-  @Stability.Uncommitted
   @Width(LONG)
   @Default
   String trustCertificatePath();
@@ -99,20 +93,14 @@ public interface SecurityConfig {
    * <p>
    * If you supply a value for this config property, the `couchbase.username`
    * and `couchbase.password` properties will be ignored.
-   *
-   * @since 4.0.4
    */
-  @Stability.Uncommitted
   @Width(LONG)
   @Default
   String clientCertificatePath();
 
   /**
    * Password for accessing the client certificate.
-   *
-   * @since 4.0.4
    */
-  @Stability.Uncommitted
   @EnvironmentVariable("KAFKA_COUCHBASE_CLIENT_CERTIFICATE_PASSWORD")
   @Default
   Password clientCertificatePassword();

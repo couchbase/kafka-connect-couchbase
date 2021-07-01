@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.config.source;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
@@ -39,7 +38,6 @@ public interface SourceBehaviorConfig {
    * may change in a patch release without notice.
    */
   @Default("${bucket}.${scope}.${collection}")
-  @Stability.Uncommitted
   String topic();
 
   /**
@@ -104,7 +102,6 @@ public interface SourceBehaviorConfig {
    * Requires Couchbase Server 7.0 or later.
    */
   @Default
-  @Stability.Uncommitted
   String scope();
 
   /**
@@ -119,6 +116,5 @@ public interface SourceBehaviorConfig {
    * Requires Couchbase Server 7.0 or later.
    */
   @Default
-  @Stability.Uncommitted
   List<String> collections();
 }

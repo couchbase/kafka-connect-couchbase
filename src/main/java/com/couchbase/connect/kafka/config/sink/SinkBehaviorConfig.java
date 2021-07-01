@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.config.sink;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
@@ -37,7 +36,6 @@ public interface SinkBehaviorConfig {
    * from topics that don't have a "topic to collection" map entry.
    */
   @Default("_default._default")
-  @Stability.Uncommitted
   String defaultCollection();
 
   @SuppressWarnings("unused")
@@ -60,7 +58,6 @@ public interface SinkBehaviorConfig {
    * specified by `couchbase.default.collection`.
    */
   @Default
-  @Stability.Uncommitted
   List<String> topicToCollection();
 
   @SuppressWarnings("unused")
