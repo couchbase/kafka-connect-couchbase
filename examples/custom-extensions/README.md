@@ -11,7 +11,9 @@ change the content and format of the messages.
 The Sink Connector can modify incoming documents by applying
 [Single Message Transforms](https://kafka.apache.org/documentation/#connect_transforms).
 This project includes an example of a custom transform you can modify to suit your needs
-in case Kafka's built-in transforms are insufficient. 
+in case Kafka's built-in transforms are insufficient.
+
+It's also possible to completely customize the behavior of the Sink Connector by providing your own `SinkHandler`.
 
 ## Build and Install the Example Extensions
 

@@ -24,6 +24,51 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.0]]
+== Version 4.1.0 (22 July 2021)
+
+https://packages.couchbase.com/clients/kafka/4.1.0/couchbase-kafka-connect-couchbase-4.1.0.zip[Download]
+
+This release stabilizes the configuration options for working with Couchbase 7 Scopes and Collections.
+All previously "uncommitted" options are promoted to "committed" status.
+
+There's also a new `SinkHandler` extension point, and bug fixes for the Subdocument and N1QL modes of operation.
+
+=== Breaking Changes
+
+* Apache Kafka 2.4.0 is now the minimum required version.
+For Confluent Platform users, this corresponds to Confluent version 5.4.0.
+
+=== Enhancements
+
+* The config options for working with Couchbase 7 Scopes and Collections are now part of the "committed" API.
+
+* All other "uncommitted" config options are promoted to "committed" status as well.
+
+* https://issues.couchbase.com/browse/KAFKAC-257[KAFKAC-257]:
+*Sink* The connector's behavior is now completely customizable by implementing the `SinkHandler` interface.
+The new xref:sink-configuration-options.adoc#couchbase.sink.handler[couchbase.sink.handler] config option specifies the class to use.
+See the https://github.com/couchbase/kafka-connect-couchbase/tree/master/examples/custom-extensions[custom extensions example code] to see how to implement your own handler.
+
+NOTE: The xref:sink-configuration-options.adoc#couchbase.document.mode[couchbase.document.mode] config option is now **DEPRECATED**.
+Instead, please use xref:sink-configuration-options.adoc#couchbase.sink.handler[couchbase.sink.handler] to specify one of the built-in handler classes.
+
+* https://issues.couchbase.com/browse/KAFKAC-263[KAFKAC-263]:
+*Source* Upgraded DCP client from 0.34.0 to 0.35.0.
+
+* https://issues.couchbase.com/browse/KAFKAC-258[KAFKAC-258]:
+*Sink* Upgraded Couchbase Java SDK from 3.1.3 to 3.2.0.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-261[KAFKAC-261]:
+*Sink* A connector configured to use SUBDOCUMENT mode with an operation of `ARRAY_PREPEND` or `ARRAY_PREPEND` could mistakenly ignore updates if Kafka records targeting the same document arrive in rapid succession.
+This is now fixed.
+
+* https://issues.couchbase.com/browse/KAFKAC-262[KAFKAC-262]:
+*Sink* A connector configured to use N1QL mode could mistakenly ignore updates if Kafka records targeting the same document(s) arrive in rapid succession.
+This is now fixed.
+
 [[v4.0.6]]
 == Version 4.0.6 (20 April 2021)
 
