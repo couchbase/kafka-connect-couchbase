@@ -53,6 +53,10 @@ public interface DcpConfig {
    * in publishing "phantom changes" that don’t reflect the actual state of
    * a document in Couchbase after a failover.
    * <p>
+   * TIP: Documents written to Couchbase with enhanced durability are never
+   * published to Kafka until the durability requirements are met, regardless
+   * of whether persistence polling is enabled.
+   * <p>
    * CAUTION: When connecting to an ephemeral bucket, always disable
    * persistence polling by setting this config option to `0`,
    * otherwise the connector will never publish any changes.

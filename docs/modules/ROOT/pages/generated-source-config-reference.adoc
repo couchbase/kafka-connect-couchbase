@@ -310,6 +310,8 @@ To disable this feature, specify a zero duration (`0`).
 In this mode the connector publishes changes to Kafka immediately, without waiting for replication.
 This is fast and uses less network bandwidth, but can result in publishing "phantom changes" that don’t reflect the actual state of a document in Couchbase after a failover.
 
+TIP: Documents written to Couchbase with enhanced durability are never published to Kafka until the durability requirements are met, regardless of whether persistence polling is enabled.
+
 CAUTION: When connecting to an ephemeral bucket, always disable persistence polling by setting this config option to `0`, otherwise the connector will never publish any changes.
 
 * Type: string
