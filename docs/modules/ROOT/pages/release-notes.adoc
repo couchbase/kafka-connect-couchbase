@@ -24,6 +24,20 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.2]]
+== Version 4.1.2 (24 Sep 2021)
+
+https://packages.couchbase.com/clients/kafka/4.1.2/couchbase-kafka-connect-couchbase-4.1.2.zip[Download]
+
+This release upgrades the jsoup library to address https://github.com/jhy/jsoup/security/advisories/GHSA-m72m-mhq2-9p6c[CVE-2021-37714].
+That vulnerability does not affect the Kafka connector, since we don't parse untrusted XML or HTML.
+You can skip this version unless your goal is to pacify a vulnerability scanner.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-269[KAFKAC-269]:
+Upgraded the jsoup library from 1.13.1 to 1.14.2
+
 [[v4.1.1]]
 == Version 4.1.1 (19 Aug 2021)
 
