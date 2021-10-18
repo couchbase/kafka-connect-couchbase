@@ -16,7 +16,7 @@
     "couchbase.event.filter": "com.couchbase.connect.kafka.filter.AllPassFilter",
     "couchbase.stream.from": "SAVED_OFFSET_OR_BEGINNING",
     "couchbase.compression": "ENABLED",
-    "couchbase.flow.control.buffer": "128m",
+    "couchbase.flow.control.buffer": "16m",
     "couchbase.persistence.polling.interval": "100ms"
   }
 }
