@@ -117,6 +117,16 @@ Update the `dcp.client.version` property in `integration-test/pom.xml` to refer 
 new snapshot version.
 Commit and push to Gerrit. Breathe in. Breathe out.
 
+## Update Black Duck scan configuration
+
+Clone the build-tools repository http://review.couchbase.org/admin/repos/build-tools
+
+Edit `blackduck/couchbase-connector-kafka/scan-config.json`
+
+Copy and paste the latest version entry; update it to refer to the version under development. For example, if you just bumped the version to 4.3.2-SNAPSHOT, the new version you're adding here should be "4.3.2"
+
+Commit the change.
+
 ## Publishing a snapshot
 
 After every passing nightly build, a snapshot should be published to the Sonatype OSS snapshot repository by running this command:
