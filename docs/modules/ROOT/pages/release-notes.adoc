@@ -24,6 +24,24 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.3]]
+== Version 4.1.3 (19 Oct 2021)
+
+https://packages.couchbase.com/clients/kafka/4.1.3/couchbase-kafka-connect-couchbase-4.1.3.zip[Download]
+
+This version reduces the default flow control buffer size to a more reasonable value and improves DCP diagnostics.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-271[KAFKAC-271]:
+*Source* The default flow control buffer size is now 16 MB instead of 128 MB.
+This makes it less likely the source connector will run out of memory under heavy load with the default heap size.
+The documentation now describes how the https://docs.couchbase.com/kafka-connector/current/source-configuration-options.html#couchbase.flow.control.buffer[couchbase.flow.control.buffer] config property affects the Kafka Connect worker's memory requirements.
+
+* https://issues.couchbase.com/browse/KAFKAC-272[KAFKAC-272]:
+*Source* Upgraded DCP client from 0.36.0 to 0.37.0.
+This upgrade adds a workaround for https://issues.couchbase.com/browse/MB-48655[MB-48655] so all versions of Couchbase now correctly log DCP diagnostic messages from the source connector.
+
 [[v4.1.2]]
 == Version 4.1.2 (24 Sep 2021)
 
