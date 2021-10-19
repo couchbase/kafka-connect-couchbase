@@ -270,7 +270,7 @@
                             <goal>kafka-connect</goal>
                         </goals>
                         <configuration>
-                            <title>Kafka Connect Couchbase</title>
+                            <title>Couchbase Connector</title>
                             <documentationUrl>https://docs.couchbase.com/kafka-connector/current/</documentationUrl>
                             <description>
                                 The official Couchbase connector developed by Couchbase, Inc.
