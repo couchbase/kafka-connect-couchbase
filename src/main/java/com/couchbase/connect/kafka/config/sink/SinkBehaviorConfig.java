@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.config.sink;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
@@ -112,6 +113,20 @@ public interface SinkBehaviorConfig {
    */
   @Default("0")
   Duration documentExpiration();
+
+  /**
+   * If the connector fails to write a document to Couchbase for any reason,
+   * it will retry until this duration expires. If the write does not succeed
+   * within this time limit, the connector terminates.
+   * <p>
+   * A value of "0" (the default) means the connector will terminate
+   * immediately when a write fails.
+   *
+   * @since 4.1.4
+   */
+  @Default("0")
+  @Stability.Uncommitted
+  Duration retryTimeout();
 
   /**
    * @deprecated in favor of using the `couchbase.sink.handler` config property

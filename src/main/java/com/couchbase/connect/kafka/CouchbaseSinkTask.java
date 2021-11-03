@@ -31,6 +31,7 @@ import com.couchbase.connect.kafka.util.BatchBuilder;
 import com.couchbase.connect.kafka.util.DocumentIdExtractor;
 import com.couchbase.connect.kafka.util.DocumentPathExtractor;
 import com.couchbase.connect.kafka.util.DurabilitySetter;
+import com.couchbase.connect.kafka.util.KafkaRetryHelper;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
@@ -43,6 +44,7 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
+import org.apache.kafka.connect.sink.SinkTaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -71,6 +73,7 @@ public class CouchbaseSinkTask extends SinkTask {
   private JsonConverter converter;
   private DocumentIdExtractor documentIdExtractor;
   private SinkHandler sinkHandler;
+  private KafkaRetryHelper retryHelper;
 
   private DurabilitySetter durabilitySetter;
 
@@ -135,10 +138,35 @@ public class CouchbaseSinkTask extends SinkTask {
     documentExpiry = config.documentExpiration().isZero()
         ? Optional.empty()
         : Optional.of(config.documentExpiration());
+
+    retryHelper = new KafkaRetryHelper("CouchbaseSinkTask.put()", config.retryTimeout());
+
+    if (usingLongKvTimeouts()) {
+      String retryTimeoutName = ConfigHelper.keyName(CouchbaseSinkConfig.class, CouchbaseSinkConfig::retryTimeout);
+      LOGGER.warn("The specified KV timeout is very long, and might cause problems for the Kafka consumer session. " +
+          " Consider using the '" + retryTimeoutName + "' config property" +
+          " instead of setting a long KV timeout. The retry timeout handles more kinds of write failures" +
+          " and can safely be set to a duration longer than Kafka consumer session timeout.");
+    }
+  }
+
+  private boolean usingLongKvTimeouts() {
+    Duration actualKvTimeout = client.cluster().environment().timeoutConfig().kvTimeout();
+    Duration actualKvDurableTimeout = client.cluster().environment().timeoutConfig().kvDurableTimeout();
+
+    // something shorter than the default Kafka consumer session timeout of 30 seconds
+    Duration threshold = Duration.ofSeconds(20);
+
+    return actualKvTimeout.compareTo(threshold) > 0 ||
+        actualKvDurableTimeout.compareTo(threshold) > 0;
   }
 
   @Override
   public void put(java.util.Collection<SinkRecord> records) {
+    retryHelper.runWithRetry(() -> doPut(records));
+  }
+
+  private void doPut(java.util.Collection<SinkRecord> records) {
     if (records.isEmpty()) {
       return;
     }
@@ -230,6 +258,11 @@ public class CouchbaseSinkTask extends SinkTask {
 
   @Override
   public void stop() {
+    if (retryHelper != null) {
+      retryHelper.close();
+      retryHelper = null;
+    }
+
     if (client != null) {
       client.close();
       client = null;

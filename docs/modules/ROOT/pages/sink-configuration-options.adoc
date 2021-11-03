@@ -14,6 +14,9 @@ Any system property recognized by the Couchbase Java SDK may be specified in the
 For example, the Couchbase Java SDK recognizes the system property `com.couchbase.env.timeout.kvTimeout`.
 To specify this setting in the connector config, use the property name `couchbase.env.timeout.kvTimeout`.
 
+TIP: If you're thinking about increasing the KV timeout to handle transient error conditions, consider using the connector's `couchbase.retry.timeout` config property instead.
+The retry timeout is a more robust way to handle all kinds of write failures.
+
 For a list of recognized properties, see xref:java-sdk:ref:client-settings.adoc[Java SDK Client Settings].
 
 UNCOMMITTED; this feature may change in a patch release without notice.

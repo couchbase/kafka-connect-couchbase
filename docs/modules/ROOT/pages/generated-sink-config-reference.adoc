@@ -260,6 +260,23 @@ A value of "0" (the default) means documents never expire.
 * Valid Values: An integer followed by a time unit (ms = milliseconds, s = seconds, m = minutes, h = hours, d = days). For example, to specify 30 minutes: 30m
 * Importance: medium
 
+[[couchbase.retry.timeout]]
+=== `couchbase.retry.timeout`
+
+If the connector fails to write a document to Couchbase for any reason, it will retry until this duration expires.
+If the write does not succeed within this time limit, the connector terminates.
+
+A value of "0" (the default) means the connector will terminate immediately when a write fails.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.1.4
+
+* Type: string
+* Default: `0`
+* Valid Values: An integer followed by a time unit (ms = milliseconds, s = seconds, m = minutes, h = hours, d = days). For example, to specify 30 minutes: 30m
+* Importance: medium
+
 == Durability
 
 [[couchbase.durability]]
