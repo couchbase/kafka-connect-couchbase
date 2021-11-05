@@ -115,12 +115,20 @@ public interface SinkBehaviorConfig {
   Duration documentExpiration();
 
   /**
-   * If the connector fails to write a document to Couchbase for any reason,
-   * it will retry until this duration expires. If the write does not succeed
-   * within this time limit, the connector terminates.
+   * Retry failed writes to Couchbase until this deadline is reached.
+   * If time runs out, the connector terminates.
    * <p>
-   * A value of "0" (the default) means the connector will terminate
+   * A value of `0` (the default) means the connector will terminate
    * immediately when a write fails.
+   * <p>
+   * NOTE: This retry timeout is distinct from the KV timeout (which you can set
+   * via `couchbase.env.*`). The KV timeout affects an individual write attempt,
+   * while the retry timeout spans multiple attempts and makes the connector
+   * resilient to more kinds of transient failures.
+   * <p>
+   * TIP: Try not to confuse this with the Kafka Connect framework's built-in
+   * `errors.retry.timeout` config property, which applies only to failures occurring
+   * _before_ the framework delivers the record to the Couchbase connector.
    *
    * @since 4.1.4
    */
