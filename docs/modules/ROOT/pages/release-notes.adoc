@@ -33,7 +33,7 @@ This version adds a new configuration options for making the connector resilient
 
 === Enhancements
 
-* https://issues.couchbase.com/browse/KAFKAC-271[KAFKAC-271]:
+* https://issues.couchbase.com/browse/KAFKAC-275[KAFKAC-275]:
 *Sink* Added the `couchbase.retry.timeout` config property.
 If non-zero, the connector retries write failures until the timeout expires.
 This is better than simply extending the KV timeout; see xref:sink-configuration-options.adoc#couchbase.retry.timeout[the documentation] for details.
