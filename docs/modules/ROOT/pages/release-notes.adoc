@@ -24,6 +24,23 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.4]]
+== Version 4.1.4 (16 Nov 2021)
+
+https://packages.couchbase.com/clients/kafka/4.1.4/couchbase-kafka-connect-couchbase-4.1.4.zip[Download]
+
+This version adds a new configuration options for making the connector resilient to more kinds of transient failures.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-271[KAFKAC-271]:
+*Sink* Added the `couchbase.retry.timeout` config property.
+If non-zero, the connector retries write failures until the timeout expires.
+This is better than simply extending the KV timeout; see xref:sink-configuration-options.adoc#couchbase.retry.timeout[the documentation] for details.
+
+* https://issues.couchbase.com/browse/KAFKAC-276[KAFKAC-276]:
+Upgraded Couchbase Java SDK from 3.2.0 to 3.2.3.
+
 [[v4.1.3]]
 == Version 4.1.3 (19 Oct 2021)
 
