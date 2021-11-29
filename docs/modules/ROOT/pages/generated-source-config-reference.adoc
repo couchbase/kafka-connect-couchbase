@@ -184,8 +184,6 @@ ${scope} refers to the scope containing the document.
 
 ${collection} refers to the collection containing the document.
 
-The behavior of the "scope" and "collection" placeholders may change in a patch release without notice.
-
 * Type: string
 * Default: `${bucket}.${scope}.${collection}`
 * Importance: medium

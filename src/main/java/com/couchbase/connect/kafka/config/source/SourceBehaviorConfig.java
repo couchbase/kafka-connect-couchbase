@@ -33,9 +33,6 @@ public interface SourceBehaviorConfig {
    * ${scope} refers to the scope containing the document.
    * <p>
    * ${collection} refers to the collection containing the document.
-   * <p>
-   * The behavior of the "scope" and "collection" placeholders
-   * may change in a patch release without notice.
    */
   @Default("${bucket}.${scope}.${collection}")
   String topic();
