@@ -72,9 +72,9 @@
         <kafka.version>2.5.0</kafka.version>
         <dcp-client.version>0.39.0</dcp-client.version>
         <java-client.version>3.2.4</java-client.version>
-        <runtime.javadoc.version>0.12.0</runtime.javadoc.version>
+        <runtime.javadoc.version>0.13.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>4.13.1</junit.version>
+        <junit.version>4.13.2</junit.version>
         <mysql.version>5.1.6</mysql.version>
         <mockito.version>1.10.19</mockito.version>
         <dist-archive-name>${project.artifactId}-${project.version}.zip</dist-archive-name>
@@ -134,12 +134,12 @@
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.14.2</version>
+            <version>1.14.3</version>
         </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-jmx</artifactId>
-            <version>1.5.5</version>
+            <version>1.8.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
