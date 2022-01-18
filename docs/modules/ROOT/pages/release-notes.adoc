@@ -24,6 +24,30 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.5]]
+== Version 4.1.5 (18 Jan 2022)
+
+https://packages.couchbase.com/clients/kafka/4.1.5/couchbase-kafka-connect-couchbase-4.1.5.zip[Download]
+
+This version upgrades the Couchbase clients and other dependencies.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-279[KAFKAC-279]:
+Upgraded Couchbase DCP Client from 0.37.0 to 0.39.0:
+
+** https://issues.couchbase.com/browse/JDCP-208[JDCP-208]
+Improved the error message when the Couchbase user has insufficient permissions.
+
+** https://issues.couchbase.com/browse/JDCP-210[JDCP-210]
+Authentication no longer fails when credentials have non-ASCII characters and the system default encoding is not UTF-8.
+
+* https://issues.couchbase.com/browse/KAFKAC-281[KAFKAC-281]:
+Upgraded Couchbase Java SDK from 3.2.3 to https://docs.couchbase.com/java-sdk/current/project-docs/sdk-release-notes.html#version-3-2-4-9-december-2021[3.2.4].
+
+* https://issues.couchbase.com/browse/KAFKAC-282[KAFKAC-282]:
+Upgraded other dependencies to latest versions.
+
 [[v4.1.4]]
 == Version 4.1.4 (16 Nov 2021)
 
