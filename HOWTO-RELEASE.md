@@ -113,8 +113,6 @@ If the release succeeded, now's the time to publish the tag:
 ## Prepare for next dev cycle
 
 Increment the version number in `pom.xml` and restore the `-SNAPSHOT` suffix.
-Update the `dcp.client.version` property in `integration-test/pom.xml` to refer to the
-new snapshot version.
 Commit and push to Gerrit. Breathe in. Breathe out.
 
 ## Update Black Duck scan configuration
