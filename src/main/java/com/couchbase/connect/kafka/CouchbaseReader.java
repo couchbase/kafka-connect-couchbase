@@ -62,6 +62,7 @@ public class CouchbaseReader extends Thread {
   private final Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno;
   private final StreamFrom streamFrom;
   private final BlockingQueue<Throwable> errorQueue;
+  private final MeterRegistry meterRegistry;
 
   public CouchbaseReader(CouchbaseSourceTaskConfig config, final String connectorName,
                          final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
@@ -87,6 +88,8 @@ public class CouchbaseReader extends Thread {
       securityConfig.trustCertificate(Paths.get(config.trustCertificatePath()));
     }
 
+    meterRegistry = newMeterRegistry(connectorName, config);
+
     client = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .bootstrapTimeout(Duration.ofMillis(config.bootstrapTimeout().toMillis()))
@@ -104,7 +107,7 @@ public class CouchbaseReader extends Thread {
         .flowControl(config.flowControlBuffer().getByteCountAsSaturatedInt())
         .bufferAckWatermark(60)
         .securityConfig(securityConfig)
-        .meterRegistry(newMeterRegistry(connectorName, config))
+        .meterRegistry(meterRegistry)
         .build();
 
     client.nonBlockingListener(new DatabaseChangeListener() {
@@ -216,6 +219,10 @@ public class CouchbaseReader extends Thread {
   }
 
   public void shutdown() {
-    client.disconnect().block();
+    try {
+      client.disconnect().block();
+    } finally {
+      meterRegistry.close();
+    }
   }
 }
