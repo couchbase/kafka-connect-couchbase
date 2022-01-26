@@ -31,6 +31,7 @@ import com.couchbase.client.dcp.highlevel.Mutation;
 import com.couchbase.client.dcp.highlevel.SnapshotMarker;
 import com.couchbase.client.dcp.highlevel.StreamFailure;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
+import com.couchbase.client.dcp.metrics.LogLevel;
 import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
@@ -90,7 +92,7 @@ public class CouchbaseReader extends Thread {
 
     meterRegistry = newMeterRegistry(connectorName, config);
 
-    client = Client.builder()
+    Client.Builder builder = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .bootstrapTimeout(Duration.ofMillis(config.bootstrapTimeout().toMillis()))
         .seedNodes(config.dcpSeedNodes())
@@ -107,8 +109,17 @@ public class CouchbaseReader extends Thread {
         .flowControl(config.flowControlBuffer().getByteCountAsSaturatedInt())
         .bufferAckWatermark(60)
         .securityConfig(securityConfig)
-        .meterRegistry(meterRegistry)
-        .build();
+        .meterRegistry(meterRegistry);
+
+    if (config.enableDcpTrace()) {
+      Pattern p = Pattern.compile(config.dcpTraceDocumentIdRegex());
+      builder.trace(LogLevel.INFO,
+          p.pattern().equals(".*")
+              ? id -> true
+              : id -> p.matcher(id).matches());
+    }
+
+    client = builder.build();
 
     client.nonBlockingListener(new DatabaseChangeListener() {
       @Override

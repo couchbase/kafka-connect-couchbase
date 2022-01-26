@@ -16,10 +16,12 @@
 
 package com.couchbase.connect.kafka.config.source;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.dcp.config.CompressionMode;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.util.config.DataSize;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
+import com.couchbase.connect.kafka.util.config.annotation.Dependents;
 import com.couchbase.connect.kafka.util.config.annotation.Group;
 
 import java.time.Duration;
@@ -90,4 +92,30 @@ public interface DcpConfig {
    */
   @Default("false")
   boolean xattrs();
+
+  /**
+   * If true, detailed protocol trace information is logged to the
+   * `com.couchbase.client.dcp.trace` category at INFO level.
+   * Otherwise, trace information is not logged.
+   * <p>
+   * Disabled by default because it generates many log messages.
+   *
+   * @since 4.1.6
+   */
+  @Stability.Uncommitted
+  @Default("false")
+  @Dependents("couchbase.dcp.trace.document.id.regex")
+  boolean enableDcpTrace();
+
+  /**
+   * When DCP trace is enabled, set this property to limit the trace
+   * to only documents whose IDs match this Java regular expression.
+   * <p>
+   * Ignored if `couchbase.enable.dcp.trace` is false.
+   *
+   * @since 4.1.6
+   */
+  @Stability.Uncommitted
+  @Default(".*")
+  String dcpTraceDocumentIdRegex();
 }

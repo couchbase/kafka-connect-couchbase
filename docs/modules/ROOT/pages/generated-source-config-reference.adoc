@@ -344,4 +344,36 @@ Should filters and source handlers have access to a document's extended attribut
 * Default: `false`
 * Importance: medium
 
+[[couchbase.enable.dcp.trace]]
+=== `couchbase.enable.dcp.trace`
+
+If true, detailed protocol trace information is logged to the `com.couchbase.client.dcp.trace` category at INFO level.
+Otherwise, trace information is not logged.
+
+Disabled by default because it generates many log messages.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.1.6
+
+* Type: boolean
+* Default: `false`
+* Importance: medium
+* Dependents: `<<couchbase.dcp.trace.document.id.regex>>`
+
+[[couchbase.dcp.trace.document.id.regex]]
+=== `couchbase.dcp.trace.document.id.regex`
+
+When DCP trace is enabled, set this property to limit the trace to only documents whose IDs match this Java regular expression.
+
+Ignored if `couchbase.enable.dcp.trace` is false.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.1.6
+
+* Type: string
+* Default: `.*`
+* Importance: medium
+
 
