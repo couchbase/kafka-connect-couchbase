@@ -24,6 +24,31 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.6]]
+== Version 4.1.6 (15 Feb 2022)
+
+https://packages.couchbase.com/clients/kafka/4.1.6/couchbase-kafka-connect-couchbase-4.1.6.zip[Download]
+
+Recommended for all users, this version fixes a memory leak when the connector stops.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-283[KAFKAC-283]:
+The connector no longer leaks JMX MBeans on shutdown.
+The leak was a regression in version 4.0.2.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-284[KAFKAC-284]
+*Source* Added a new `couchbase.enable.dcp.trace` config option for enabling a DCP protocol trace to assist with diagnosing connector issues.
+Also added `couchbase.dcp.trace.document.id.regex` to narrow the scope of the trace.
+
+* https://issues.couchbase.com/browse/KAFKAC-286[KAFKAC-286]:
+Upgraded Couchbase Java SDK from 3.2.4 to 3.2.5.
+
+* https://issues.couchbase.com/browse/KAFKAC-287[KAFKAC-287]:
+Upgraded Couchbase DCP Client from 0.39.0 to 0.40.0.
+
 [[v4.1.5]]
 == Version 4.1.5 (18 Jan 2022)
 
