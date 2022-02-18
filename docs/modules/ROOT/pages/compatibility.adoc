@@ -46,6 +46,6 @@ h| Couchbase↓    | 4.0.x | 4.1.0 | 4.1.1+
 +++*+++ If you've been using an earlier version of Couchbase, you can upgrade to Couchbase 7 and everything will continue working as before.
 To take advantage of the Scopes and Collections introduced in Couchbase 7, please upgrade the connector to version 4.1.
 
-== Couchbase Cloud
+== Couchbase Capella
 
-Connector versions 4.0.1 and later are compatible with Couchbase Cloud.
+Connector versions 4.0.1 and later are compatible with Couchbase Capella.

@@ -207,7 +207,7 @@ This includes KV timeout durations, Response Time Observability settings, and lo
 
 https://packages.couchbase.com/clients/kafka/4.0.5/couchbase-kafka-connect-couchbase-4.0.5.zip[Download]
 
-This release improves diagnostic logging and simplifies Couchbase Cloud configuration.
+This release improves diagnostic logging and simplifies Couchbase Capella configuration.
 
 === Enhancements
 
@@ -288,7 +288,7 @@ In this release, the connector publishes metrics via JMX to facilitate monitorin
 
 https://packages.couchbase.com/clients/kafka/4.0.1/couchbase-kafka-connect-couchbase-4.0.1.zip[Download]
 
-This release improves compatibility with Couchbase Cloud, and exposes extended attributes (XATTRS) to custom components.
+This release improves compatibility with Couchbase Capella, and exposes extended attributes (XATTRS) to custom components.
 
 === Enhancements
 
@@ -311,7 +311,7 @@ Upgraded the DCP client from 0.29.0 to 0.30.0, adding support for XATTRs.
 
 * https://issues.couchbase.com/browse/KAFKAC-225[KAFKAC-225]:
 Fixed a regression in version 4.0.0 that broke alternate address resolution.
-The connector now handles DNS SRV and alternate addresses correctly, and can connect to Couchbase Cloud or other network environments that use alternate addresses.
+The connector now handles DNS SRV and alternate addresses correctly, and can connect to Couchbase Capella or other network environments that use alternate addresses.
 
 [[v4.0.0]]
 == Version 4.0.0 (18 August 2020)

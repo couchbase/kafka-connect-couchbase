@@ -1,8 +1,8 @@
-= Couchbase Cloud Support
+= Couchbase Capella Support
 :page-topic-type: concept
 
 [abstract]
-Connecting to Couchbase Cloud is very similar to connecting to any Couchbase cluster over an encrypted connection.
+Connecting to Couchbase Capella is very similar to connecting to any Couchbase cluster over an encrypted connection.
 This section explains how.
 
 [IMPORTANT]
@@ -13,7 +13,7 @@ Earlier versions will not work.
 
 == Certificate Download
 
-Once you have created a Cluster in Couchbase Cloud, navigate to the `Connect` tab and download the security certificate.
+Once you have created a Cluster in Couchbase Capella, navigate to the `Connect` tab and download the security certificate.
 
 image::cloud-ui.png[Cloud UI]
 
@@ -27,7 +27,7 @@ Enable TLS by setting `*couchbase.enable.tls*` to `true`.
 
 Set the `*couchbase.trust.certificate.path*` property to the absolute filesystem path to `couchbase.pem`.
 
-Now you're ready to connect to your Couchbase Cloud cluster.
+Now you're ready to connect to your Couchbase Capella cluster.
 
 TIP: Alternatively, you can put the certificate in a trust store as decribed in the next section.
 
@@ -39,9 +39,9 @@ Prior to connector version 4.0.5, the certificate must live in a trust store.
 === Add the certificate to a trust store
 
 The connector's trust store is a Java keystore file containing the certificates the connector should trust.
-We'll use the Java `keytool` command to create a keystore and populate it with the root certificates for Couchbase Cloud.
+We'll use the Java `keytool` command to create a keystore and populate it with the root certificates for Couchbase Capella.
 
-To add the Couchbase Cloud root certificate:
+To add the Couchbase Capella root certificate:
 
 [source]
 ----
@@ -67,7 +67,7 @@ Your keystore contains 1 entry
 
 === Configure the connector to use a trust store
 
-Now that you have a trust store containing the cloud certificate, the last step is to configure the connector to use it for secure connections.
+Now that you have a trust store containing the Capella certificate, the last step is to configure the connector to use it for secure connections.
 
 Enable TLS by setting `*couchbase.enable.tls*` to `true`.
 
@@ -75,4 +75,4 @@ Set the `*couchbase.trust.store.path*` property to the absolute filesystem path 
 
 Configure `*couchbase.trust.store.password*` by providing the keystore password.
 
-Now you're ready to connect to your Couchbase Cloud cluster.
+Now you're ready to connect to your Couchbase Capella cluster.

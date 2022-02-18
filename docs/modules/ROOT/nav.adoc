@@ -6,6 +6,6 @@
 * xref:streams-sample.adoc[Couchbase Sample with Kafka Streams]
 * xref:migration.adoc[Migration Guide]
 * xref:compatibility.adoc[Compatibility]
-* xref:cloud.adoc[Couchbase Cloud Support]
+* xref:cloud.adoc[Couchbase Capella Support]
 * xref:troubleshooting.adoc[Troubleshooting]
 * xref:release-notes.adoc[Release Notes]
