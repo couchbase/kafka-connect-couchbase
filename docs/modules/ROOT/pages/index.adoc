@@ -1,23 +1,38 @@
 = Introduction
 
 [abstract]
-The Kafka connector provides functionality to stream, filter, and transform events between Couchbase Server and Kafka.
-
 The Couchbase Kafka connector is a plug-in for the https://kafka.apache.org/documentation.html#connect[Kafka Connect] framework.
-It provides both "source" and "sink" components.
+It provides source and sink components.
 
-The source connector streams documents from Couchbase Server using the high-performance Database Change Protocol (DCP) and publishes the documents to Kafka topics in near real-time.
-Whenever you modify a document in Couchbase, the new version is published to Kafka.
+The source connector streams documents from Couchbase Server using the high-performance Database Change Protocol (DCP) and publishes the latest version of each document to a Kafka topic in near real-time.
 
 The sink connector subscribes to Kafka topics and writes the messages to Couchbase Server.
 
-== Delivery Guarantees
+[[delivery-guarantees]]
+== Source Connector Delivery Guarantees
 
-The connector guarantees "at least one" delivery.
-In some situations the connector may "rewind" the document stream and restart from an earlier point in history.
+The source connector guarantees "at least one" delivery of _the latest version_ of each document.
 
-Except for rewinding, the connector preserves the order of changes within the same Couchbase partition (or "virtual bucket").
-The order between changes in different Couchbase partitions is not guaranteed.
+In some situations the source connector may "rewind" the document stream and restart from an earlier point in history.
+
+Except for rewinding, the source connector preserves the order of changes within the same Couchbase partition (or "virtual bucket"), and changes to a document are published in the order they occurred.
+
+The order between changes in different Couchbase partitions is *not* guaranteed.
+
+When a document is removed from Couchbase due to expiration, the connector does not publish the deletion until the expired document is xref:server:learn:data/expiration.adoc#post-expiration-purging[purged from Couchbase].
+
+WARNING: The source connector *does not* guarantee every version of a document will be reflected in the Kafka topic.
+For example, if a Couchbase document value changes rapidly from `V1` -> `V2` -> `V3`, or if the connector is not running when the change occurs, the connector is only guaranteed to publish the latest value (`V3`).
+
+For use cases that require every document version be reflected in the event stream without fail, two popular options are:
+
+1. Treat the documents as immutable, and write a new document for each application event.
+In other words, make `V1`, `V2`, and `V3` separate documents.
+
+2. Include a version history inside each document.
+For example, the first version of a document would be just `[V1]`.
+The second version would add `V2`, resulting in `[V1,V2]`.
+After adding `V3`, it would be `[V1,V2,V3]`.
 
 == Compatibility
 

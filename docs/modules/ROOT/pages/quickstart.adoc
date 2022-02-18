@@ -1,6 +1,9 @@
 = Quickstart
 
-This section shows how to add the connector to your application.
+[abstract]
+This section shows how to deploy the connector.
+
+Before you start, make sure to read the xref:index.adoc[introduction], especially the part about the connector's xref:index.adoc#delivery-guarantees[delivery guarantees].
 
 == Download
 
