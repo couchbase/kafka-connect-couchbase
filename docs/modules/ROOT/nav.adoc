@@ -1,5 +1,6 @@
 .xref:index.adoc[Kafka Connector]
 * xref:quickstart.adoc[Quickstart]
+* xref:delivery-guarantees.adoc[Delivery Guarantees]
 * xref:source-configuration-options.adoc[Source Configuration Options]
 * xref:sink-configuration-options.adoc[Sink Configuration Options]
 * xref:monitoring.adoc[Monitoring]
