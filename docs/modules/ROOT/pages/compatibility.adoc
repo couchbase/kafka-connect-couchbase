@@ -33,6 +33,8 @@ h| Confluent Platform ↓ | 4.0 | 4.1
 
 == Couchbase Server
 
+The connector is compatible with Couchbase Server Enterprise Edition and Couchbase Server Community Edition.
+
 [%autowidth,cols="^,3*^"]
 |===
  |           3+h| Connector
