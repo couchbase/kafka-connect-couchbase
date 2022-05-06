@@ -1,0 +1,22 @@
+= Branch Management
+
+[abstract]
+A brief overview of how this project uses branches for code and documentation.
+
+The `master` branch is used for day-to-day development.
+
+There is one `release/*` branch for each previous minor release version.
+For example, if the current minor version is `2.1`, the branches might be `release/1.0`, `release/1.1`, `release/2.0`.
+
+The `master` branch is for the latest minor version.
+
+Patch versions (for example, `2.1.3`) are tagged on the `master` branch (or one of the release branches, in the rare case you need to do a new release on an older minor version).
+
+There's one set of documentation for each minor version.
+The documentation lives in the same repo as the code, and branches along with the code.
+
+CAUTION: Changes to the docs are automatically published to `docs.couchbase.com`, including docs in the `master` branch.
+If you're writing docs for an upcoming minor version, you might want to do that in a temporary branch instead of `master`, and/or only commit the changes after the minor version is released.
+
+
+
