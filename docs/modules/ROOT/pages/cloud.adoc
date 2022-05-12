@@ -11,6 +11,24 @@ You must use a Kafka connector version of *4.0.1 or higher*.
 Earlier versions will not work.
 ====
 
+
+== Before You Start
+
+Make sure your Capella cluster is configured to allow connections from the IP addresses of all computers running the connector.
+
+You will need the credentials of a Capella database user with read (or read/write) permission.
+
+You will need to know which version of the connector you are using, so you can follow the instructions for that version.
+
+[[configure-4.1.7]]
+== Configuring Version 4.1.7 and Later
+
+With this version of the connector, connecting to Capella is simple.
+All you need to do is enable TLS by setting the `couchbase.enable.tls` connector config property to true.
+
+The Capella Certificate Authority (CA) certificate bundled with the connector is trusted by default. You can skip the rest of this page, or continue reading to learn how to configure the connector to trust a different CA certificate.
+
+[[certificate-download]]
 == Certificate Download
 
 Once you have created a Cluster in Couchbase Capella, navigate to the `Connect` tab and download the security certificate.

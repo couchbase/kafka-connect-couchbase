@@ -89,6 +89,9 @@ public class CouchbaseReader extends Thread {
     if (!isNullOrEmpty(config.trustCertificatePath())) {
       securityConfig.trustCertificate(Paths.get(config.trustCertificatePath()));
     }
+    if (isNullOrEmpty(config.trustStorePath()) && isNullOrEmpty(config.trustCertificatePath())) {
+      securityConfig.trustCertificates(com.couchbase.client.core.env.SecurityConfig.defaultCaCertificates());
+    }
 
     meterRegistry = newMeterRegistry(connectorName, config);
 
