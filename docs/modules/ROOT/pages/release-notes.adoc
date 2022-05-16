@@ -24,6 +24,22 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.7]]
+== Version 4.1.7 (17 May 2022)
+
+https://packages.couchbase.com/clients/kafka/4.1.7/couchbase-kafka-connect-couchbase-4.1.7.zip[Download]
+
+This version makes it easier to connect to Capella.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-290[KAFKAC-290]
+When connecting to Capella, it is no longer necessary to configure the Certificate Authority certificate.
+All you need to do is enable TLS.
+
+* https://issues.couchbase.com/browse/KAFKAC-288[KAFKAC-288]:
+Upgraded Couchbase Java SDK from 3.2.5 to 3.3.0.
+
 [[v4.1.6]]
 == Version 4.1.6 (15 Feb 2022)
 

@@ -16,7 +16,9 @@ Earlier versions will not work.
 
 Make sure your Capella cluster is configured to allow connections from the IP addresses of all computers running the connector.
 
-You will need the credentials of a Capella database user with read (or read/write) permission.
+You will need the credentials of a Capella database user.
+For the source connector, the user must have read (or read/write) permission.
+For the sink connector, the user must have read/write permission.
 
 You will need to know which version of the connector you are using, so you can follow the instructions for that version.
 
@@ -26,7 +28,8 @@ You will need to know which version of the connector you are using, so you can f
 With this version of the connector, connecting to Capella is simple.
 All you need to do is enable TLS by setting the `couchbase.enable.tls` connector config property to true.
 
-The Capella Certificate Authority (CA) certificate bundled with the connector is trusted by default. You can skip the rest of this page, or continue reading to learn how to configure the connector to trust a different CA certificate.
+The Capella Certificate Authority (CA) certificate bundled with the connector is trusted by default.
+*You can skip the rest of this page*, or continue reading to learn how to configure the connector to trust a different CA certificate.
 
 [[certificate-download]]
 == Certificate Download
