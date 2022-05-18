@@ -87,6 +87,8 @@ For this exercise, change the value of `couchbase.bucket` to `travel-sample` (or
 For `couchbase.username` and `couchbase.password`, supply the credentials of a Couchbase user who has the "Data DCP Reader" role for the bucket.
 If you have not yet created such a user, now is a good time to read about xref:server:manage:manage-security/manage-users-and-roles.adoc[Creating and Managing Users with the UI].
 
+TIP: If you're connecting to Capella, make sure to read xref:cloud.adoc[].
+
 [[run]]
 === Run the Source Connector
 
