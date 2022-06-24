@@ -74,7 +74,7 @@ producer.interceptor.classes=io.confluent.monitoring.clients.interceptor.Monitor
 
 == Code Overview
 
-The full code of this sample is accessible in the connector repository at https://github.com/couchbase/kafka-connect-couchbase/blob/master/src/test/java/examples/KafkaStreamsDemo.java[src/test/java/examples/KafkaStreamsDemo.java].
+The full code of this sample is accessible in the connector repository at https://github.com/couchbase/kafka-connect-couchbase/tree/master/examples/kafka-streams-demo[examples/kafka-streams-demo].
 
 [source,java]
 ----
