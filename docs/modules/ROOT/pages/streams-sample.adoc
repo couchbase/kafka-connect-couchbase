@@ -1,4 +1,4 @@
-= Couchbase Sample with Kakfa Streams
+= Couchbase Sample with Kafka Streams
 
 Sample application which uses Couchbase connector with Kafka Streams.
 
