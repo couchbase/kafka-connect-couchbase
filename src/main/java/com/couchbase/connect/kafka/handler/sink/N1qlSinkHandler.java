@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.handler.sink;
 
+import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 
@@ -39,9 +41,9 @@ public class N1qlSinkHandler implements SinkHandler {
   private static final String ID_FIELD = "__id__";
 
   private N1qlSinkHandlerConfig.Operation mode;
-  private String conditions;
-  private boolean createDocuments;
-  private String bucketName;
+  protected String conditions;
+  protected boolean createDocuments;
+  protected String bucketName;
 
   /**
    * Returns a modified copy of the given map, using the alias property
@@ -85,6 +87,8 @@ public class N1qlSinkHandler implements SinkHandler {
   public SinkAction handle(SinkHandlerParams params) {
     String documentId = getDocumentId(params);
     SinkDocument doc = params.document().orElse(null);
+    String keySpace = keyspace(params);
+
     if (doc == null) {
       return SinkAction.remove(params, params.collection(), documentId);
     }
@@ -111,7 +115,7 @@ public class N1qlSinkHandler implements SinkHandler {
       }
     }
 
-    String statement = getStatement(bucketName, node);
+    String statement = getStatement(keySpace, node);
     node.put(ID_FIELD, documentId);
 
     // ReactiveCluster.query is an unholy blend of hot and cold.
@@ -128,35 +132,68 @@ public class N1qlSinkHandler implements SinkHandler {
     return new SinkAction(action, concurrencyHint);
   }
 
-  private String getStatement(String bucketName, JsonObject kafkaMessage) {
+  /**
+   * Returns the target keyspace (bucket + scope + collection)
+   * pre-escaped for inclusion in a query statement.
+  */
+  protected static String keyspace(SinkHandlerParams params) {
+    ReactiveCollection c = params.collection();
+    String bucket = c.bucketName();
+    String scope = defaultIfEmpty(c.scopeName(), "_default");
+    String collection = defaultIfEmpty(c.name(), "_default");
+
+    List<String> components = new ArrayList<>();
+    components.add(bucket); // always include bucket
+
+    // For compatibility with pre-7.0 servers, omit scope and collection
+    // when the keyspace is the default collection.
+    boolean defaultCollection = 
+        scope.equals("_default") && collection.equals("_default");
+    if (!defaultCollection) {
+      components.add(scope);
+      components.add(collection);
+    }
+
+    // Escape each component by enclosing in backticks (`),
+    // then put a dot (.) in between each component.
+    return components.stream()
+        .map(it -> "`" + it + "`")
+        .collect(Collectors.joining("."));
+  }
+
+  private static String defaultIfEmpty(String s, String defaultValue) {
+    return s.isEmpty() ? defaultValue : s;
+  }
+
+  private String getStatement(String keySpace, JsonObject kafkaMessage) {
     switch (this.mode) {
       case UPDATE_WHERE:
-        return updateWithConditionStatement(bucketName, kafkaMessage);
+        return updateWithConditionStatement(keySpace, kafkaMessage);
       case UPDATE:
         return createDocuments
-            ? mergeStatement(bucketName, kafkaMessage)
-            : updateStatement(bucketName, kafkaMessage);
+            ? mergeStatement(keySpace, kafkaMessage)
+            : updateStatement(keySpace, kafkaMessage);
       default:
         throw new AssertionError("unrecognized n1ql mode");
     }
   }
 
   private String updateStatement(String keySpace, JsonObject values) {
-    return "UPDATE `" + keySpace + "`" +
+    return "UPDATE " + keySpace +
         " USE KEYS $" + ID_FIELD +
         " SET " + assignments(values) +
         " RETURNING meta().id;";
   }
 
   private String updateWithConditionStatement(String keySpace, JsonObject values) {
-    return "UPDATE `" + keySpace + "`" +
+    return "UPDATE " + keySpace +
         " SET " + assignments(values) +
         " WHERE " + conditions +
         " RETURNING meta().id;";
   }
 
   private String mergeStatement(String keyspace, JsonObject values) {
-    return "MERGE INTO `" + keyspace + "` AS doc" +
+    return "MERGE INTO " + keyspace + " AS doc" +
         " USING 1 AS o" + // dummy to satisfy the MERGE INTO syntax?
         " ON KEY $" + ID_FIELD +
         " WHEN MATCHED THEN UPDATE SET " + assignments(values, "doc.") +
