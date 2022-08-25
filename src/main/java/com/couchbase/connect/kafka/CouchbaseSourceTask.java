@@ -27,6 +27,7 @@ import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
+import com.couchbase.connect.kafka.util.CollectionMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigException;
@@ -52,8 +53,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class CouchbaseSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
-
   private static final long STOP_TIMEOUT_MILLIS = SECONDS.toMillis(10);
+  private Map<String, String> collectionToTopic;
 
   private String connectorName;
   private CouchbaseReader couchbaseReader;
@@ -102,6 +103,7 @@ public class CouchbaseSourceTask extends SourceTask {
     sourceHandler.init(unmodifiableProperties);
 
     topic = config.topic();
+    collectionToTopic = CollectionMap.parse(config.collectionToTopic());
     bucket = config.bucket();
     connectorNameInOffsets = config.connectorNameInOffsets();
     batchSizeMax = config.batchSizeMax();
@@ -210,16 +212,18 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   private CouchbaseSourceRecord convertToSourceRecord(DocumentChange change, DocumentEvent docEvent) {
-    String defaultTopic = getDefaultTopic(docEvent);
+    String topic = collectionToTopic.getOrDefault(
+        scopeAndCollection(docEvent.collectionMetadata().scopeName(), docEvent.collectionMetadata().collectionName()),
+        getDefaultTopic(docEvent));
 
-    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, defaultTopic, noValue));
+    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, topic, noValue));
     if (builder == null) {
       return null;
     }
     return builder.build(change,
         sourcePartition(docEvent.partition()),
         sourceOffset(docEvent),
-        defaultTopic);
+        topic);
   }
 
   @Override
@@ -305,4 +309,9 @@ public class CouchbaseSourceTask extends SourceTask {
         .map(Integer::valueOf)
         .collect(Collectors.toList());
   }
+
+  private String scopeAndCollection(String scopeName, String collectionName) {
+    return scopeName + "." + collectionName;
+  }
+
 }

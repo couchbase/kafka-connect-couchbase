@@ -20,6 +20,10 @@ import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
+import com.couchbase.connect.kafka.util.CollectionMap;
+import org.apache.kafka.common.config.ConfigDef;
+import static com.couchbase.connect.kafka.util.config.ConfigHelper.validate;
+
 
 import java.util.List;
 
@@ -36,6 +40,32 @@ public interface SourceBehaviorConfig {
    */
   @Default("${bucket}.${scope}.${collection}")
   String topic();
+
+
+  /**
+   * A map from Couchbase collection to Kafka topic .
+   * <p>
+   * Collection and Topic are joined by an equals sign.
+   * Map entries are delimited by commas.
+   * <p>
+   * For example, if you want to write messages from collection "
+   * scope-a.invoices" to topic "topic1", and messages from collection
+   * "scope-a.widgets" to topic "topic2" you would write:
+   * "scope-a.invoices=topic1,scope-a.widgets"=topic2.
+   * <p>
+   * Defaults to an empty map.For collections not present in this map,
+   *the destination topic is determined by the `couchbase.topic` config property.
+  */
+  @Default
+  List<String> collectionToTopic();
+
+  @SuppressWarnings("unused")
+  static ConfigDef.Validator collectionTotopicValidator() {
+    return validate(CollectionMap::parse, "scope.collection=topic,...");
+  }
+
+
+
 
   /**
    * The fully-qualified class name of the source handler to use.
