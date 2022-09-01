@@ -175,7 +175,8 @@ Disabled by default because it generates many log messages.
 [[couchbase.topic]]
 === `couchbase.topic`
 
-Name of the Kafka topic to publish data to.
+Name of the default Kafka topic to publish data to, for collections that don't have an entry in the `couchbase.collection.to.topic` map.
+
 This is a format string that recognizes the following placeholders:
 
 ${bucket} refers to the bucket containing the document.
@@ -186,6 +187,24 @@ ${collection} refers to the collection containing the document.
 
 * Type: string
 * Default: `${bucket}.${scope}.${collection}`
+* Importance: medium
+
+[[couchbase.collection.to.topic]]
+=== `couchbase.collection.to.topic`
+
+A map from Couchbase collection to Kafka topic.
+
+Collection and Topic are joined by an equals sign.
+Map entries are delimited by commas.
+
+For example, if you want to write messages from collection "scope-a.invoices" to topic "topic1", and messages from collection "scope-a.widgets" to topic "topic2", you would write: "scope-a.invoices=topic1,scope-a.widgets=topic2".
+
+Defaults to an empty map.
+For collections not present in this map, the destination topic is determined by the `couchbase.topic` config property.
+
+* Type: list
+* Default: `""`
+* Valid Values: scope.collection=topic,...
 * Importance: medium
 
 [[couchbase.source.handler]]

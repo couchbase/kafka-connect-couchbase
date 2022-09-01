@@ -34,7 +34,7 @@ public interface SinkBehaviorConfig {
 
   /**
    * Qualified name (scope.collection) of the destination collection for messages
-   * from topics that don't have a "topic to collection" map entry.
+   * from topics that don't have an entry in the `couchbase.topic.to.collection` map.
    */
   @Default("_default._default")
   String defaultCollection();
@@ -63,7 +63,7 @@ public interface SinkBehaviorConfig {
 
   @SuppressWarnings("unused")
   static ConfigDef.Validator topicToCollectionValidator() {
-    return validate(TopicMap::parse, "topic=scope.collection,...");
+    return validate(TopicMap::parseTopicToCollection, "topic=scope.collection,...");
   }
 
   /**

@@ -49,7 +49,7 @@ When you're satisfied with the test results, it's time to...
 
 ## Refresh the generated documentation
 
-Some of the reference documentation is generated from Javadoc.
+Some reference documentation is generated from Javadoc.
 Run this command to regenerate the docs:
 
     mvn clean test-compile exec:java

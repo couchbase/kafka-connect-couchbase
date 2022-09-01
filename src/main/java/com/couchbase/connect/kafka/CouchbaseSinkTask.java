@@ -44,7 +44,6 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
-import org.apache.kafka.connect.sink.SinkTaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -106,7 +105,7 @@ public class CouchbaseSinkTask extends SinkTask {
     LogRedaction.setRedactionLevel(config.logRedaction());
     client = new KafkaCouchbaseClient(config, clusterEnvProperties);
     defaultDestCollection = ScopeAndCollection.parse(config.defaultCollection());
-    topicToCollection = TopicMap.parse(config.topicToCollection());
+    topicToCollection = TopicMap.parseTopicToCollection(config.topicToCollection());
 
     converter = new JsonConverter();
     converter.configure(mapOf("schemas.enable", false), false);

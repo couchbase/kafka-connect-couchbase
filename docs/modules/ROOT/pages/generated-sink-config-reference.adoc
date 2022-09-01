@@ -175,7 +175,7 @@ Disabled by default because it generates many log messages.
 [[couchbase.default.collection]]
 === `couchbase.default.collection`
 
-Qualified name (scope.collection) of the destination collection for messages from topics that don't have a "topic to collection" map entry.
+Qualified name (scope.collection) of the destination collection for messages from topics that don't have an entry in the `couchbase.topic.to.collection` map.
 
 * Type: string
 * Default: `_default._default`

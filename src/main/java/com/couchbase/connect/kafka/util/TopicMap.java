@@ -19,25 +19,48 @@ package com.couchbase.connect.kafka.util;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
-public class TopicMap extends HashMap<String, ScopeAndCollection> {
+import static java.util.stream.Collectors.toMap;
+
+public class TopicMap {
   private TopicMap() {
     throw new AssertionError("not instantiable");
   }
 
-  public static Map<String, ScopeAndCollection> parse(List<String> topicToCollection) {
-    Map<String, ScopeAndCollection> result = new HashMap<>();
+  public static Map<String, ScopeAndCollection> parseTopicToCollection(List<String> topicToCollection) {
+    return mapValues(parseCommon(topicToCollection), ScopeAndCollection::parse);
+  }
 
-    for (String entry : topicToCollection) {
-      String[] topicAndCollection = entry.split("=", -1);
-      if (topicAndCollection.length != 2) {
+  public static Map<ScopeAndCollection, String> parseCollectionToTopic(List<String> collectionToTopic) {
+    return mapKeys(parseCommon(collectionToTopic), ScopeAndCollection::parse);
+  }
+
+  private static Map<String, String> parseCommon(List<String> map) {
+    Map<String, String> result = new HashMap<>();
+    for (String entry : map) {
+      String[] components = entry.split("=", -1);
+      if (components.length != 2) {
         throw new IllegalArgumentException("Bad entry: '" + entry + "'. Expected exactly one equals (=) character separating topic and collection.");
       }
-      String topic = topicAndCollection[0];
-      ScopeAndCollection scopeAndCollection = ScopeAndCollection.parse(topicAndCollection[1]);
-      result.put(topic, scopeAndCollection);
+      result.put(components[0], components[1]);
     }
-
     return result;
+  }
+
+  private static <K, V1, V2> Map<K, V2> mapValues(Map<K, V1> map, Function<? super V1, ? extends V2> valueTransformer) {
+    return map.entrySet().stream()
+        .collect(toMap(
+            Map.Entry::getKey,
+            entry -> valueTransformer.apply(entry.getValue())
+        ));
+  }
+
+  private static <K1, K2, V> Map<K2, V> mapKeys(Map<K1, V> map, Function<? super K1, ? extends K2> keyTransformer) {
+    return map.entrySet().stream()
+        .collect(toMap(
+            entry -> keyTransformer.apply(entry.getKey()),
+            Map.Entry::getValue
+        ));
   }
 }

@@ -27,7 +27,8 @@ import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
-import com.couchbase.connect.kafka.util.CollectionMap;
+import com.couchbase.connect.kafka.util.ScopeAndCollection;
+import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigException;
@@ -54,15 +55,14 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class CouchbaseSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
   private static final long STOP_TIMEOUT_MILLIS = SECONDS.toMillis(10);
-  private Map<String, String> collectionToTopic;
 
   private String connectorName;
   private CouchbaseReader couchbaseReader;
   private BlockingQueue<DocumentChange> queue;
   private BlockingQueue<Throwable> errorQueue;
-  private String topic;
+  private String defaultTopicTemplate;
+  private Map<ScopeAndCollection, String> collectionToTopic;
   private String bucket;
-  private volatile boolean running;
   private Filter filter;
   private SourceHandler sourceHandler;
   private int batchSizeMax;
@@ -102,9 +102,10 @@ public class CouchbaseSourceTask extends SourceTask {
     sourceHandler = Utils.newInstance(config.sourceHandler());
     sourceHandler.init(unmodifiableProperties);
 
-    topic = config.topic();
-    collectionToTopic = CollectionMap.parse(config.collectionToTopic());
+    defaultTopicTemplate = config.topic();
+    collectionToTopic = TopicMap.parseCollectionToTopic(config.collectionToTopic());
     bucket = config.bucket();
+    //noinspection deprecation
     connectorNameInOffsets = config.connectorNameInOffsets();
     batchSizeMax = config.batchSizeMax();
     noValue = config.noValue();
@@ -112,7 +113,6 @@ public class CouchbaseSourceTask extends SourceTask {
     List<Integer> partitions = parseInts(config.partitions());
     Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno = readSourceOffsets(partitions);
 
-    running = true;
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
     couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle);
@@ -180,7 +180,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
   private String getDefaultTopic(DocumentEvent docEvent) {
     CollectionMetadata collectionMetadata = docEvent.collectionMetadata();
-    return topic
+    return defaultTopicTemplate
         .replace("${bucket}", bucket)
         .replace("${scope}", collectionMetadata.scopeName())
         .replace("${collection}", collectionMetadata.collectionName())
@@ -213,8 +213,9 @@ public class CouchbaseSourceTask extends SourceTask {
 
   private CouchbaseSourceRecord convertToSourceRecord(DocumentChange change, DocumentEvent docEvent) {
     String topic = collectionToTopic.getOrDefault(
-        scopeAndCollection(docEvent.collectionMetadata().scopeName(), docEvent.collectionMetadata().collectionName()),
-        getDefaultTopic(docEvent));
+        scopeAndCollection(docEvent),
+        getDefaultTopic(docEvent)
+    );
 
     SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, topic, noValue));
     if (builder == null) {
@@ -228,7 +229,6 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @Override
   public void stop() {
-    running = false;
     if (couchbaseReader != null) {
       couchbaseReader.shutdown();
       try {
@@ -310,8 +310,9 @@ public class CouchbaseSourceTask extends SourceTask {
         .collect(Collectors.toList());
   }
 
-  private String scopeAndCollection(String scopeName, String collectionName) {
-    return scopeName + "." + collectionName;
+  private static ScopeAndCollection scopeAndCollection(DocumentEvent docEvent) {
+    CollectionMetadata md = docEvent.collectionMetadata();
+    return new ScopeAndCollection(md.scopeName(), md.collectionName());
   }
 
 }
