@@ -215,6 +215,9 @@ The source handler determines how the Couchbase document is converted into a Kaf
 
 To publish JSON messages identical to the Couchbase documents, use `com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler` and set `value.converter` to `org.apache.kafka.connect.converters.ByteArrayConverter`.
 
+When using a custom source handler that filters out certain messages, consider also configuring `couchbase.black.hole.topic`.
+See that property's documentation for details.
+
 * Type: class
 * Importance: medium
 
@@ -222,10 +225,32 @@ To publish JSON messages identical to the Couchbase documents, use `com.couchbas
 === `couchbase.event.filter`
 
 The class name of the event filter to use.
-The event filter determines whether or not a database change event is ignored.
+The event filter determines whether a database change event is ignored.
+
+When using a non-default filter, consider also configuring `couchbase.black.hole.topic`.
+See that property's documentation for details.
 
 * Type: class
 * Default: `com.couchbase.connect.kafka.filter.AllPassFilter`
+* Importance: medium
+
+[[couchbase.black.hole.topic]]
+=== `couchbase.black.hole.topic`
+
+If this property is non-blank, the connector publishes a tiny synthetic record to this topic whenever the Filter or SourceHandler ignores a source event.
+
+This lets the connector tell the Kafka Connect framework about the source offset of the ignored event.
+Otherwise, a long sequence of ignored events in a low-traffic deployment might cause the stored source offset to lag too far behind the current source offset, which can lead to rollbacks to zero when the connector is restarted.
+
+Each record published to the black hole topic has one of 1024 possible keys.
+Because the records themselves are not important, you can minimize storage requirements by setting the black hole topic's `cleanup.policy` to `compact`.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.1.8
+
+* Type: string
+* Default: `""`
 * Importance: medium
 
 [[couchbase.batch.size.max]]

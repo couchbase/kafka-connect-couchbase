@@ -44,10 +44,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -69,6 +71,9 @@ public class CouchbaseSourceTask extends SourceTask {
   private boolean connectorNameInOffsets;
   private boolean noValue;
   private SourceDocumentLifecycle lifecycle;
+
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private Optional<String> blackHoleTopic;
 
   @Override
   public String version() {
@@ -101,6 +106,8 @@ public class CouchbaseSourceTask extends SourceTask {
 
     sourceHandler = Utils.newInstance(config.sourceHandler());
     sourceHandler.init(unmodifiableProperties);
+
+    blackHoleTopic = Optional.ofNullable(emptyToNull(config.blackHoleTopic().trim()));
 
     defaultTopicTemplate = config.topic();
     collectionToTopic = TopicMap.parseCollectionToTopic(config.collectionToTopic());
@@ -151,21 +158,45 @@ public class CouchbaseSourceTask extends SourceTask {
       events.add(firstEvent);
       queue.drainTo(events, batchSizeMax - 1);
 
-      List<SourceRecord> results = convertToSourceRecords(events);
+      ConversionResult results = convertToSourceRecords(events);
 
-      int excluded = events.size() - results.size();
-      LOGGER.info("Poll returns {} result(s) (filtered out {})", results.size(), excluded);
-      return results;
+      LOGGER.info("Poll returns {} result(s) (filtered out {})", results.published, results.dropped);
+      return results.records;
 
     } finally {
       events.forEach(DocumentChange::flowControlAck);
     }
   }
 
+  private static class ConversionResult {
+    public final List<SourceRecord> records;
+    public final int published; // excluding those published to black hole (those are included in "dropped")
+    public final int dropped;
+
+    public ConversionResult(List<SourceRecord> records, int published, int dropped) {
+      this.records = records;
+      this.published = published;
+      this.dropped = dropped;
+    }
+  }
+
+  /**
+   * Returns true if the record is a synthetic source offset update for
+   * an ignored Couchbase event, destined for a black hole.
+   */
+  private boolean isSourceOffsetUpdate(SourceRecord record) {
+    return blackHoleTopic.isPresent() && blackHoleTopic.get().equals(record.topic());
+  }
+
   @Override
   public void commitRecord(SourceRecord record) {
     if (record instanceof CouchbaseSourceRecord) {
-      lifecycle.logCommittedToKafkaTopic((CouchbaseSourceRecord) record);
+      CouchbaseSourceRecord couchbaseRecord = (CouchbaseSourceRecord) record;
+      if (isSourceOffsetUpdate(couchbaseRecord)) {
+        lifecycle.logSourceOffsetUpdateCommittedToBlackHoleTopic(couchbaseRecord);
+      } else {
+        lifecycle.logCommittedToKafkaTopic(couchbaseRecord);
+      }
     } else {
       LOGGER.warn("Committed a record we didn't create? Record key {}", record.key());
     }
@@ -187,20 +218,24 @@ public class CouchbaseSourceTask extends SourceTask {
         .replace("%", "_"); // % is valid in Couchbase name but not Kafka topic name
   }
 
-  private List<SourceRecord> convertToSourceRecords(List<DocumentChange> events) {
+  private ConversionResult convertToSourceRecords(List<DocumentChange> events) {
     List<SourceRecord> results = new ArrayList<>(events.size());
-
+    int dropped = 0;
     for (DocumentChange e : events) {
       DocumentEvent docEvent = DocumentEvent.create(e, bucket);
 
       if (!filter.pass(docEvent)) {
         lifecycle.logSkippedBecauseFilterSaysIgnore(e);
+        dropped++;
+        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e, docEvent)));
         continue;
       }
 
       SourceRecord sourceRecord = convertToSourceRecord(e, docEvent);
       if (sourceRecord == null) {
         lifecycle.logSkippedBecauseHandlerSaysIgnore(e);
+        dropped++;
+        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e, docEvent)));
         continue;
       }
 
@@ -208,7 +243,31 @@ public class CouchbaseSourceTask extends SourceTask {
       results.add(sourceRecord);
     }
 
-    return results;
+    int published = results.size();
+    if (blackHoleTopic.isPresent()) {
+      published -= dropped;
+    }
+
+    return new ConversionResult(results, published, dropped);
+  }
+
+  /**
+   * Returns a new synthetic record representing a Couchbase event
+   * that was dropped by the filter or source handler.
+   * <p>
+   * These records are published to the configured "black hole" topic
+   * as a way to tell Kafka Connect about the source offset of the ignored event.
+   */
+  private SourceRecord createSourceOffsetUpdateRecord(String topic, DocumentChange change, DocumentEvent docEvent) {
+    return new SourceRecordBuilder()
+        // Include vbucket in key so records aren't all assigned to the same Kafka partition
+        .key("ignored-" + change.getVbucket())
+        .build(
+            change,
+            sourcePartition(docEvent.partition()),
+            sourceOffset(docEvent),
+            topic
+        );
   }
 
   private CouchbaseSourceRecord convertToSourceRecord(DocumentChange change, DocumentEvent docEvent) {

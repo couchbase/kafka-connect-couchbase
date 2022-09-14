@@ -46,6 +46,10 @@ public class SourceDocumentLifecycle {
 
     CONVERTED_TO_KAFKA_RECORD,
     COMMITTED_TO_TOPIC,
+
+    // For an ignored event, we published a dummy message to the configured black hole topic
+    // to tell Kafka Connect about the ignored event's source offset.
+    SOURCE_OFFSET_UPDATE_COMMITTED_TO_BLACK_HOLE_TOPIC,
     ;
   }
 
@@ -103,6 +107,10 @@ public class SourceDocumentLifecycle {
 
   public void logCommittedToKafkaTopic(CouchbaseSourceRecord sourceRecord) {
     logMilestone(sourceRecord, Milestone.COMMITTED_TO_TOPIC, emptyMap());
+  }
+
+  public void logSourceOffsetUpdateCommittedToBlackHoleTopic(CouchbaseSourceRecord sourceRecord) {
+    logMilestone(sourceRecord, Milestone.SOURCE_OFFSET_UPDATE_COMMITTED_TO_BLACK_HOLE_TOPIC, emptyMap());
   }
 
   private void logMilestone(DocumentChange event, Milestone milestone) {
