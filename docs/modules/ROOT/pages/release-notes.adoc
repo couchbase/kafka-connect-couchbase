@@ -24,6 +24,38 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.8]]
+== Version 4.1.8 (20 September 2022)
+
+https://packages.couchbase.com/clients/kafka/4.1.8/couchbase-kafka-connect-couchbase-4.1.8.zip[Download]
+
+This version improves support for scopes & collections, adds an experimental `AnalyticsSinkHandler`, and adds a new feature that may reduce rollbacks by telling the Kafka Connect framework about the source offsets of ignored Couchbase events.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-295[KAFKAC-295]
+*Source* The new `couchbase.collection.to.topic` config property lets you specify an arbitrary mapping from Couchbase scope & collection to Kafka topic.
+This is useful when the `couchbase.topic` property is not sufficient because the desired topic name differs from the collection name.
+Thanks to Shahrzad Haji Amin Shirazi.
+
+* https://issues.couchbase.com/browse/KAFKAC-293[KAFKAC-293]
+*Sink* `N1qlSinkHandler` now honors the configured destination scope & collection.
+Thanks to Shahrzad Haji Amin Shirazi.
+
+* https://issues.couchbase.com/browse/KAFKAC-294[KAFKAC-294]
+*Sink* The new experimental `AnalyticsSinkHandler` sends documents directly to the Analytics service.
+Thanks to Shahrzad Haji Amin Shirazi.
+
+* https://issues.couchbase.com/browse/KAFKAC-296[KAFKAC-296]
+*Source* In extremely low-traffic environments that ignore a majority of Couchbase events, the new `couchbase.black.hole.topic` config property may reduce the occurrence of rollback to zero.
+If a topic is specified, the connector sends a tiny record to this topic for each ignored event, to inform Kafka Connect about the event's source offset.
+
+* https://issues.couchbase.com/browse/KAFKAC-297[KAFKAC-297]:
+Upgraded Couchbase Java SDK from 3.3.0 to 3.3.4.
+
+* https://issues.couchbase.com/browse/KAFKAC-298[KAFKAC-298]:
+Upgraded DCP client from 0.40.0 to 0.41.0
+
 [[v4.1.7]]
 == Version 4.1.7 (17 May 2022)
 
