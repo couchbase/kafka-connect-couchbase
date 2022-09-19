@@ -110,6 +110,12 @@ If the release succeeded, now's the time to publish the tag:
 
     git push origin x.y.z
 
+## Publish to Confluent Hub
+
+This is a manual process.
+Send a polite email to our friends at Confluent.
+Let them know about the new download links for the connector and the GPG signature.
+
 ## Prepare for next dev cycle
 
 Increment the version number in `pom.xml` and restore the `-SNAPSHOT` suffix.
