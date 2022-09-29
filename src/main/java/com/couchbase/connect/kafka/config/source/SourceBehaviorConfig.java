@@ -57,6 +57,8 @@ public interface SourceBehaviorConfig {
    * <p>
    * Defaults to an empty map. For collections not present in this map,
    * the destination topic is determined by the `couchbase.topic` config property.
+   *
+   * @since 4.1.8
    */
   @Default
   List<String> collectionToTopic();

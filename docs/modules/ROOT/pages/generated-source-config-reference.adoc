@@ -202,6 +202,8 @@ For example, if you want to write messages from collection "scope-a.invoices" to
 Defaults to an empty map.
 For collections not present in this map, the destination topic is determined by the `couchbase.topic` config property.
 
+* Since: 4.1.8
+
 * Type: list
 * Default: `""`
 * Valid Values: scope.collection=topic,...
