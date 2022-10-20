@@ -24,6 +24,43 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.9]]
+== Version 4.1.9 (21 October 2022)
+
+https://packages.couchbase.com/clients/kafka/4.1.9/couchbase-kafka-connect-couchbase-4.1.9.zip[Download]
+
+You can now authenticate with Couchbase as an LDAP user, as long as secure connections are enabled.
+
+=== Breaking Changes
+
+* The Couchbase `dcp-client` library no longer includes a repackaged version of Jackson.
+If you have written your own custom `Filter`, `SourceHandler`, or `SinkHandler` component that depends on the DCP client's repackaged Jackson, search for:
++
+[source,java]
+----
+import com.couchbase.client.dcp.deps.
+----
++
+and replace with:
++
+[source,java]
+----
+import com.couchbase.client.core.deps.
+----
+to use the version in the Couchbase `core-io` library instead.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/JDCP-224[JDCP-224]:
+Use SASL mechanism `PLAIN` when authenticating with Couchbase on a secure connection.
+`PLAIN` is the fastest mechanism, and the only one that works with LDAP users.
+
+* https://issues.couchbase.com/browse/JDCP-217[JDCP-217]:
+Support Couchbase clusters that advertise only TLS ports.
+
+* https://issues.couchbase.com/browse/KAFKAC-299[KAFKAC-299]:
+Upgrade Couchbase DCP client from `0.41.0` to `0.42.0`.
+
 [[v4.1.8]]
 == Version 4.1.8 (20 September 2022)
 
