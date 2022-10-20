@@ -16,8 +16,8 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonProcessingException;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.slf4j.Logger;

@@ -16,11 +16,11 @@
 
 package com.couchbase.connect.kafka.util;
 
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonFactory;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonParser;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonPointer;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.FilteringParserDelegate;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.JsonPointerBasedFilter;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonFactory;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonPointer;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.filter.FilteringParserDelegate;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.filter.JsonPointerBasedFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.TokenFilter.Inclusion.ONLY_INCLUDE_ALL;
+import static com.couchbase.client.core.deps.com.fasterxml.jackson.core.filter.TokenFilter.Inclusion.ONLY_INCLUDE_ALL;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 

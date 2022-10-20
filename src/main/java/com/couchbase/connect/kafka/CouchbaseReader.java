@@ -43,7 +43,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +96,8 @@ public class CouchbaseReader extends Thread {
 
     Client.Builder builder = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
-        .bootstrapTimeout(Duration.ofMillis(config.bootstrapTimeout().toMillis()))
+        .bootstrapTimeout(config.bootstrapTimeout())
+        .socketConnectTimeout(config.bootstrapTimeout().toMillis())
         .seedNodes(config.dcpSeedNodes())
         .networkResolution(NetworkResolution.valueOf(config.network()))
         .bucket(config.bucket())

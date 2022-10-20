@@ -16,11 +16,11 @@
 
 package com.couchbase.connect.kafka.example;
 
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonFactory;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonParser;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.JsonPointer;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.FilteringParserDelegate;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.JsonPointerBasedFilter;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonFactory;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonPointer;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.filter.FilteringParserDelegate;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.filter.JsonPointerBasedFilter;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -33,7 +33,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.filter.TokenFilter.Inclusion.ONLY_INCLUDE_ALL;
+import static com.couchbase.client.core.deps.com.fasterxml.jackson.core.filter.TokenFilter.Inclusion.ONLY_INCLUDE_ALL;
 
 /**
  * An example Filter implementation that looks at a field of the document, and skips

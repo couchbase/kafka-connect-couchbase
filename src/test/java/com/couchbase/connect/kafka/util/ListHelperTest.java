@@ -17,7 +17,7 @@
 package com.couchbase.connect.kafka.util;
 
 import com.couchbase.client.dcp.core.utils.DefaultObjectMapper;
-import com.couchbase.client.dcp.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import org.junit.Test;
 
 import java.io.IOException;

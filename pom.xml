@@ -70,7 +70,7 @@
     <properties>
         <java-compat.version>1.8</java-compat.version>
         <kafka.version>2.5.0</kafka.version>
-        <dcp-client.version>0.41.0</dcp-client.version>
+        <dcp-client.version>0.42.0</dcp-client.version>
         <java-client.version>3.3.4</java-client.version>
         <runtime.javadoc.version>0.13.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -144,7 +144,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>31.0.1-jre</version>
+            <version>31.1-jre</version>
             <scope>test</scope>
         </dependency>
         <dependency>
