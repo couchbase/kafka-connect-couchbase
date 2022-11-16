@@ -135,7 +135,7 @@ public class N1qlSinkHandler implements SinkHandler {
   /**
    * Returns the target keyspace (bucket + scope + collection)
    * pre-escaped for inclusion in a query statement.
-  */
+   */
   protected static String keyspace(SinkHandlerParams params) {
     ReactiveCollection c = params.collection();
     String bucket = c.bucketName();
@@ -147,7 +147,7 @@ public class N1qlSinkHandler implements SinkHandler {
 
     // For compatibility with pre-7.0 servers, omit scope and collection
     // when the keyspace is the default collection.
-    boolean defaultCollection = 
+    boolean defaultCollection =
         scope.equals("_default") && collection.equals("_default");
     if (!defaultCollection) {
       components.add(scope);

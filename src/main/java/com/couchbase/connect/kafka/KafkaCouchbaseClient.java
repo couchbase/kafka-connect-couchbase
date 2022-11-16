@@ -20,7 +20,6 @@ import com.couchbase.client.core.env.AbstractMapPropertyLoader;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CertificateAuthenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
@@ -34,7 +33,6 @@ import org.apache.kafka.common.config.ConfigException;
 
 import java.io.Closeable;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

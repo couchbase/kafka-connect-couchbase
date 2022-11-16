@@ -21,10 +21,11 @@ import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import org.apache.kafka.common.config.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import org.apache.kafka.common.config.ConfigException;
+
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 
 
@@ -39,15 +40,15 @@ public class AnalyticsSinkHandler implements SinkHandler {
 
   @Override
   public void init(SinkHandlerContext context) {
-  CouchbaseSinkConfig config = ConfigHelper.parse(CouchbaseSinkConfig.class, context.configProperties());
-  this.bucketName = config.bucket();
+    CouchbaseSinkConfig config = ConfigHelper.parse(CouchbaseSinkConfig.class, context.configProperties());
+    this.bucketName = config.bucket();
   }
 
   @Override
   public SinkAction handle(SinkHandlerParams params) {
     String documentId = getDocumentId(params);
     SinkDocument doc = params.document().orElse(null);
-    String keySpace = keyspace(bucketName,params.collection().scopeName(), params.collection().name());
+    String keySpace = keyspace(bucketName, params.collection().scopeName(), params.collection().name());
     if (doc != null) {
       final JsonObject node;
       try {
@@ -65,9 +66,9 @@ public class AnalyticsSinkHandler implements SinkHandler {
       String statement = upsertStatement(keySpace, node);
 
       Mono<?> action = Mono.defer(() ->
-              params.cluster()
-                  .analyticsQuery(statement, analyticsOptions().parameters(node))
-                  .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
+          params.cluster()
+              .analyticsQuery(statement, analyticsOptions().parameters(node))
+              .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
 
       ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentId);
       return new SinkAction(action, concurrencyHint);
@@ -75,9 +76,9 @@ public class AnalyticsSinkHandler implements SinkHandler {
       // when doc is null we are deleting the document
       String statement = deleteStatement(keySpace, documentId);
       Mono<?> action = Mono.defer(() ->
-              params.cluster()
-                      .analyticsQuery(statement)
-                      .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
+          params.cluster()
+              .analyticsQuery(statement)
+              .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
 
       ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentId);
       return new SinkAction(action, concurrencyHint);
@@ -99,9 +100,9 @@ public class AnalyticsSinkHandler implements SinkHandler {
   }
 
   protected static String keyspace(String bucketName, String scope, String collection) {
-    if(scope.equals("") || collection.equals("")){
+    if (scope.equals("") || collection.equals("")) {
       throw new ConfigException("Missing required configuration for scope and collection.");
     }
-    return  "`" + bucketName + "`.`" + scope + "`.`" + collection + "`";
+    return "`" + bucketName + "`.`" + scope + "`.`" + collection + "`";
   }
 }

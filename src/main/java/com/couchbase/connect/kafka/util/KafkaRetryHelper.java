@@ -117,7 +117,7 @@ public class KafkaRetryHelper implements Closeable {
         String retryTimeoutName = ConfigHelper.keyName(CouchbaseSinkConfig.class, CouchbaseSinkConfig::retryTimeout);
 
         log.error("Initial attempt for {} failed. Retry is disabled. Connector will terminate. " +
-            "To mitigate this kind of failure, enable retry by setting the '{}' connector config property.",
+                "To mitigate this kind of failure, enable retry by setting the '{}' connector config property.",
             actionDescription, retryTimeoutName, e);
         throw e;
       }

@@ -100,10 +100,11 @@ public class AsciiDocGenerator {
         for (String dependent : key.dependents) {
           b.append("`");
           b.append("<<").append(dependent).append(">>");
-          if (++j == key.dependents.size())
+          if (++j == key.dependents.size()) {
             b.append("`");
-          else
+          } else {
             b.append("`, ");
+          }
         }
         b.append("\n");
       }
@@ -142,15 +143,18 @@ public class AsciiDocGenerator {
         return key.type.toString().toLowerCase(Locale.ROOT);
       case "Default":
         if (key.hasDefault()) {
-          if (key.defaultValue == null)
+          if (key.defaultValue == null) {
             return "null";
+          }
           String defaultValueStr = convertToString(key.defaultValue, key.type);
-          if (defaultValueStr.isEmpty())
+          if (defaultValueStr.isEmpty()) {
             return "\"\"";
-          else
+          } else {
             return defaultValueStr;
-        } else
+          }
+        } else {
           return "";
+        }
       case "Valid Values":
         return key.validator != null ? key.validator.toString() : "";
       case "Importance":
@@ -180,14 +184,15 @@ public class AsciiDocGenerator {
       cmp = Integer.compare(k1.orderInGroup, k2.orderInGroup);
       if (cmp == 0) {
         // first take anything with no default value
-        if (!k1.hasDefault() && k2.hasDefault())
+        if (!k1.hasDefault() && k2.hasDefault()) {
           cmp = -1;
-        else if (!k2.hasDefault() && k1.hasDefault())
+        } else if (!k2.hasDefault() && k1.hasDefault()) {
           cmp = 1;
-        else {
+        } else {
           cmp = k1.importance.compareTo(k2.importance);
-          if (cmp == 0)
+          if (cmp == 0) {
             return k1.name.compareTo(k2.name);
+          }
         }
       }
     }

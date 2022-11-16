@@ -17,7 +17,6 @@
 package com.couchbase.connect.kafka.config.common;
 
 import com.couchbase.connect.kafka.util.config.annotation.Default;
-import com.couchbase.connect.kafka.util.config.annotation.DisplayName;
 import com.couchbase.connect.kafka.util.config.annotation.EnvironmentVariable;
 import com.couchbase.connect.kafka.util.config.annotation.Importance;
 import com.couchbase.connect.kafka.util.config.annotation.Width;
