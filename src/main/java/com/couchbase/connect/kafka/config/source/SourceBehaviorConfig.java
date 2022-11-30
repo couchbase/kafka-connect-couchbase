@@ -103,9 +103,9 @@ public interface SourceBehaviorConfig {
    * too far behind the current source offset, which can lead to rollbacks to zero
    * when the connector is restarted.
    * <p>
-   * Each record published to the black hole topic has one of 1024 possible keys.
-   * Because the records themselves are not important, you can minimize storage
-   * requirements by setting the black hole topic's `cleanup.policy` to `compact`.
+   * After a record is published to this topic, the record is no longer important,
+   * and should be deleted as soon as possible. To reduce disk usage, configure
+   * this topic to use the lowest possible retention settings.
    *
    * @since 4.1.8
    */
