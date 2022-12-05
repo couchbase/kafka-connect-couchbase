@@ -19,13 +19,13 @@ package com.couchbase.connect.kafka;
 import java.util.OptionalLong;
 
 /**
- * Holds a DCP sequence number and the vBucket UUID for which the sequence number is valid.
+ * Info required for resuming a DCP stream.
  */
-class SeqnoAndVbucketUuid {
+class SourceOffset {
   private final long seqno;
   private final OptionalLong vbucketUuid;
 
-  public SeqnoAndVbucketUuid(long seqno, Long vbucketUuid) {
+  public SourceOffset(long seqno, Long vbucketUuid) {
     this.seqno = seqno;
     this.vbucketUuid = vbucketUuid == null ? OptionalLong.empty() : OptionalLong.of(vbucketUuid);
   }

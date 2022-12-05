@@ -118,7 +118,7 @@ public class CouchbaseSourceTask extends SourceTask {
     noValue = config.noValue();
 
     List<Integer> partitions = parseInts(config.partitions());
-    Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno = readSourceOffsets(partitions);
+    Map<Integer, SourceOffset> partitionToSavedSeqno = readSourceOffsets(partitions);
 
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
@@ -307,8 +307,8 @@ public class CouchbaseSourceTask extends SourceTask {
    *
    * @return a map of partitions to sequence numbers.
    */
-  private Map<Integer, SeqnoAndVbucketUuid> readSourceOffsets(Collection<Integer> partitions) {
-    Map<Integer, SeqnoAndVbucketUuid> partitionToSequenceNumber = new HashMap<>();
+  private Map<Integer, SourceOffset> readSourceOffsets(Collection<Integer> partitions) {
+    Map<Integer, SourceOffset> partitionToSequenceNumber = new HashMap<>();
 
     Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
         sourcePartitions(partitions));
@@ -324,7 +324,7 @@ public class CouchbaseSourceTask extends SourceTask {
       int partition = Integer.parseInt((String) partitionIdentifier.get("partition"));
       long seqno = (Long) offset.get("bySeqno");
       Long vbuuid = (Long) offset.get("vbuuid"); // might be absent if upgrading from older version
-      partitionToSequenceNumber.put(partition, new SeqnoAndVbucketUuid(seqno, vbuuid));
+      partitionToSequenceNumber.put(partition, new SourceOffset(seqno, vbuuid));
     }
 
     LOGGER.debug("Partition to saved seqno: {}", partitionToSequenceNumber);

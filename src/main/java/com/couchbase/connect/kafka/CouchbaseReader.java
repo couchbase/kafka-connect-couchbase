@@ -60,14 +60,14 @@ public class CouchbaseReader extends Thread {
 
   private final Client client;
   private final List<Integer> partitions;
-  private final Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno;
+  private final Map<Integer, SourceOffset> partitionToSavedSeqno;
   private final StreamFrom streamFrom;
   private final BlockingQueue<Throwable> errorQueue;
   private final MeterRegistry meterRegistry;
 
   public CouchbaseReader(CouchbaseSourceTaskConfig config, final String connectorName,
                          final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
-                         final List<Integer> partitions, final Map<Integer, SeqnoAndVbucketUuid> partitionToSavedSeqno,
+                         final List<Integer> partitions, final Map<Integer, SourceOffset> partitionToSavedSeqno,
                          final SourceDocumentLifecycle lifecycle) {
     requireNonNull(lifecycle);
     this.partitions = partitions;
@@ -193,9 +193,9 @@ public class CouchbaseReader extends Thread {
     LOGGER.info("Resuming from saved offsets for {} of {} partitions",
         partitionToSavedSeqno.size(), partitions.size());
 
-    for (Map.Entry<Integer, SeqnoAndVbucketUuid> entry : partitionToSavedSeqno.entrySet()) {
+    for (Map.Entry<Integer, SourceOffset> entry : partitionToSavedSeqno.entrySet()) {
       final int partition = entry.getKey();
-      final SeqnoAndVbucketUuid offset = entry.getValue();
+      final SourceOffset offset = entry.getValue();
       final long savedSeqno = offset.seqno();
 
       PartitionState ps = client.sessionState().get(partition);
