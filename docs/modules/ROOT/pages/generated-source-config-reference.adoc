@@ -245,7 +245,7 @@ This lets the connector tell the Kafka Connect framework about the source offset
 Otherwise, a long sequence of ignored events in a low-traffic deployment might cause the stored source offset to lag too far behind the current source offset, which can lead to rollbacks to zero when the connector is restarted.
 
 After a record is published to this topic, the record is no longer important, and should be deleted as soon as possible.
-To reduce disk usage, configure this topic to use the lowest possible retention settings.
+To reduce disk usage, configure this topic to use small segments and the lowest possible retention settings.
 
 UNCOMMITTED; this feature may change in a patch release without notice.
 

@@ -105,7 +105,7 @@ public interface SourceBehaviorConfig {
    * <p>
    * After a record is published to this topic, the record is no longer important,
    * and should be deleted as soon as possible. To reduce disk usage, configure
-   * this topic to use the lowest possible retention settings.
+   * this topic to use small segments and the lowest possible retention settings.
    *
    * @since 4.1.8
    */
