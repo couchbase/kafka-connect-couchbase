@@ -28,7 +28,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
-import static com.couchbase.client.core.util.CbCollections.transformValues;
 import static com.couchbase.connect.kafka.util.ConnectHelper.getConnectorContextFromLoggingContext;
 import static java.util.Collections.emptyMap;
 
@@ -67,9 +66,7 @@ public class SourceTaskLifecycle {
   public void logSourceOffsetsRead(Map<Integer, SourceOffset> sourceOffsets, PartitionSet partitionsWithoutSavedOffsets) {
     Map<String, Object> details = new LinkedHashMap<>();
     details.put("partitionsWithNoSavedOffset", partitionsWithoutSavedOffsets.format());
-    details.put("sourceOffsets", new TreeMap<>(transformValues(sourceOffsets, it ->
-        it.vbucketUuid().orElse(0) + "@" + it.seqno()))
-    );
+    details.put("sourceOffsets", new TreeMap<>(sourceOffsets));
     logMilestone(Milestone.SOURCE_OFFSETS_READ, details);
   }
 

@@ -28,12 +28,12 @@ import com.couchbase.client.dcp.highlevel.DatabaseChangeListener;
 import com.couchbase.client.dcp.highlevel.Deletion;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.client.dcp.highlevel.Mutation;
-import com.couchbase.client.dcp.highlevel.SnapshotMarker;
 import com.couchbase.client.dcp.highlevel.StreamFailure;
+import com.couchbase.client.dcp.highlevel.StreamOffset;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
 import com.couchbase.client.dcp.metrics.LogLevel;
-import com.couchbase.client.dcp.state.FailoverLogEntry;
 import com.couchbase.client.dcp.state.PartitionState;
+import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.util.ConnectHelper;
 import com.couchbase.connect.kafka.util.Version;
@@ -46,6 +46,8 @@ import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -53,7 +55,6 @@ import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
-import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
 public class CouchbaseReader extends Thread {
@@ -61,20 +62,22 @@ public class CouchbaseReader extends Thread {
 
   private final Client client;
   private final List<Integer> partitions;
-  private final Map<Integer, SourceOffset> partitionToSavedSeqno;
+  private final Map<Integer, SourceOffset> partitionToSavedOffset;
   private final StreamFrom streamFrom;
   private final BlockingQueue<Throwable> errorQueue;
   private final MeterRegistry meterRegistry;
 
-  public CouchbaseReader(CouchbaseSourceTaskConfig config, final String connectorName,
+  public CouchbaseReader(final CouchbaseSourceTaskConfig config, final String connectorName,
                          final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
-                         final List<Integer> partitions, final Map<Integer, SourceOffset> partitionToSavedSeqno,
+                         final List<Integer> partitions, final Map<Integer, SourceOffset> partitionToSavedOffset,
                          final SourceDocumentLifecycle lifecycle) {
+    requireNonNull(connectorName);
     requireNonNull(lifecycle);
-    this.partitions = partitions;
-    this.partitionToSavedSeqno = partitionToSavedSeqno;
+    requireNonNull(queue);
+    this.partitions = requireNonNull(partitions);
+    this.partitionToSavedOffset = requireNonNull(partitionToSavedOffset);
     this.streamFrom = config.streamFrom();
-    this.errorQueue = errorQueue;
+    this.errorQueue = requireNonNull(errorQueue);
 
     Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
         ? new PasswordAuthenticator(new StaticCredentialsProvider(config.username(), config.password().value()))
@@ -194,36 +197,40 @@ public class CouchbaseReader extends Thread {
   }
 
   private void restoreSavedOffsets() {
-    LOGGER.info("Resuming from saved offsets for {} of {} partitions",
-        partitionToSavedSeqno.size(), partitions.size());
+    LOGGER.info("Resuming from saved offsets for {} of {} partitions: {}",
+        partitionToSavedOffset.size(),
+        partitions.size(),
+        PartitionSet.from(partitionToSavedOffset.keySet())
+    );
 
-    for (Map.Entry<Integer, SourceOffset> entry : partitionToSavedSeqno.entrySet()) {
+    SortedMap<Integer, Long> partitionToFallbackUuid = new TreeMap<>();
+
+    for (Map.Entry<Integer, SourceOffset> entry : partitionToSavedOffset.entrySet()) {
       final int partition = entry.getKey();
       final SourceOffset offset = entry.getValue();
-      final long savedSeqno = offset.seqno();
 
-      PartitionState ps = client.sessionState().get(partition);
-      ps.setStartSeqno(savedSeqno);
-      ps.setSnapshot(new SnapshotMarker(savedSeqno, savedSeqno));
+      StreamOffset streamOffset = offset.asStreamOffset();
 
-      if (offset.vbucketUuid().isPresent()) {
-        long vbuuid = offset.vbucketUuid().getAsLong();
-        LOGGER.debug("Initializing failover log for partition {} using stored vbuuid {} ", partition, vbuuid);
-        // Use seqno -1 (max unsigned) so this synthetic failover log entry will always be pruned
-        // if the initial streamOpen request gets a rollback response. If there's no rollback
-        // on initial request, then the seqno used here doesn't matter, because the failover log
-        // gets reset when the stream is opened.
-        ps.setFailoverLog(singletonList(new FailoverLogEntry(-1L, vbuuid)));
-      } else {
+      if (streamOffset.getVbuuid() == 0) {
         // If we get here, we're probably restoring the stream offset from a previous version of the connector
-        // which didn't save vbucket UUIDs. Hope the current vbuuid in the failover log is the correct one.
+        // which didn't save vbucket UUIDs. Hope the current vbuuid is the correct one.
         // CAVEAT: This doesn't always work, and sometimes triggers a rollback to zero.
-        LOGGER.warn("No vBucket UUID is associated with stream offset for partition {}." +
-            " This is normal if you're upgrading from connector version 3.4.5 or earlier," +
-            " and should stop happening once the Kafka Connect framework asks the connector" +
-            " to save its offsets (see connector worker config property 'offset.flush.interval.ms').", partition);
+        long currentVbuuid = client.sessionState().get(partition).getLastUuid();
+        streamOffset = offset.withVbucketUuid(currentVbuuid).asStreamOffset();
+        partitionToFallbackUuid.put(partition, currentVbuuid);
       }
-      client.sessionState().set(partition, ps);
+
+      client.sessionState().set(partition, PartitionState.fromOffset(streamOffset));
+    }
+
+    if (!partitionToFallbackUuid.isEmpty()) {
+      LOGGER.info(
+          "Some source offsets are missing a partition UUID." +
+              " This is normal if you're upgrading from connector version 3.4.5 or earlier." +
+              " This message should go away after a document from each partition is published to Kafka." +
+              " Here is the map from partition number to the latest partition UUID used as a fallback: {}",
+          partitionToFallbackUuid
+      );
     }
   }
 

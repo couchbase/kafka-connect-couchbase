@@ -50,6 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -294,7 +296,7 @@ public class CouchbaseSourceTask extends SourceTask {
         .build(
             change,
             sourcePartition(docEvent.partition()),
-            sourceOffset(docEvent),
+            sourceOffset(change),
             topic
         );
   }
@@ -311,7 +313,7 @@ public class CouchbaseSourceTask extends SourceTask {
     }
     return builder.build(change,
         sourcePartition(docEvent.partition()),
-        sourceOffset(docEvent),
+        sourceOffset(change),
         topic);
   }
 
@@ -339,28 +341,23 @@ public class CouchbaseSourceTask extends SourceTask {
    * @return a map of partitions to sequence numbers.
    */
   private Map<Integer, SourceOffset> readSourceOffsets(Collection<Integer> partitions) {
-    Map<Integer, SourceOffset> partitionToSequenceNumber = new HashMap<>();
-
-    Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(
-        sourcePartitions(partitions));
+    Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader()
+        .offsets(sourcePartitions(partitions));
 
     LOGGER.debug("Raw source offsets: {}", offsets);
 
-    for (Map.Entry<Map<String, Object>, Map<String, Object>> entry : offsets.entrySet()) {
-      Map<String, Object> partitionIdentifier = entry.getKey();
-      Map<String, Object> offset = entry.getValue();
-      if (offset == null) {
-        continue;
+    SortedMap<Integer, SourceOffset> partitionToSourceOffset = new TreeMap<>();
+
+    offsets.forEach((partitionIdentifier, offset) -> {
+      if (offset != null) {
+        int partition = Integer.parseInt((String) partitionIdentifier.get("partition"));
+        partitionToSourceOffset.put(partition, SourceOffset.fromMap(offset));
       }
-      int partition = Integer.parseInt((String) partitionIdentifier.get("partition"));
-      long seqno = (Long) offset.get("bySeqno");
-      Long vbuuid = (Long) offset.get("vbuuid"); // might be absent if upgrading from older version
-      partitionToSequenceNumber.put(partition, new SourceOffset(seqno, vbuuid));
-    }
+    });
 
-    LOGGER.debug("Partition to saved seqno: {}", partitionToSequenceNumber);
+    LOGGER.debug("Partition to saved source offset: {}", partitionToSourceOffset);
 
-    return partitionToSequenceNumber;
+    return partitionToSourceOffset;
   }
 
   private List<Map<String, Object>> sourcePartitions(Collection<Integer> partitions) {
@@ -385,13 +382,10 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   /**
-   * Converts a Couchbase DCP sequence number + vBucket UUID into the Map format required by Kafka Connect.
+   * Converts a Couchbase DCP stream offset into the Map format required by Kafka Connect.
    */
-  private static Map<String, Object> sourceOffset(DocumentEvent event) {
-    Map<String, Object> offset = new HashMap<>();
-    offset.put("bySeqno", event.bySeqno());
-    offset.put("vbuuid", event.partitionUuid());
-    return offset;
+  private static Map<String, Object> sourceOffset(DocumentChange change) {
+    return new SourceOffset(change.getOffset()).toMap();
   }
 
   private static ScopeAndCollection scopeAndCollection(DocumentEvent docEvent) {
