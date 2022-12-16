@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.dcp.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
+import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CollectionMetadata;
@@ -31,23 +32,26 @@ import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.apache.kafka.connect.source.SourceTaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
@@ -75,9 +79,23 @@ public class CouchbaseSourceTask extends SourceTask {
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<String> blackHoleTopic;
 
+  private final SourceTaskLifecycle taskLifecycle = new SourceTaskLifecycle();
+
   @Override
   public String version() {
     return Version.getVersion();
+  }
+
+  @Override
+  public void initialize(SourceTaskContext context) {
+    super.initialize(context);
+    taskLifecycle.logTaskInitialized(context.configs().get("name"));
+  }
+
+  @Override
+  public void commit() throws InterruptedException {
+    super.commit();
+    taskLifecycle.logOffsetCommitHook();
   }
 
   @Override
@@ -117,8 +135,19 @@ public class CouchbaseSourceTask extends SourceTask {
     batchSizeMax = config.batchSizeMax();
     noValue = config.noValue();
 
-    List<Integer> partitions = parseInts(config.partitions());
+    PartitionSet partitionSet = PartitionSet.parse(config.partitions());
+    taskLifecycle.logTaskStarted(connectorName, partitionSet);
+
+    List<Integer> partitions = partitionSet.toList();
     Map<Integer, SourceOffset> partitionToSavedSeqno = readSourceOffsets(partitions);
+
+    Set<Integer> partitionsWithoutSavedOffsets = new HashSet<>(partitions);
+    partitionsWithoutSavedOffsets.removeAll(partitionToSavedSeqno.keySet());
+
+    taskLifecycle.logSourceOffsetsRead(
+        partitionToSavedSeqno,
+        PartitionSet.from(partitionsWithoutSavedOffsets)
+    );
 
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
@@ -189,13 +218,13 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   @Override
-  public void commitRecord(SourceRecord record) {
+  public void commitRecord(SourceRecord record, RecordMetadata metadata) {
     if (record instanceof CouchbaseSourceRecord) {
       CouchbaseSourceRecord couchbaseRecord = (CouchbaseSourceRecord) record;
       if (isSourceOffsetUpdate(couchbaseRecord)) {
-        lifecycle.logSourceOffsetUpdateCommittedToBlackHoleTopic(couchbaseRecord);
+        lifecycle.logSourceOffsetUpdateCommittedToBlackHoleTopic(couchbaseRecord, metadata);
       } else {
-        lifecycle.logCommittedToKafkaTopic(couchbaseRecord);
+        lifecycle.logCommittedToKafkaTopic(couchbaseRecord, metadata);
       }
     } else {
       LOGGER.warn("Committed a record we didn't create? Record key {}", record.key());
@@ -288,6 +317,8 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @Override
   public void stop() {
+    taskLifecycle.logTaskStopped();
+
     if (couchbaseReader != null) {
       couchbaseReader.shutdown();
       try {
@@ -361,12 +392,6 @@ public class CouchbaseSourceTask extends SourceTask {
     offset.put("bySeqno", event.bySeqno());
     offset.put("vbuuid", event.partitionUuid());
     return offset;
-  }
-
-  private static List<Integer> parseInts(Collection<String> stringifiedInts) {
-    return stringifiedInts.stream()
-        .map(Integer::valueOf)
-        .collect(Collectors.toList());
   }
 
   private static ScopeAndCollection scopeAndCollection(DocumentEvent docEvent) {

@@ -20,6 +20,7 @@ import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.dcp.config.HostAndPort;
+import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
@@ -53,6 +54,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
   private Map<String, String> configProperties;
   private CouchbaseBucketConfig bucketConfig;
   private Set<SeedNode> seedNodes;
+  private final ConnectorLifecycle lifecycle = new ConnectorLifecycle();
 
   @Override
   public String version() {
@@ -61,6 +63,8 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
   @Override
   public void start(Map<String, String> properties) {
+    lifecycle.logConnectorStarted(properties.get("name"));
+
     try {
       configProperties = properties;
       CouchbaseSourceConfig config = ConfigHelper.parse(CouchbaseSourceConfig.class, properties);
@@ -83,13 +87,14 @@ public class CouchbaseSourceConnector extends SourceConnector {
     return CouchbaseSourceTask.class;
   }
 
-  private List<List<Integer>> splitPartitions(int maxTasks) {
+  private List<PartitionSet> splitPartitions(int maxTasks) {
     List<Integer> partitions = IntStream.range(0, bucketConfig.numberOfPartitions())
         .boxed()
         .collect(toList());
 
     return ListHelper.chunks(partitions, maxTasks).stream()
         .filter(list -> !list.isEmpty()) // remove empty chunks (no work for task to do)
+        .map(PartitionSet::from)
         .collect(toList());
   }
 
@@ -102,7 +107,8 @@ public class CouchbaseSourceConnector extends SourceConnector {
         })
         .collect(joining(","));
 
-    List<List<Integer>> partitionsGrouped = splitPartitions(maxTasks);
+    List<PartitionSet> partitionsGrouped = splitPartitions(maxTasks);
+    lifecycle.logPartitionsAssigned(partitionsGrouped);
 
     String partitionsKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::partitions);
     String dcpSeedNodesKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::dcpSeedNodes);
@@ -110,13 +116,11 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
     List<Map<String, String>> taskConfigs = new ArrayList<>();
     int taskId = 0;
-    for (List<Integer> taskPartitions : partitionsGrouped) {
-      String commaDelimitedPartitions = taskPartitions.stream()
-          .map(Object::toString)
-          .collect(joining(","));
+    for (PartitionSet taskPartitions : partitionsGrouped) {
+      String formattedPartitions = taskPartitions.format();
 
       Map<String, String> taskProps = new HashMap<>(configProperties);
-      taskProps.put(partitionsKey, commaDelimitedPartitions);
+      taskProps.put(partitionsKey, formattedPartitions);
       taskProps.put(dcpSeedNodesKey, seedNodes);
       taskProps.put(taskIdKey, "maybe-" + taskId++);
       taskConfigs.add(taskProps);
@@ -126,6 +130,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
   @Override
   public void stop() {
+    lifecycle.logConnectorStopped();
   }
 
   @Override

@@ -16,13 +16,17 @@
 
 package com.couchbase.connect.kafka.config.source;
 
+import com.couchbase.client.dcp.util.PartitionSet;
+
 import java.util.List;
 
 public interface CouchbaseSourceTaskConfig extends CouchbaseSourceConfig {
   /**
-   * List of partitions for this task to watch for changes.
+   * Set of partitions for this task to watch for changes.
+   * <p>
+   * Parse using {@link PartitionSet#parse(String)}.
    */
-  List<String> partitions(); // each item is a stringified integer.
+  String partitions();
 
   /**
    * KV node addresses the DCP client should bootstrap against.

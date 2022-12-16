@@ -21,14 +21,18 @@ import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.client.dcp.metrics.LogLevel;
 import com.couchbase.connect.kafka.config.common.LoggingConfig;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.util.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.connect.kafka.util.ConnectHelper.getConnectorContextFromLoggingContext;
 import static com.couchbase.connect.kafka.util.ConnectHelper.getTaskIdFromLoggingContext;
 import static java.time.temporal.ChronoUnit.MICROS;
 import static java.util.Collections.emptyMap;
@@ -105,12 +109,25 @@ public class SourceDocumentLifecycle {
     }
   }
 
-  public void logCommittedToKafkaTopic(CouchbaseSourceRecord sourceRecord) {
-    logMilestone(sourceRecord, Milestone.COMMITTED_TO_TOPIC, emptyMap());
+  public void logCommittedToKafkaTopic(CouchbaseSourceRecord sourceRecord, @Nullable RecordMetadata metadata) {
+    logMilestone(sourceRecord, Milestone.COMMITTED_TO_TOPIC, toMap(metadata));
   }
 
-  public void logSourceOffsetUpdateCommittedToBlackHoleTopic(CouchbaseSourceRecord sourceRecord) {
-    logMilestone(sourceRecord, Milestone.SOURCE_OFFSET_UPDATE_COMMITTED_TO_BLACK_HOLE_TOPIC, emptyMap());
+  public void logSourceOffsetUpdateCommittedToBlackHoleTopic(CouchbaseSourceRecord sourceRecord, @Nullable RecordMetadata metadata) {
+    logMilestone(sourceRecord, Milestone.SOURCE_OFFSET_UPDATE_COMMITTED_TO_BLACK_HOLE_TOPIC, toMap(metadata));
+  }
+
+  private Map<String, Object> toMap(@Nullable RecordMetadata metadata) {
+    LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+    if (metadata != null) {
+      details.put("topic", metadata.topic());
+      details.put("partition", metadata.partition());
+      details.put("offset", metadata.offset());
+      details.put("timestamp", metadata.timestamp());
+      details.put("serializedKeySize", metadata.serializedKeySize());
+      details.put("serializedValueSize", metadata.serializedValueSize());
+    }
+    return mapOf("recordMetadata", details);
   }
 
   private void logMilestone(DocumentChange event, Milestone milestone) {
@@ -122,6 +139,10 @@ public class SourceDocumentLifecycle {
       LinkedHashMap<String, Object> message = new LinkedHashMap<>();
       message.put("milestone", milestone);
       message.put("tracingToken", sourceRecord.getTracingToken());
+
+      // In case the user customized their logging config to exclude MDC
+      getConnectorContextFromLoggingContext().ifPresent(it -> message.put("context", it));
+
       message.put("documentId", sourceRecord.getCouchbaseDocumentId());
       message.putAll(milestoneDetails);
       doLog(message);
@@ -133,6 +154,10 @@ public class SourceDocumentLifecycle {
       LinkedHashMap<String, Object> message = new LinkedHashMap<>();
       message.put("milestone", milestone);
       message.put("tracingToken", event.getTracingToken());
+
+      // In case the user customized their logging config to exclude MDC
+      getConnectorContextFromLoggingContext().ifPresent(it -> message.put("context", it));
+
       message.put("documentId", event.getQualifiedKey());
       message.putAll(milestoneDetails);
       doLog(message);
