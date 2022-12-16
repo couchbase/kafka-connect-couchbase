@@ -39,7 +39,7 @@ public class ConnectorLifecycle {
 
     /**
      * The connector has created a configuration for each task, and specified
-     * which Couchbase partitions each task should steam from.
+     * which Couchbase partitions each task should stream from.
      */
     PARTITIONS_ASSIGNED,
   }
