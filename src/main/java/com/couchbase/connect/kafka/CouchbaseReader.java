@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
@@ -79,18 +80,21 @@ public class CouchbaseReader extends Thread {
         ? new PasswordAuthenticator(new StaticCredentialsProvider(config.username(), config.password().value()))
         : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value());
 
-    SecurityConfig.Builder securityConfig = SecurityConfig.builder()
-        .enableTls(config.enableTls())
-        .enableHostnameVerification(config.enableHostnameVerification());
-    if (!isNullOrEmpty(config.trustStorePath())) {
-      securityConfig.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value());
-    }
-    if (!isNullOrEmpty(config.trustCertificatePath())) {
-      securityConfig.trustCertificate(Paths.get(config.trustCertificatePath()));
-    }
-    if (isNullOrEmpty(config.trustStorePath()) && isNullOrEmpty(config.trustCertificatePath())) {
-      securityConfig.trustCertificates(com.couchbase.client.core.env.SecurityConfig.defaultCaCertificates());
-    }
+    Consumer<SecurityConfig.Builder> securityConfig = security -> {
+      security
+          .enableTls(config.enableTls())
+          .enableHostnameVerification(config.enableHostnameVerification());
+
+      if (!isNullOrEmpty(config.trustStorePath())) {
+        security.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value());
+      }
+      if (!isNullOrEmpty(config.trustCertificatePath())) {
+        security.trustCertificate(Paths.get(config.trustCertificatePath()));
+      }
+      if (isNullOrEmpty(config.trustStorePath()) && isNullOrEmpty(config.trustCertificatePath())) {
+        security.trustCertificates(com.couchbase.client.core.env.SecurityConfig.defaultCaCertificates());
+      }
+    };
 
     meterRegistry = newMeterRegistry(connectorName, config);
 
