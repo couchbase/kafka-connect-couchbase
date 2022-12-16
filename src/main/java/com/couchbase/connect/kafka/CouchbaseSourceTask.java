@@ -346,16 +346,30 @@ public class CouchbaseSourceTask extends SourceTask {
 
     LOGGER.debug("Raw source offsets: {}", offsets);
 
+    // Remove partitions from this set as we see them in the map. Expect a map entry for each
+    // requested partition. A null-valued entry indicates the partition has no saved offset.
+    // A *missing* entry indicates something bad happened inside the offset storage reader.
+    Set<Integer> missingPartitions = new HashSet<>(partitions);
+
+    // Populated from the map entries with non-null values.
     SortedMap<Integer, SourceOffset> partitionToSourceOffset = new TreeMap<>();
 
     offsets.forEach((partitionIdentifier, offset) -> {
+      int partition = Integer.parseInt((String) partitionIdentifier.get("partition"));
+      missingPartitions.remove(partition);
+
       if (offset != null) {
-        int partition = Integer.parseInt((String) partitionIdentifier.get("partition"));
         partitionToSourceOffset.put(partition, SourceOffset.fromMap(offset));
       }
     });
 
-    LOGGER.debug("Partition to saved source offset: {}", partitionToSourceOffset);
+    if (!missingPartitions.isEmpty()) {
+      // Something is wrong with the offset storage reader.
+      // We should have seen one entry for each requested partition.
+      LOGGER.error("Offset storage reader returned no information about these partitions: {}",
+          PartitionSet.from(missingPartitions)
+      );
+    }
 
     return partitionToSourceOffset;
   }
