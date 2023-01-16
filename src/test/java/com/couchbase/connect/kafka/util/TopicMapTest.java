@@ -1,13 +1,15 @@
 package com.couchbase.connect.kafka.util;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TopicMapTest {
   @Test
@@ -38,27 +40,27 @@ public class TopicMapTest {
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void parseMissingDelim() {
     List<String> topicsToCollections = Arrays.asList(
         "topic1=myscope.collection1",
         "topic2.theirscope.collection2"
     );
-    TopicMap.parseTopicToCollection(topicsToCollections);
+    assertThrows(IllegalArgumentException.class, () -> TopicMap.parseTopicToCollection(topicsToCollections));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void parseExtraDelim() {
     List<String> topicsToCollections = Arrays.asList(
         "topic1=myscope.collection1",
         "topic2==theirscope.collection2"
     );
-    TopicMap.parseTopicToCollection(topicsToCollections);
+    assertThrows(IllegalArgumentException.class, () -> TopicMap.parseTopicToCollection(topicsToCollections));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void parseMalformedCollection() {
-    TopicMap.parseTopicToCollection(listOf("foo=bar"));
+    assertThrows(IllegalArgumentException.class, () -> TopicMap.parseTopicToCollection(listOf("foo=bar")));
   }
 
 }

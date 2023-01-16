@@ -20,15 +20,16 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.connect.kafka.handler.sink.SinkDocument;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static java.util.Optional.ofNullable;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DocumentIdExtractorTest {
 
@@ -48,20 +49,21 @@ public class DocumentIdExtractorTest {
     expectedResultDocument = toValidJson(expectedResultDocument);
 
     SinkDocument result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
-    assertEquals(Optional.ofNullable(expectedDocumentId), result.id());
+    assertEquals(ofNullable(expectedDocumentId), result.id());
     assertJsonEquals(expectedResultDocument, result);
 
     // and again without removing the document id
     result = new DocumentIdExtractor(pointer, false).extractDocumentId(document.getBytes(UTF_8));
-    assertEquals(Optional.ofNullable(expectedDocumentId), result.id());
-    assertEquals(document, new String(result.content(), UTF_8));
+    assertEquals(ofNullable(expectedDocumentId), result.id());
+    byte[] content = result.content();
+    assertEquals(document, new String(content, UTF_8));
 
     // and one last time with lots of extra whitespace
     for (char c : ",:[]{}".toCharArray()) {
       document = document.replace(Character.toString(c), "  " + c + "  ");
     }
     result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
-    assertEquals(Optional.ofNullable(expectedDocumentId), result.id());
+    assertEquals(ofNullable(expectedDocumentId), result.id());
     assertJsonEquals(expectedResultDocument, result);
   }
 
@@ -69,15 +71,12 @@ public class DocumentIdExtractorTest {
     document = toValidJson(document);
     final byte[] documentBytes = document.getBytes(UTF_8);
 
-    try {
-      new DocumentIdExtractor(pointer, true).extractDocumentId(documentBytes);
-      fail("expected 'not found'");
-    } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
-      // expected
-
-      assertArrayEquals("ID extractor must not modified the byte array when throwing exception",
-          documentBytes, document.getBytes(UTF_8));
-    }
+    assertThrows(DocumentPathExtractor.DocumentPathNotFoundException.class, (() ->
+        new DocumentIdExtractor(pointer, true).extractDocumentId(documentBytes))
+    );
+    assertArrayEquals(document.getBytes(UTF_8), documentBytes,
+        "ID extractor must not modified the byte array when throwing exception"
+    );
   }
 
   private static void assertJsonEquals(String expected, String actual) throws IOException {
@@ -215,13 +214,15 @@ public class DocumentIdExtractorTest {
     check("/a", testDocument, "1", "{}");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void pointerMustNotBeEmpty() {
-    new DocumentIdExtractor("", true);
+    assertThrows(IllegalArgumentException.class, () ->
+        new DocumentIdExtractor("", true));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void pointerMustBeValid() {
-    new DocumentIdExtractor("a/b", true);
+    assertThrows(IllegalArgumentException.class, () ->
+        new DocumentIdExtractor("a/b", true));
   }
 }

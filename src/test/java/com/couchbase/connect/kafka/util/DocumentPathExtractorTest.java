@@ -19,14 +19,14 @@ package com.couchbase.connect.kafka.util;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DocumentPathExtractorTest {
 
@@ -67,15 +67,12 @@ public class DocumentPathExtractorTest {
     document = toValidJson(document);
     final byte[] documentBytes = document.getBytes(UTF_8);
 
-    try {
-      new DocumentPathExtractor(pointer, true).extractDocumentPath(documentBytes);
-      fail("expected 'not found'");
-    } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
-      // expected
-
-      assertArrayEquals("path extractor must not modified the byte array when throwing exception",
-          documentBytes, document.getBytes(UTF_8));
-    }
+    assertThrows(DocumentPathExtractor.DocumentPathNotFoundException.class, () ->
+        new DocumentPathExtractor(pointer, true).extractDocumentPath(documentBytes)
+    );
+    assertArrayEquals(documentBytes, document.getBytes(UTF_8),
+        "path extractor must not modified the byte array when throwing exception"
+    );
   }
 
   private static void assertJsonEquals(String expected, String actual) throws IOException {
@@ -213,13 +210,13 @@ public class DocumentPathExtractorTest {
     check("/a", testDocument, "1", "{}");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void pointerMustNotBeEmpty() {
-    new DocumentPathExtractor("", true);
+    assertThrows(IllegalArgumentException.class, () -> new DocumentPathExtractor("", true));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void pointerMustBeValid() {
-    new DocumentPathExtractor("a/b", true);
+    assertThrows(IllegalArgumentException.class, () -> new DocumentPathExtractor("a/b", true));
   }
 }

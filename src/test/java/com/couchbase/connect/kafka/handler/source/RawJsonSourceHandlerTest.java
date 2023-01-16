@@ -16,17 +16,18 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import static com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler.isValidJson;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RawJsonSourceHandlerTest {
 
   @Test
-  public void jsonValidation() throws Exception {
+  public void jsonValidation() {
     assertValid("true");
     assertValid("0");
     assertValid("1.0");
@@ -50,10 +51,10 @@ public class RawJsonSourceHandlerTest {
   }
 
   private static void assertValid(String input) {
-    assertTrue("should be valid: " + input, isValidJson(input.getBytes(UTF_8)));
+    assertTrue(isValidJson(input.getBytes(UTF_8)), "should be valid: " + input);
   }
 
   private static void assertInvalid(String input) {
-    assertFalse("should be invalid: " + input, isValidJson(input.getBytes(UTF_8)));
+    assertFalse(isValidJson(input.getBytes(UTF_8)), "should be invalid: " + input);
   }
 }

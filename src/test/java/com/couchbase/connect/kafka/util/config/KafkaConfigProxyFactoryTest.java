@@ -21,7 +21,7 @@ import com.couchbase.connect.kafka.util.config.annotation.EnvironmentVariable;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -32,9 +32,8 @@ import java.util.Map;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KafkaConfigProxyFactoryTest {
   private static final KafkaConfigProxyFactory factory = new KafkaConfigProxyFactory("foo");
@@ -106,7 +105,7 @@ public class KafkaConfigProxyFactoryTest {
   }
 
   @Test
-  public void requiredValues() throws Exception {
+  public void requiredValues() {
     Map<String, String> props = new HashMap<>();
     props.put("foo.string.value", "xyzzy");
     props.put("foo.boolean.value", "true");
@@ -178,16 +177,14 @@ public class KafkaConfigProxyFactoryTest {
   }
 
   @Test
-  public void customValidator() throws Exception {
+  public void customValidator() {
     TestConfigWithValidator config = factory.newProxy(TestConfigWithValidator.class, emptyMap(), false);
-    assertEquals("hello", config.stringValue());
 
-    try {
-      factory.newProxy(TestConfigWithValidator.class, singletonMap("foo.string.value", "xyzzy"), false);
-      fail();
-    } catch (ConfigException e) {
-      assertTrue(e.getMessage().contains("The letter 'z' has been outlawed"));
-    }
+    assertEquals("hello", config.stringValue());
+    assertThrows(ConfigException.class, () ->
+            factory.newProxy(TestConfigWithValidator.class, singletonMap("foo.string.value", "xyzzy"), false),
+        "The letter 'z' has been outlawed"
+    );
   }
 
   public interface BaseConfig {
@@ -201,7 +198,7 @@ public class KafkaConfigProxyFactoryTest {
   }
 
   @Test
-  public void inheritedMethodsAreIncluded() throws Exception {
+  public void inheritedMethodsAreIncluded() {
     SubclassConfig config = factory.newProxy(SubclassConfig.class, emptyMap(), false);
     assertEquals("base", config.baseValue());
     assertEquals("subclass", config.subclassValue());
@@ -215,7 +212,7 @@ public class KafkaConfigProxyFactoryTest {
   }
 
   @Test
-  public void environmentVariable() throws Exception {
+  public void environmentVariable() {
     KafkaConfigProxyFactory factory = new KafkaConfigProxyFactory("foo");
     EnvarConfig config = factory.newProxy(EnvarConfig.class, singletonMap("foo.password", "a"), false);
     assertEquals("a", config.password().value());
@@ -225,7 +222,7 @@ public class KafkaConfigProxyFactoryTest {
   }
 
   @Test
-  public void keyName() throws Exception {
+  public void keyName() {
     KafkaConfigProxyFactory factory = new KafkaConfigProxyFactory("foo");
     assertEquals("foo.string.value", factory.keyName(TestConfig.class, TestConfig::stringValue));
   }

@@ -1,9 +1,10 @@
 package com.couchbase.connect.kafka.util;
 
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ScopeAndCollectionTest {
 
@@ -18,22 +19,21 @@ public class ScopeAndCollectionTest {
     assertEquals(collection, scopeAndCollection.getCollection());
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void parseMissingDelim() throws Exception {
-    ScopeAndCollection scopeAndCollection = ScopeAndCollection.parse(scope + collection);
+  @Test
+  public void parseMissingDelim() {
+    assertThrows(IllegalArgumentException.class, () -> ScopeAndCollection.parse(scope + collection));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void parseExtraDelim() throws Exception {
-    ScopeAndCollection scopeAndCollection = ScopeAndCollection.parse(scope + ".." + collection);
+  @Test
+  public void parseExtraDelim() {
+    assertThrows(IllegalArgumentException.class, () -> ScopeAndCollection.parse(scope + ".." + collection));
   }
 
   @Test
   public void checkEqual() {
     ScopeAndCollection scopeAndCollection1 = ScopeAndCollection.parse(createFQCN(scope, collection));
     ScopeAndCollection scopeAndCollection2 = new ScopeAndCollection(scope, collection);
-    assertTrue(scopeAndCollection1.equals(scopeAndCollection2));
-
+    assertEquals(scopeAndCollection1, scopeAndCollection2);
   }
 
   public String createFQCN(String scope, String collection) {

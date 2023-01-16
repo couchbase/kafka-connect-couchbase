@@ -18,7 +18,6 @@ package com.couchbase.connect.kafka;
 
 import com.couchbase.connect.kafka.handler.sink.ConcurrencyHint;
 import com.couchbase.connect.kafka.handler.sink.SinkAction;
-import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -29,7 +28,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 public class CouchbaseSinkTaskTest {
 

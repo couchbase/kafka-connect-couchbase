@@ -18,7 +18,7 @@ package com.couchbase.connect.kafka.util;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.dcp.core.utils.DefaultObjectMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,12 +27,14 @@ import java.util.stream.IntStream;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.connect.kafka.util.ListHelper.chunks;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ListHelperTest {
-  @Test(expected = IllegalArgumentException.class)
-  public void chunkIntoZero() throws Exception {
-    chunks(listOf(1, 2, 3, 4, 5), 0);
+
+  @Test
+  public void chunkIntoZero() {
+    assertThrows(IllegalArgumentException.class, () -> chunks(listOf(1, 2, 3, 4, 5), 0));
   }
 
   @Test

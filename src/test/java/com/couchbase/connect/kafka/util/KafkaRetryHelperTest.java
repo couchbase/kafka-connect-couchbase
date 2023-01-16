@@ -18,26 +18,27 @@ package com.couchbase.connect.kafka.util;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import org.apache.kafka.connect.errors.RetriableException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class KafkaRetryHelperTest {
   private TestClock clock;
   private KafkaRetryHelper retryHelper;
 
-  @Before
+  @BeforeEach
   public void setup() {
     clock = new TestClock();
     retryHelper = new KafkaRetryHelper("test", Duration.ofSeconds(5), clock);
   }
 
-  @After
+  @AfterEach
   public void after() {
     retryHelper.close();
   }
@@ -52,19 +53,6 @@ public class KafkaRetryHelperTest {
 
     public void advance(Duration d) {
       now += d.toNanos();
-    }
-  }
-
-  // todo upgrade to JUnit 5 and remove this
-  private static <T extends Throwable> T assertThrows(Class<T> c, Runnable r) {
-    try {
-      r.run();
-      throw new AssertionError("expected " + c.getSimpleName());
-    } catch (Throwable e) {
-      if (c.isAssignableFrom(e.getClass())) {
-        return c.cast(e);
-      }
-      throw new AssertionError("expected " + c.getSimpleName() + " but got " + e.getClass());
     }
   }
 
@@ -85,11 +73,11 @@ public class KafkaRetryHelperTest {
   private void assertSuccess() {
     AtomicBoolean b = new AtomicBoolean();
     retryHelper.runWithRetry(() -> b.set(true));
-    assertTrue(b.get());
+    assertTrue(b::get);
   }
 
   @Test
-  public void eventuallyTimesOut() throws Exception {
+  public void eventuallyTimesOut() {
     assertRetriable();
 
     clock.advance(Duration.ofSeconds(1));
@@ -100,7 +88,7 @@ public class KafkaRetryHelperTest {
   }
 
   @Test
-  public void successResetsRetryStartTime() throws Exception {
+  public void successResetsRetryStartTime() {
     assertRetriable();
 
     clock.advance(Duration.ofSeconds(1));
@@ -119,7 +107,7 @@ public class KafkaRetryHelperTest {
   }
 
   @Test
-  public void canSucceedImmediately() throws Exception {
+  public void canSucceedImmediately() {
     assertSuccess();
     clock.advance(Duration.ofDays(1));
     assertSuccess();
@@ -128,7 +116,7 @@ public class KafkaRetryHelperTest {
   }
 
   @Test
-  public void zeroRetryDurationMeansNoRetry() throws Exception {
+  public void zeroRetryDurationMeansNoRetry() {
     try (KafkaRetryHelper retryHelper = new KafkaRetryHelper("test", Duration.ZERO, clock)) {
       assertThrows(CouchbaseException.class, () ->
           retryHelper.runWithRetry(KafkaRetryHelperTest::throwCouchbaseException));

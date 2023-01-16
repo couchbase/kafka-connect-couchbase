@@ -18,10 +18,10 @@ package com.couchbase.connect.kafka;
 
 import com.couchbase.connect.kafka.handler.sink.ConcurrencyHint;
 import com.couchbase.connect.kafka.util.BatchBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.couchbase.client.dcp.core.utils.CbCollections.listOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BatchBuilderTest {
 

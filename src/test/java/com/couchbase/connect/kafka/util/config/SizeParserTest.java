@@ -16,13 +16,15 @@
 
 package com.couchbase.connect.kafka.util.config;
 
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SizeParserTest {
   @Test
-  public void parseSize() throws Exception {
+  public void parseSize() {
     assertEquals(0, parseBytes("0"));
     assertEquals(0, parseBytes("0k"));
     assertEquals(3, parseBytes("3b"));
@@ -36,14 +38,14 @@ public class SizeParserTest {
     assertEquals(0, parseBytes("0g"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void missingNumber() throws Exception {
-    parseBytes("k");
+  @Test
+  public void missingNumber() {
+    assertThrows(IllegalArgumentException.class, () -> parseBytes("k"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void missingUnit() throws Exception {
-    parseBytes("300");
+  @Test
+  public void missingUnit() {
+    assertThrows(IllegalArgumentException.class, () -> parseBytes("300"));
   }
 
   private static long parseBytes(String s) {

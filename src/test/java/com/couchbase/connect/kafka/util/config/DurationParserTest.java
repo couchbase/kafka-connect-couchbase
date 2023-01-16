@@ -16,11 +16,13 @@
 
 package com.couchbase.connect.kafka.util.config;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DurationParserTest {
   @Test
@@ -43,13 +45,13 @@ public class DurationParserTest {
     assertEquals(0, DurationParser.parseDuration("0ms", SECONDS));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void missingNumber() throws Exception {
-    DurationParser.parseDuration("ms", MILLISECONDS);
+  @Test
+  public void missingNumber() {
+    assertThrows(IllegalArgumentException.class, () -> DurationParser.parseDuration("ms", MILLISECONDS));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void missingUnit() throws Exception {
-    DurationParser.parseDuration("300", MILLISECONDS);
+  @Test
+  public void missingUnit() {
+    assertThrows(IllegalArgumentException.class, () -> DurationParser.parseDuration("300", MILLISECONDS));
   }
 }
