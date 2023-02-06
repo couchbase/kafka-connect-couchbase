@@ -71,6 +71,9 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
       try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
         Bucket bucket = client.bucket();
+        if (bucket == null){
+          throw new ConnectException("Cannot start CouchbaseSourceConnector because bucket name is not present");
+        }
         bucketConfig = (CouchbaseBucketConfig) CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout());
         String connectionString = String.join(",", config.seedNodes());
         NetworkResolution network = NetworkResolution.valueOf(config.network());

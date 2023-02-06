@@ -56,6 +56,8 @@ public interface ConnectionConfig {
   /**
    * Name of the Couchbase bucket to use.
    */
+  // Property is required , unless AnalyticsSinkHandler is getting used
+  @Default
   @Width(LONG)
   @Importance(HIGH)
   String bucket();

@@ -48,7 +48,10 @@ public class AnalyticsSinkHandler implements SinkHandler {
   public SinkAction handle(SinkHandlerParams params) {
     String documentId = getDocumentId(params);
     SinkDocument doc = params.document().orElse(null);
-    String keySpace = keyspace(bucketName, params.collection().scopeName(), params.collection().name());
+
+    // if bucketName is present then keyspace=bucketName.scopeName.collectionName otherwise keyspace=scopeName.collectionName
+    String keySpace = keyspace(bucketName, params.getScopeAndCollection().getScope(), params.getScopeAndCollection().getCollection());
+
     if (doc != null) {
       final JsonObject node;
       try {
@@ -103,6 +106,14 @@ public class AnalyticsSinkHandler implements SinkHandler {
     if (scope.equals("") || collection.equals("")) {
       throw new ConfigException("Missing required configuration for scope and collection.");
     }
-    return "`" + bucketName + "`.`" + scope + "`.`" + collection + "`";
+
+    String keySpace = "";
+    if (bucketName != null && !bucketName.isEmpty()) {
+      keySpace += "`" + bucketName + "`.";
+    }
+    keySpace += "`" + scope + "`.`" + collection + "`";
+
+    return keySpace;
   }
+
 }

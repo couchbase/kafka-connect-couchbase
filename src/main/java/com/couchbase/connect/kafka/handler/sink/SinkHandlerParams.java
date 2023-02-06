@@ -16,10 +16,14 @@
 
 package com.couchbase.connect.kafka.handler.sink;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.ReactiveCluster;
 import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.kv.CommonDurabilityOptions;
+import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import org.apache.kafka.connect.sink.SinkRecord;
+import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -33,7 +37,9 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class SinkHandlerParams {
   private final ReactiveCluster cluster;
+  @Nullable
   private final ReactiveCollection collection;
+  private final ScopeAndCollection scopeAndCollection;
   private final SinkRecord sinkRecord;
   private final Optional<SinkDocument> document;
   private final Consumer<CommonDurabilityOptions<?>> durabilityOptions;
@@ -46,13 +52,15 @@ public class SinkHandlerParams {
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public SinkHandlerParams(ReactiveCluster cluster,
-                           ReactiveCollection collection,
+                           @Nullable ReactiveCollection collection,
+                           ScopeAndCollection scopeAndCollection,
                            SinkRecord sinkRecord,
                            SinkDocument document,
                            Optional<Duration> expiry,
                            Consumer<CommonDurabilityOptions<?>> durabilityOptions) {
     this.cluster = requireNonNull(cluster);
-    this.collection = requireNonNull(collection);
+    this.collection = collection;
+    this.scopeAndCollection = requireNonNull(scopeAndCollection);
     this.sinkRecord = requireNonNull(sinkRecord);
     this.durabilityOptions = requireNonNull(durabilityOptions);
     this.document = Optional.ofNullable(document);
@@ -79,7 +87,15 @@ public class SinkHandlerParams {
    * collection instead.
    */
   public ReactiveCollection collection() {
+    if (collection == null) {
+      throw new IllegalStateException("Collection is null");
+    }
     return collection;
+  }
+
+  @Stability.Internal
+  public ScopeAndCollection getScopeAndCollection() {
+    return scopeAndCollection;
   }
 
   /**

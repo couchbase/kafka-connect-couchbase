@@ -20,6 +20,8 @@ import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.java.Collection;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.config.sink.SinkBehaviorConfig.DocumentMode;
+import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
+import com.couchbase.connect.kafka.handler.sink.AnalyticsSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkAction;
 import com.couchbase.connect.kafka.handler.sink.SinkDocument;
@@ -61,6 +63,7 @@ import java.util.stream.Stream;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
+import static com.couchbase.connect.kafka.util.config.ConfigHelper.keyName;
 import static java.util.Collections.unmodifiableMap;
 
 public class CouchbaseSinkTask extends SinkTask {
@@ -117,6 +120,16 @@ public class CouchbaseSinkTask extends SinkTask {
 
     Class<? extends SinkHandler> sinkHandlerClass = config.sinkHandler();
 
+    if (sinkHandlerClass != AnalyticsSinkHandler.class && client.bucket() == null) {
+      String bucketPropertyName = keyName(
+          CouchbaseSourceTaskConfig.class,
+          CouchbaseSourceTaskConfig::bucket
+      );
+      throw new ConfigException(
+          "Missing required config property: " + bucketPropertyName
+      );
+    }
+
     DocumentMode documentMode = config.documentMode();
     if (documentMode != DocumentMode.DOCUMENT) {
       sinkHandlerClass = documentMode == DocumentMode.N1QL
@@ -141,7 +154,7 @@ public class CouchbaseSinkTask extends SinkTask {
     retryHelper = new KafkaRetryHelper("CouchbaseSinkTask.put()", config.retryTimeout());
 
     if (usingLongKvTimeouts()) {
-      String retryTimeoutName = ConfigHelper.keyName(CouchbaseSinkConfig.class, CouchbaseSinkConfig::retryTimeout);
+      String retryTimeoutName = keyName(CouchbaseSinkConfig.class, CouchbaseSinkConfig::retryTimeout);
       LOGGER.warn("The specified KV timeout is very long, and might cause problems for the Kafka consumer session. " +
           " Consider using the '" + retryTimeoutName + "' config property" +
           " instead of setting a long KV timeout. The retry timeout handles more kinds of write failures" +
@@ -179,14 +192,17 @@ public class CouchbaseSinkTask extends SinkTask {
       ScopeAndCollection destCollectionSpec = topicToCollection.getOrDefault(record.topic(), defaultDestCollection);
       Collection destCollection = client.collection(destCollectionSpec);
 
-      SinkAction action = sinkHandler.handle(
-          new SinkHandlerParams(
-              client.cluster().reactive(),
-              destCollection.reactive(),
-              record,
-              toSinkDocument(record),
-              documentExpiry,
-              durabilitySetter));
+      SinkHandlerParams params = new SinkHandlerParams(
+          client.cluster().reactive(),
+          destCollection == null ? null : destCollection.reactive(),
+          destCollectionSpec,
+          record,
+          toSinkDocument(record),
+          documentExpiry,
+          durabilitySetter
+      );
+
+      SinkAction action = sinkHandler.handle(params);
 
       if (action != null) {
         actions.add(action);

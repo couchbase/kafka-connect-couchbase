@@ -30,11 +30,13 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.connect.kafka.config.common.CommonConfig;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import org.apache.kafka.common.config.ConfigException;
+import reactor.util.annotation.Nullable;
 
 import java.io.Closeable;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.couchbase.client.core.env.IoConfig.networkResolution;
@@ -84,7 +86,7 @@ public class KafkaCouchbaseClient implements Closeable {
         clusterOptions(authenticator)
             .environment(env));
 
-    bucket = cluster.bucket(config.bucket());
+    bucket = config.bucket().isEmpty() ? null : cluster.bucket(config.bucket());
   }
 
   private static void applyCustomEnvironmentProperties(ClusterEnvironment.Builder envBuilder, Map<String, String> envProps) {
@@ -108,12 +110,15 @@ public class KafkaCouchbaseClient implements Closeable {
     return cluster;
   }
 
+  @Nullable
   public Bucket bucket() {
     return bucket;
   }
 
+  @Nullable
   public Collection collection(ScopeAndCollection scopeAndCollection) {
-    return bucket()
+    if (bucket == null) return null;
+    return Objects.requireNonNull(bucket())
         .scope(scopeAndCollection.getScope())
         .collection(scopeAndCollection.getCollection());
   }
