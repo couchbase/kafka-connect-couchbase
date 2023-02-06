@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Couchbase, Inc.
+ * Copyright 2023 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,19 @@ package com.couchbase.connect.kafka.handler.sink;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.kafka.common.config.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 
@@ -44,25 +50,51 @@ public class AnalyticsSinkHandler implements SinkHandler {
     this.bucketName = config.bucket();
   }
 
+  private static Pair<String, JsonArray> prepareWhereClauseForDelete(JsonObject documentKeys) {
+
+    List<Object> values = new ArrayList<>();
+    String whereClause = documentKeys.getNames().stream().map(key -> {
+      values.add(documentKeys.get(key));
+      return "`" + key + "`=?";
+    }).collect(Collectors.joining(" AND "));
+    return Pair.of(whereClause, JsonArray.from(values));
+  }
+
+  protected static Pair<String, JsonArray> deleteQuery(String keySpace, JsonObject documentKeys) {
+    Pair<String, JsonArray> whereClause = prepareWhereClauseForDelete(documentKeys);
+    return Pair.of("DELETE FROM " + keySpace + " WHERE " + whereClause.getLeft() + ";", whereClause.getRight());
+  }
+
+  protected static JsonObject getJsonObject(String object) {
+    JsonObject node = null;
+    try {
+      node = JsonObject.fromJson(object);
+    } catch (Exception e) {
+      log.warn("could not generate analytics statement from node (not json)", e);
+    }
+
+    if (node != null && node.isEmpty()) {
+      node = null;
+      log.warn("could not generate analytics statement from empty node");
+    }
+    return node;
+  }
+
+  private String upsertStatement(String keySpace, JsonObject values) {
+    return "UPSERT INTO " + keySpace + " ([" + values + "]);";
+  }
+
   @Override
   public SinkAction handle(SinkHandlerParams params) {
-    String documentId = getDocumentId(params);
+    String documentKeys = getDocumentId(params);
     SinkDocument doc = params.document().orElse(null);
 
     // if bucketName is present then keyspace=bucketName.scopeName.collectionName otherwise keyspace=scopeName.collectionName
     String keySpace = keyspace(bucketName, params.getScopeAndCollection().getScope(), params.getScopeAndCollection().getCollection());
 
     if (doc != null) {
-      final JsonObject node;
-      try {
-        node = JsonObject.fromJson(doc.content());
-      } catch (Exception e) {
-        log.warn("could not generate analytics statement from node (not json)", e);
-        return SinkAction.ignore();
-      }
-
-      if (node.isEmpty()) {
-        log.warn("could not generate analytics statement from empty node");
+      final JsonObject node = getJsonObject(new String(doc.content()));
+      if (node == null) {
         return SinkAction.ignore();
       }
 
@@ -73,30 +105,31 @@ public class AnalyticsSinkHandler implements SinkHandler {
               .analyticsQuery(statement, analyticsOptions().parameters(node))
               .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
 
-      ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentId);
+      ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentKeys);
       return new SinkAction(action, concurrencyHint);
     } else {
       // when doc is null we are deleting the document
-      String statement = deleteStatement(keySpace, documentId);
+      if (documentKeys.contains("`")) {
+        log.warn("Could not generate Analytics N1QL DELETE statement with backtick (`) in field name");
+        return SinkAction.ignore();
+      }
+
+      final JsonObject documentKeysJson = getJsonObject(documentKeys);
+      if (documentKeysJson == null) {
+        return SinkAction.ignore();
+      }
+
+      Pair<String, JsonArray> deleteQuery = deleteQuery(keySpace, documentKeysJson);
       Mono<?> action = Mono.defer(() ->
           params.cluster()
-              .analyticsQuery(statement)
+              .analyticsQuery(deleteQuery.getLeft(), analyticsOptions().parameters(deleteQuery.getRight()))
               .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
 
-      ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentId);
+      ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentKeys);
       return new SinkAction(action, concurrencyHint);
 
     }
   }
-
-  private String upsertStatement(String keySpace, JsonObject values) {
-    return "UPSERT INTO " + keySpace + " ([" + values + "]);";
-  }
-
-  private String deleteStatement(String keySpace, String documentId) {
-    return "DELETE FROM " + keySpace + " WHERE _id= \"" + documentId + "\" ;";
-  }
-
   @Override
   public String toString() {
     return "AnalyticsSinkHandler{" + ", bucketName='" + bucketName + '\'' + '}';
