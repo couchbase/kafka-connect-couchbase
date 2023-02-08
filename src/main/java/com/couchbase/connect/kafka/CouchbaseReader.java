@@ -112,6 +112,7 @@ public class CouchbaseReader extends Thread {
         .collectionsAware(true)
         .scopeName(config.scope())
         .collectionNames(config.collections())
+        .optionalControlParam("change_streams", true)
         .noValue(config.noValue())
         .xattrs(config.xattrs())
         .compression(config.compression())
