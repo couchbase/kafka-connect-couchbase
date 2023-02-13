@@ -46,6 +46,13 @@ Upgraded Couchbase DCP client from `0.42.0` to `0.43.0`.
 * https://issues.couchbase.com/browse/KAFKAC-305[KAFKAC-305]:
 Upgraded Couchbase Java SDK from `3.3.4` to `3.4.1`.
 
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/JDCP-232[JDCP-232]:
+Fixed a race condition that sometimes caused the connector to fail on startup with the message:
+`java.lang.IllegalStateException: Tried to add duplicate channel`.
+
+
 [[v4.1.9]]
 == Version 4.1.9 (21 October 2022)
 
