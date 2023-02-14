@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 
 /**
@@ -93,7 +94,13 @@ public class AnalyticsSinkHandler implements SinkHandler {
     String keySpace = keyspace(bucketName, params.getScopeAndCollection().getScope(), params.getScopeAndCollection().getCollection());
 
     if (doc != null) {
-      final JsonObject node = getJsonObject(new String(doc.content()));
+      final String docContent = new String(doc.content(), UTF_8);
+      if (docContent.contains("`")) {
+        log.warn("Could not generate Analytics N1QL UPSERT statement with backtick (`) in document content");
+        return SinkAction.ignore();
+      }
+
+      final JsonObject node = getJsonObject(docContent);
       if (node == null) {
         return SinkAction.ignore();
       }
