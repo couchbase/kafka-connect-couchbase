@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.dcp.config.HostAndPort;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.client.java.Bucket;
@@ -75,7 +76,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
           throw new ConnectException("Cannot start CouchbaseSourceConnector because bucket name is not present");
         }
         bucketConfig = (CouchbaseBucketConfig) CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout());
-        String connectionString = String.join(",", config.seedNodes());
+        ConnectionString connectionString = ConnectionString.create(String.join(",", config.seedNodes()));
         NetworkResolution network = NetworkResolution.valueOf(config.network());
         seedNodes = SeedNodeHelper.getKvNodes(bucket, connectionString, config.enableTls(), network, config.bootstrapTimeout());
       }
