@@ -37,7 +37,10 @@ May be overridden with the KAFKA_COUCHBASE_PASSWORD environment variable.
 
 Name of the Couchbase bucket to use.
 
+This property is required unless using the experimental AnalyticsSinkHandler.
+
 * Type: string
+* Default: `""`
 * Importance: high
 
 [[couchbase.network]]
