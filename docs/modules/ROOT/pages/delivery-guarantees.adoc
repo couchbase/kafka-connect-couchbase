@@ -15,13 +15,19 @@ When a document is removed from Couchbase due to expiration, the connector does 
 
 WARNING: The source connector *does not* guarantee every version of a document will be reflected in the Kafka topic.
 For example, if a Couchbase document value changes rapidly from `V1` -> `V2` -> `V3`, or if the connector is not running when the change occurs, the connector is only guaranteed to publish the latest value (`V3`).
+In other words, changes to the same document may be "deduplicated", in which case only the latest version is published.
 
-For use cases that require every document version be reflected in the event stream without fail, two popular options are:
+For use cases that require every document version be reflected in the event stream, some possible options are:
 
-1. Treat the documents as immutable, and write a new document for each application event.
+* Configure the source bucket and/or collections to preserve historical document versions (requires Couchbase Server 7.2 or later).
+The connector publishes every historical document version it encounters.
+Be aware that Couchbase Server does not store historical document versions forever.
+Document changes that are evicted from history become eligible for deduplication.
+
+* Alternatively, treat the documents as immutable, and write a new document for each application event.
 In other words, make `V1`, `V2`, and `V3` separate documents.
 
-2. Include a version history inside each document.
+* A third option is to include a version history inside each document.
 For example, the first version of a document would be just `[V1]`.
 The second version would add `V2`, resulting in `[V1,V2]`.
 After adding `V3`, it would be `[V1,V2,V3]`.
