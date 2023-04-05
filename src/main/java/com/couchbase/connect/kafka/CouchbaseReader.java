@@ -31,6 +31,7 @@ import com.couchbase.client.dcp.highlevel.Mutation;
 import com.couchbase.client.dcp.highlevel.StreamFailure;
 import com.couchbase.client.dcp.highlevel.StreamOffset;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
+import com.couchbase.client.dcp.message.StreamFlag;
 import com.couchbase.client.dcp.metrics.LogLevel;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.util.PartitionSet;
@@ -53,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
 import static java.util.Objects.requireNonNull;
@@ -113,6 +115,7 @@ public class CouchbaseReader extends Thread {
         .scopeName(config.scope())
         .collectionNames(config.collections())
         .optionalControlParam("change_streams", true)
+        .optionalStreamFlags(setOf(StreamFlag.IGNORE_PURGED_TOMBSTONES))
         .noValue(config.noValue())
         .xattrs(config.xattrs())
         .compression(config.compression())
