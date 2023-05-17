@@ -24,6 +24,26 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.12]]
+== Version 4.1.12 (17 May 2023)
+
+https://packages.couchbase.com/clients/kafka/4.1.12/couchbase-kafka-connect-couchbase-4.1.12.zip[Download]
+
+If the connector is stopped for an extended period of time, it can now resume from where it left off, without having to roll back to zero.
+This behavior requires Couchbase Server 7.2 or later.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-319[KAFKAC-319]:
+When resuming from an old checkpoint (where the connector's sequence number is lower than Couchbase Server's purge sequence number), the connector no longer rolls back to zero.
+This behavior requires Couchbase Server 7.2 or later.
+
+* https://issues.couchbase.com/browse/KAFKAC-322[KAFKAC-322]:
+Upgraded Couchbase DCP client from 0.44.0 to 0.46.0.
+
+* https://issues.couchbase.com/browse/KAFKAC-321[KAFKAC-321]:
+Upgraded Couchbase Java SDK from 3.4.3 to 3.4.6.
+
 [[v4.1.11]]
 == Version 4.1.11 (17 February 2023)
 
