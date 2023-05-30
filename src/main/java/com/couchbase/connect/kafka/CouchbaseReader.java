@@ -69,6 +69,14 @@ public class CouchbaseReader extends Thread {
   private final BlockingQueue<Throwable> errorQueue;
   private final MeterRegistry meterRegistry;
 
+  /**
+   * As a workaround for JDCP-237 and the fact that the DCP client's `connect()` method
+   * calls `disconnect()` internally if the connection failed, we need to keep track of
+   * whether the connection was successful, so we don't end up calling `disconnect()`
+   * if the client has already been disconnected due to a failed connection attempt.
+   */
+  private volatile boolean connected;
+
   public CouchbaseReader(final CouchbaseSourceTaskConfig config, final String connectorName,
                          final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
                          final List<Integer> partitions, final Map<Integer, SourceOffset> partitionToSavedOffset,
@@ -177,6 +185,7 @@ public class CouchbaseReader extends Thread {
   public void run() {
     try {
       client.connect().block();
+      connected = true;
 
       // Apply the fallback state to all partitions. As of DCP client version 0.12.0,
       // this is the only way to set the sequence number to "now".
@@ -249,7 +258,10 @@ public class CouchbaseReader extends Thread {
 
   public void shutdown() {
     try {
-      client.disconnect().block();
+      if (connected) {
+        connected = false;
+        client.disconnect().block();
+      }
     } finally {
       meterRegistry.close();
     }
