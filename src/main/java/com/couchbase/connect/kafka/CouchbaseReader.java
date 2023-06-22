@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.dcp.Authenticator;
 import com.couchbase.client.dcp.CertificateAuthenticator;
 import com.couchbase.client.dcp.Client;
@@ -23,7 +24,6 @@ import com.couchbase.client.dcp.PasswordAuthenticator;
 import com.couchbase.client.dcp.SecurityConfig;
 import com.couchbase.client.dcp.StaticCredentialsProvider;
 import com.couchbase.client.dcp.StreamTo;
-import com.couchbase.client.dcp.core.env.NetworkResolution;
 import com.couchbase.client.dcp.highlevel.DatabaseChangeListener;
 import com.couchbase.client.dcp.highlevel.Deletion;
 import com.couchbase.client.dcp.highlevel.DocumentChange;

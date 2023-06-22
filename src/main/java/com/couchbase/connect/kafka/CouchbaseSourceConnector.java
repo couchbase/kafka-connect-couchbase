@@ -20,7 +20,7 @@ import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.dcp.config.HostAndPort;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
