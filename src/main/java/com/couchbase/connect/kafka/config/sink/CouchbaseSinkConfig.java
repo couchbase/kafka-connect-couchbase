@@ -23,5 +23,6 @@ public interface CouchbaseSinkConfig extends
     SinkBehaviorConfig,
     DurabilityConfig,
     N1qlSinkHandlerConfig,
+    AnalyticsSinkHandlerConfig,
     SubDocumentSinkHandlerConfig {
 }

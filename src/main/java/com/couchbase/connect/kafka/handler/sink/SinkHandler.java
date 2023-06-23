@@ -19,6 +19,8 @@ package com.couchbase.connect.kafka.handler.sink;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -42,6 +44,21 @@ public interface SinkHandler {
    * to skip this message.
    */
   SinkAction handle(SinkHandlerParams params);
+
+  /**
+   * Translates List of Kafka Connect {@link SinkRecord} (and associated parameters)
+   * into List of actions to perform.
+   */
+  default List<SinkAction> handleBatch(List<SinkHandlerParams> params) {
+    List<SinkAction> actions = new ArrayList<>(params.size());
+    for (SinkHandlerParams param : params) {
+      SinkAction action = handle(param);
+      if (action != null) {
+        actions.add(action);
+      }
+    }
+    return actions;
+  }
 
   /**
    * Returns the Couchbase document ID to use for the record

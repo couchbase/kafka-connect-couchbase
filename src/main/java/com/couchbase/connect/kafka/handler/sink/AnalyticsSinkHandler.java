@@ -17,10 +17,14 @@
 package com.couchbase.connect.kafka.handler.sink;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.java.ReactiveCluster;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
+import com.couchbase.connect.kafka.util.AnalyticsBatchBuilder;
+import com.couchbase.connect.kafka.util.N1qlData;
+import com.couchbase.connect.kafka.util.N1qlData.OperationType;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.kafka.common.config.ConfigException;
@@ -29,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,12 +49,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class AnalyticsSinkHandler implements SinkHandler {
   private static final Logger log = LoggerFactory.getLogger(AnalyticsSinkHandler.class);
   protected String bucketName;
-
-  @Override
-  public void init(SinkHandlerContext context) {
-    CouchbaseSinkConfig config = ConfigHelper.parse(CouchbaseSinkConfig.class, context.configProperties());
-    this.bucketName = config.bucket();
-  }
+  protected int maxBatchLimit;
 
   private static Pair<String, JsonArray> prepareWhereClauseForDelete(JsonObject documentKeys) {
 
@@ -79,6 +79,27 @@ public class AnalyticsSinkHandler implements SinkHandler {
       log.warn("could not generate analytics statement from empty node");
     }
     return node;
+  }
+
+  protected static String keyspace(String bucketName, String scope, String collection) {
+    if (scope.equals("") || collection.equals("")) {
+      throw new ConfigException("Missing required configuration for scope and collection.");
+    }
+
+    String keySpace = "";
+    if (bucketName != null && !bucketName.isEmpty()) {
+      keySpace += "`" + bucketName + "`.";
+    }
+    keySpace += "`" + scope + "`.`" + collection + "`";
+
+    return keySpace;
+  }
+
+  @Override
+  public void init(SinkHandlerContext context) {
+    CouchbaseSinkConfig config = ConfigHelper.parse(CouchbaseSinkConfig.class, context.configProperties());
+    maxBatchLimit = config.analyticsMaxRecordsInBatch();
+    this.bucketName = config.bucket();
   }
 
   private String upsertStatement(String keySpace, JsonObject values) {
@@ -137,23 +158,99 @@ public class AnalyticsSinkHandler implements SinkHandler {
 
     }
   }
+
+  @Override
+  public List<SinkAction> handleBatch(List<SinkHandlerParams> params) {
+    if (params.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(maxBatchLimit);
+    final ReactiveCluster cluster = params.get(0).cluster();
+
+    for (SinkHandlerParams param : params) {
+      String documentIds = getDocumentId(param);
+      SinkDocument doc = param.document().orElse(null);
+
+      // if bucketName is present then keyspace=bucketName.scopeName.collectionName otherwise keyspace=scopeName.collectionName
+      String keySpace = keyspace(bucketName, param.getScopeAndCollection().getScope(), param.getScopeAndCollection().getCollection());
+
+      if (doc != null) {
+        //Upsertion Case
+        final JsonObject node;
+        try {
+          node = JsonObject.fromJson(doc.content());
+        } catch (Exception e) {
+          log.warn("could not generate n1ql statement from node (not json)", e);
+          continue;
+        }
+
+        if (node.isEmpty()) {
+          log.warn("could not generate n1ql statement from node (not json)");
+          continue;
+        }
+
+        boolean backTicksFoundInKeys = false;
+        for (String name : node.getNames()) {
+          if (name.contains("`")) {
+            backTicksFoundInKeys = true;
+            // todo figure out how to escape backticks when generating N1QL statements.
+            // For now, bail out to avoid N1QL injection.
+            log.warn("could not generate n1ql statement from node with backtick (`) in field name");
+            break;
+          }
+        }
+
+        if (backTicksFoundInKeys) {
+          // Ignoring this record
+          continue;
+        }
+
+        batchBuilder.add(
+            new N1qlData(keySpace, node.toString(), OperationType.UPSERT, ConcurrencyHint.of(documentIds))
+        );
+      } else {
+        // when doc is null we are deleting the document
+        if (documentIds.contains("`")) {
+          log.warn("Could not generate Analytics N1QL DELETE statement with backtick (`) in field name");
+          continue;
+        }
+
+        final JsonObject documentKeysJson = getJsonObject(documentIds);
+        if (documentKeysJson == null) {
+          continue;
+        }
+
+        // Create Delete Statement
+        String deleteCondition = generateDeleteCondition(documentKeysJson);
+
+        batchBuilder.add(
+            new N1qlData(keySpace, deleteCondition, OperationType.DELETE, ConcurrencyHint.of(documentIds))
+        );
+      }
+    }
+
+    return batchBuilder.build().stream().map(statement -> new SinkAction(
+        Mono.defer(() -> cluster.analyticsQuery(statement).map(ReactiveAnalyticsResult::metaData)), ConcurrencyHint.neverConcurrent()
+    )).collect(Collectors.toList());
+  }
+
+  private String generateDeleteCondition(JsonObject documentKeysJson) {
+    String condition = documentKeysJson.getNames().stream().map(key -> {
+      Object value = documentKeysJson.get(key);
+      if (value instanceof Number) {
+        return String.format("%s=%s", key, value);
+      } else {
+        return String.format("%s=\"%s\"", key, value);
+      }
+    }).collect(Collectors.joining(" AND "));
+
+    return " ( " + condition + " ) ";
+  }
+
   @Override
   public String toString() {
     return "AnalyticsSinkHandler{" + ", bucketName='" + bucketName + '\'' + '}';
-  }
-
-  protected static String keyspace(String bucketName, String scope, String collection) {
-    if (scope.equals("") || collection.equals("")) {
-      throw new ConfigException("Missing required configuration for scope and collection.");
-    }
-
-    String keySpace = "";
-    if (bucketName != null && !bucketName.isEmpty()) {
-      keySpace += "`" + bucketName + "`.";
-    }
-    keySpace += "`" + scope + "`.`" + collection + "`";
-
-    return keySpace;
   }
 
 }

@@ -187,7 +187,7 @@ public class CouchbaseSinkTask extends SinkTask {
     LOGGER.trace("Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the Couchbase...",
         recordsCount, first.topic(), first.kafkaPartition(), first.kafkaOffset());
 
-    List<SinkAction> actions = new ArrayList<>(records.size());
+    List<SinkHandlerParams> paramsList = new ArrayList<>();
     for (SinkRecord record : records) {
       ScopeAndCollection destCollectionSpec = topicToCollection.getOrDefault(record.topic(), defaultDestCollection);
       Collection destCollection = client.collection(destCollectionSpec);
@@ -202,12 +202,10 @@ public class CouchbaseSinkTask extends SinkTask {
           durabilitySetter
       );
 
-      SinkAction action = sinkHandler.handle(params);
-
-      if (action != null) {
-        actions.add(action);
-      }
+      paramsList.add(params);
     }
+
+    List<SinkAction> actions = sinkHandler.handleBatch(paramsList);
 
     execute(actions);
   }

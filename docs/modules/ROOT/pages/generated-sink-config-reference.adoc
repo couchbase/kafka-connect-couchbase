@@ -363,6 +363,25 @@ This property is specific to `N1qlSinkHandler`.
 * Default: `true`
 * Importance: medium
 
+== Analytics Sink Handler
+
+[[couchbase.analytics.max.records.in.batch]]
+=== `couchbase.analytics.max.records.in.batch`
+
+Every Batch consists of an UPSERT or a DELETE statement, based on mutations.
+This property determines the maximum number of records in the UPSERT or DELETE statement in the batch.
+Users can configure this parameter based on the capacity of their analytics cluster.
+
+This property is specific to `AnalyticsSinkHandler`.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.1.14
+
+* Type: int
+* Default: `100`
+* Importance: medium
+
 == Sub Document Sink Handler
 
 [[couchbase.subdocument.path]]
