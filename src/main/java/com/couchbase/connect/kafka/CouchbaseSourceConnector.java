@@ -17,17 +17,12 @@ package com.couchbase.connect.kafka;
 
 
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
-import com.couchbase.client.core.env.NetworkResolution;
-import com.couchbase.client.core.env.SeedNode;
-import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.util.CouchbaseHelper;
 import com.couchbase.connect.kafka.util.ListHelper;
-import com.couchbase.connect.kafka.util.SeedNodeHelper;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import org.apache.kafka.common.config.ConfigDef;
@@ -35,26 +30,19 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceConnector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.IntStream;
 
 import static com.couchbase.connect.kafka.util.config.ConfigHelper.keyName;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public class CouchbaseSourceConnector extends SourceConnector {
-  private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceConnector.class);
-
   private Map<String, String> configProperties;
-  private CouchbaseBucketConfig bucketConfig;
-  private Set<SeedNode> seedNodes;
+  private int numPartitions;
   private final ConnectorLifecycle lifecycle = new ConnectorLifecycle();
 
   @Override
@@ -75,10 +63,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
         if (bucket == null){
           throw new ConnectException("Cannot start CouchbaseSourceConnector because bucket name is not present");
         }
-        bucketConfig = (CouchbaseBucketConfig) CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout());
-        ConnectionString connectionString = ConnectionString.create(String.join(",", config.seedNodes()));
-        NetworkResolution network = NetworkResolution.valueOf(config.network());
-        seedNodes = SeedNodeHelper.getKvNodes(bucket, connectionString, config.enableTls(), network, config.bootstrapTimeout());
+        numPartitions = ((CouchbaseBucketConfig) CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout())).numberOfPartitions();
       }
 
     } catch (ConfigException e) {
@@ -92,7 +77,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
   }
 
   private List<PartitionSet> splitPartitions(int maxTasks) {
-    List<Integer> partitions = IntStream.range(0, bucketConfig.numberOfPartitions())
+    List<Integer> partitions = IntStream.range(0, numPartitions)
         .boxed()
         .collect(toList());
 
@@ -104,18 +89,10 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
   @Override
   public List<Map<String, String>> taskConfigs(int maxTasks) {
-    String seedNodes = this.seedNodes.stream()
-        .map(n -> {
-          int port = n.kvPort().orElseThrow(() -> new AssertionError("seed node must have kv port"));
-          return new HostAndPort(n.address(), port).format();
-        })
-        .collect(joining(","));
-
     List<PartitionSet> partitionsGrouped = splitPartitions(maxTasks);
     lifecycle.logPartitionsAssigned(partitionsGrouped);
 
     String partitionsKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::partitions);
-    String dcpSeedNodesKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::dcpSeedNodes);
     String taskIdKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::maybeTaskId);
 
     List<Map<String, String>> taskConfigs = new ArrayList<>();
@@ -125,7 +102,6 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
       Map<String, String> taskProps = new HashMap<>(configProperties);
       taskProps.put(partitionsKey, formattedPartitions);
-      taskProps.put(dcpSeedNodesKey, seedNodes);
       taskProps.put(taskIdKey, "maybe-" + taskId++);
       taskConfigs.add(taskProps);
     }

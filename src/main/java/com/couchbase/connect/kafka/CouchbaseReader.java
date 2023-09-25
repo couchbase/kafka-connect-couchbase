@@ -115,7 +115,7 @@ public class CouchbaseReader extends Thread {
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
         .bootstrapTimeout(config.bootstrapTimeout())
         .socketConnectTimeout(config.bootstrapTimeout().toMillis())
-        .seedNodes(config.dcpSeedNodes())
+        .seedNodes(config.seedNodes())
         .networkResolution(NetworkResolution.valueOf(config.network()))
         .bucket(config.bucket())
         .authenticator(authenticator)
