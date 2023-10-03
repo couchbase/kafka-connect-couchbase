@@ -24,6 +24,18 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.1.14]]
+== Version 4.1.14 (3 Oct 2023)
+
+https://packages.couchbase.com/clients/kafka/4.1.14/couchbase-kafka-connect-couchbase-4.1.14.zip[Download]
+
+This maintenance release improves how the source connector resolves DNS SRV addresses.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-307[KAFKAC-307]:
+*Source* Instead of resolving a DNS SRV address just once when the connector starts up, the connector now passes the DNS SRV address along to the DCP client, so the DCP client can re-resolve it if necessary.
+
 [[v4.1.13]]
 == Version 4.1.13 (21 Jun 2023)
 
