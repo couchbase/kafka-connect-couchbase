@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.connect.kafka.util;
 
 import com.couchbase.connect.kafka.handler.sink.ConcurrencyHint;
-import com.couchbase.connect.kafka.util.N1qlData.OperationType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -26,10 +28,13 @@ import java.util.stream.Collectors;
 
 public class AnalyticsBatchBuilder {
   private final List<Batch> batches = new ArrayList<>();
-  private final int maxBatchSize;
+  private static final Logger LOGGER = LoggerFactory.getLogger(AnalyticsBatchBuilder.class);
+  private final long maxBatchSizeInBytes;
+  private final int maxRecordsCount;
 
-  public AnalyticsBatchBuilder(int maxBatchSize) {
-    this.maxBatchSize = maxBatchSize;
+  public AnalyticsBatchBuilder(long maxBatchSizeInBytes, int maxRecordsCount) {
+    this.maxBatchSizeInBytes = maxBatchSizeInBytes;
+    this.maxRecordsCount = maxRecordsCount;
   }
 
   public void add(N1qlData data) {
@@ -51,13 +56,19 @@ public class AnalyticsBatchBuilder {
     }
     // If currentBatch is not suitable based on keyspace or
     // batch size reached threshold , then create a new Batch
-    Batch batch = new Batch(keyspace, type, batches.size(), maxBatchSize);
+    Batch batch = new Batch(keyspace, type, batches.size(), maxBatchSizeInBytes, maxRecordsCount);
     batches.add(batch);
 
     return batch;
   }
 
   public List<String> build() {
+    LOGGER.info("============Begin Batch Stats=================");
+    for(int i=0 ; i < batches.size(); i++) {
+      Batch batch = batches.get(i);
+      LOGGER.info("Batch Number: {} sizeOfBatch: {} RecordsInBatch: {} for KeySpace: {}",i+1,batch.countOfRecordsInCurrentBatch,batch.sizeOfCurrentBatch,batch.keyspace);
+    }
+    LOGGER.info("============End Batch Stats=================");
     return batches.stream().map(Batch::getBlockQuery).collect(Collectors.toList());
   }
 
@@ -69,14 +80,17 @@ public class AnalyticsBatchBuilder {
     private final Set<ConcurrencyHint> hints = new HashSet<>();
     private final StringBuilder batchedData = new StringBuilder();
     private final int batchId;
-    private final int batchLimit;
+    private final long maxBatchSizeInBytes;
     private int countOfRecordsInCurrentBatch = 0;
+    private final int maxRecordCountLimit;
+    private int sizeOfCurrentBatch = 0;
 
-    Batch(String keyspace, N1qlData.OperationType type, int batchId, int batchLimit) {
+    Batch(String keyspace, N1qlData.OperationType type, int batchId, long maxBatchSizeInBytes, int maxRecordCountLimit) {
       this.type = type;
       this.keyspace = keyspace;
       this.batchId = batchId;
-      this.batchLimit = batchLimit;
+      this.maxBatchSizeInBytes = maxBatchSizeInBytes;
+      this.maxRecordCountLimit = maxRecordCountLimit;
     }
 
     public N1qlData.OperationType getType() {
@@ -92,6 +106,7 @@ public class AnalyticsBatchBuilder {
             batchedData.append(" , ");
           }
           batchedData.append(data.getData());
+          sizeOfCurrentBatch += data.getData().length();
           countOfRecordsInCurrentBatch++;
           break;
         case DELETE:
@@ -99,6 +114,7 @@ public class AnalyticsBatchBuilder {
             batchedData.append(" OR ");
           }
           batchedData.append(data.getData());
+          sizeOfCurrentBatch += data.getData().length();
           countOfRecordsInCurrentBatch++;
           break;
         default:
@@ -110,8 +126,12 @@ public class AnalyticsBatchBuilder {
       return countOfRecordsInCurrentBatch;
     }
 
-    public boolean isCompatible(String keyspace, OperationType type, ConcurrencyHint hint) {
-      return this.keyspace.equals(keyspace) && this.type.equals(type) && !hints.contains(hint) && getCountOfRecordsInCurrentBatch() < batchLimit;
+    public int getSizeOfCurrentBatch() {
+      return sizeOfCurrentBatch;
+    }
+
+    public boolean isCompatible(String keyspace, N1qlData.OperationType type, ConcurrencyHint hint) {
+      return this.keyspace.equals(keyspace) && this.type.equals(type) && !hints.contains(hint) && sizeOfCurrentBatch < maxBatchSizeInBytes && countOfRecordsInCurrentBatch < maxRecordCountLimit;
     }
 
     public String getBlockQuery() {
@@ -136,5 +156,4 @@ public class AnalyticsBatchBuilder {
       return batchId;
     }
   }
-
 }

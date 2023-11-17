@@ -77,9 +77,10 @@ public class AnalyticsBatchBuilderTest {
     keyspaces.add("sample_travel.inventory.hotel");
 
     int batchLimit = 10;
+    long maxBatchSizeInBytes = 5000000;
 
     // Actual
-    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(batchLimit);
+    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(maxBatchSizeInBytes, batchLimit);
 
     generateUpsertBatchedData(data, numberOfDataToBeGenerated, numberOfDataToBeGenerated, numberOfDataToBeGenerated, keyspaces, 1, batchBuilder);
 
@@ -102,7 +103,7 @@ public class AnalyticsBatchBuilderTest {
     // When batchLimit < numberOfDataToBeGenerated
     numberOfDataToBeGenerated = 5;
     batchLimit = 2;
-    batchBuilder = new AnalyticsBatchBuilder(batchLimit);
+    batchBuilder = new AnalyticsBatchBuilder(maxBatchSizeInBytes, batchLimit);
     generateUpsertBatchedData(data, numberOfDataToBeGenerated, numberOfDataToBeGenerated, numberOfDataToBeGenerated, keyspaces, 1, batchBuilder);
 
     List<String> expectedDataList = new ArrayList<>();
@@ -123,6 +124,7 @@ public class AnalyticsBatchBuilderTest {
   public void allUpsertInDifferentKeySpaces() {
     int numberOfDataToBeGenerated = 10;
     int batchLimit = 4;
+    long maxBatchSizeInBytes = 5000000;
 
     // will change keyspace after every 3 records
     int ksRepetition = 3;
@@ -131,7 +133,7 @@ public class AnalyticsBatchBuilderTest {
     keySpaces.add("sample_travel.inventory.airline");
     keySpaces.add("sample_travel.inventory.route");
 
-    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(batchLimit);
+    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(maxBatchSizeInBytes, batchLimit);
 
     List<N1qlData> data = new ArrayList<>();
     generateUpsertBatchedData(data, numberOfDataToBeGenerated, numberOfDataToBeGenerated, numberOfDataToBeGenerated, keySpaces, ksRepetition, batchBuilder);
@@ -157,6 +159,7 @@ public class AnalyticsBatchBuilderTest {
   public void upsertWithIdRepetitionAndKeyspaceRepetition() {
     int numberOfDataToBeGenerated = 10;
     int batchLimit = 4;
+    long maxBatchSizeInBytes = 5000000;
 
     // will repeat id after 2 records
     int idRepetition = 2;
@@ -167,7 +170,7 @@ public class AnalyticsBatchBuilderTest {
     keySpaces.add("sample_travel.inventory.airline");
     keySpaces.add("sample_travel.inventory.route");
 
-    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(batchLimit);
+    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(maxBatchSizeInBytes, batchLimit);
 
     List<N1qlData> data = new ArrayList<>();
     generateUpsertBatchedData(data, numberOfDataToBeGenerated, numberOfDataToBeGenerated, idRepetition, keySpaces, ksRepetition, batchBuilder);
@@ -196,6 +199,7 @@ public class AnalyticsBatchBuilderTest {
   public void mixedUpsertDeleteWithIdRepetitionAndKeyspaceRepetition() {
     int numberOfDataToBeGenerated = 10;
     int batchLimit = 6;
+    long maxBatchSizeInBytes = 5000000;
 
     int idRepetition = 4;
     int ksRepetition = 5;
@@ -207,7 +211,7 @@ public class AnalyticsBatchBuilderTest {
     keySpaces.add("sample_travel.inventory.airline");
     keySpaces.add("sample_travel.inventory.route");
 
-    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(batchLimit);
+    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(maxBatchSizeInBytes, batchLimit);
 
     List<N1qlData> data = new ArrayList<>();
     generateUpsertBatchedData(data, numberOfDataToBeGenerated, operationRepetition, idRepetition, keySpaces, ksRepetition, batchBuilder);

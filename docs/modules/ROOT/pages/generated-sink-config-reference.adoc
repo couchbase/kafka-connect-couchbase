@@ -382,6 +382,24 @@ UNCOMMITTED; this feature may change in a patch release without notice.
 * Default: `100`
 * Importance: medium
 
+[[couchbase.analytics.max.size.in.batch]]
+=== `couchbase.analytics.max.size.in.batch`
+
+Every Batch consists of an UPSERT or a DELETE statement, based on mutations.
+This property defines the max size of all docs in bytes in an UPSERT statement in a batch.
+Users can configure this parameter based on the capacity of their analytics cluster.
+
+This property is specific to `AnalyticsSinkHandler`.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.1.15
+
+* Type: string
+* Default: `5m`
+* Valid Values: An integer followed by a size unit (b = bytes, k = kilobytes, m = megabytes, g = gigabytes). For example, to specify 64 megabytes: 64m
+* Importance: medium
+
 == Sub Document Sink Handler
 
 [[couchbase.subdocument.path]]

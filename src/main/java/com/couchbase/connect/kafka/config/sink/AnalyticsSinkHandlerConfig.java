@@ -16,6 +16,7 @@
 package com.couchbase.connect.kafka.config.sink;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.connect.kafka.util.config.DataSize;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 
 public interface AnalyticsSinkHandlerConfig {
@@ -33,4 +34,18 @@ public interface AnalyticsSinkHandlerConfig {
   @Stability.Uncommitted
   @Default("100")
   int analyticsMaxRecordsInBatch();
+
+  /**
+   * Every Batch consists of an UPSERT or a DELETE statement,
+   * based on mutations.
+   * This property defines the max size of all docs in bytes in an UPSERT statement in a batch.
+   * Users can configure this parameter based on the capacity of their analytics cluster.
+   * <p>
+   * This property is specific to `AnalyticsSinkHandler`.
+   *
+   * @since 4.1.15
+   */
+  @Stability.Uncommitted
+  @Default("5m")
+  DataSize analyticsMaxSizeInBatch();
 }

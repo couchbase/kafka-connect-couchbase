@@ -49,7 +49,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class AnalyticsSinkHandler implements SinkHandler {
   private static final Logger log = LoggerFactory.getLogger(AnalyticsSinkHandler.class);
   protected String bucketName;
-  protected int maxBatchLimit;
+  protected int maxRecordsInBatchLimit;
+  protected long maxSizeOfRecordsInBytesLimit;
 
   private static Pair<String, JsonArray> prepareWhereClauseForDelete(JsonObject documentKeys) {
 
@@ -98,7 +99,8 @@ public class AnalyticsSinkHandler implements SinkHandler {
   @Override
   public void init(SinkHandlerContext context) {
     CouchbaseSinkConfig config = ConfigHelper.parse(CouchbaseSinkConfig.class, context.configProperties());
-    maxBatchLimit = config.analyticsMaxRecordsInBatch();
+    maxRecordsInBatchLimit = config.analyticsMaxRecordsInBatch();
+    maxSizeOfRecordsInBytesLimit = config.analyticsMaxSizeInBatch().getByteCount();
     this.bucketName = config.bucket();
   }
 
@@ -165,7 +167,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
       return Collections.emptyList();
     }
 
-    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(maxBatchLimit);
+    AnalyticsBatchBuilder batchBuilder = new AnalyticsBatchBuilder(maxSizeOfRecordsInBytesLimit, maxRecordsInBatchLimit);
     final ReactiveCluster cluster = params.get(0).cluster();
 
     for (SinkHandlerParams param : params) {
