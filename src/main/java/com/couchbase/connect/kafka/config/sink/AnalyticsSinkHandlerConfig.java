@@ -19,6 +19,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.util.config.DataSize;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 
+import java.time.Duration;
+
 public interface AnalyticsSinkHandlerConfig {
   /**
    * Every Batch consists of an UPSERT or a DELETE statement,
@@ -48,4 +50,15 @@ public interface AnalyticsSinkHandlerConfig {
   @Stability.Uncommitted
   @Default("5m")
   DataSize analyticsMaxSizeInBatch();
+
+  /**
+   * This property determines the time period after which client cancels the Query request for Analytics.
+   * <p>
+   * This property is specific to `AnalyticsSinkHandler`.
+   *
+   * @since 4.1.15
+   */
+  @Stability.Uncommitted
+  @Default("5m")
+  Duration analyticsQueryTimeout();
 }

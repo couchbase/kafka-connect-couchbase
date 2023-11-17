@@ -18,6 +18,7 @@ package com.couchbase.connect.kafka.handler.sink;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.ReactiveCluster;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -32,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -51,6 +53,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
   protected String bucketName;
   protected int maxRecordsInBatchLimit;
   protected long maxSizeOfRecordsInBytesLimit;
+  protected Duration analyticsQueryTimeout;
 
   private static Pair<String, JsonArray> prepareWhereClauseForDelete(JsonObject documentKeys) {
 
@@ -101,6 +104,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
     CouchbaseSinkConfig config = ConfigHelper.parse(CouchbaseSinkConfig.class, context.configProperties());
     maxRecordsInBatchLimit = config.analyticsMaxRecordsInBatch();
     maxSizeOfRecordsInBytesLimit = config.analyticsMaxSizeInBatch().getByteCount();
+    analyticsQueryTimeout = config.analyticsQueryTimeout();
     this.bucketName = config.bucket();
   }
 
@@ -132,7 +136,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
 
       Mono<?> action = Mono.defer(() ->
           params.cluster()
-              .analyticsQuery(statement, analyticsOptions().parameters(node))
+              .analyticsQuery(statement, analyticsOptions().timeout(analyticsQueryTimeout).parameters(node))
               .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
 
       ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentKeys);
@@ -152,7 +156,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
       Pair<String, JsonArray> deleteQuery = deleteQuery(keySpace, documentKeysJson);
       Mono<?> action = Mono.defer(() ->
           params.cluster()
-              .analyticsQuery(deleteQuery.getLeft(), analyticsOptions().parameters(deleteQuery.getRight()))
+              .analyticsQuery(deleteQuery.getLeft(), analyticsOptions().timeout(analyticsQueryTimeout).parameters(deleteQuery.getRight()))
               .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
 
       ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentKeys);
@@ -233,7 +237,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
     }
 
     return batchBuilder.build().stream().map(statement -> new SinkAction(
-        Mono.defer(() -> cluster.analyticsQuery(statement).map(ReactiveAnalyticsResult::metaData)), ConcurrencyHint.neverConcurrent()
+        Mono.defer(() -> cluster.analyticsQuery(statement, AnalyticsOptions.analyticsOptions().timeout(analyticsQueryTimeout)).map(ReactiveAnalyticsResult::metaData)), ConcurrencyHint.neverConcurrent()
     )).collect(Collectors.toList());
   }
 

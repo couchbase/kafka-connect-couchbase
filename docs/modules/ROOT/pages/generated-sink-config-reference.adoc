@@ -400,6 +400,22 @@ UNCOMMITTED; this feature may change in a patch release without notice.
 * Valid Values: An integer followed by a size unit (b = bytes, k = kilobytes, m = megabytes, g = gigabytes). For example, to specify 64 megabytes: 64m
 * Importance: medium
 
+[[couchbase.analytics.query.timeout]]
+=== `couchbase.analytics.query.timeout`
+
+This property determines the time period after which client cancels the Query request for Analytics.
+
+This property is specific to `AnalyticsSinkHandler`.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.1.15
+
+* Type: string
+* Default: `5m`
+* Valid Values: An integer followed by a time unit (ms = milliseconds, s = seconds, m = minutes, h = hours, d = days). For example, to specify 30 minutes: 30m
+* Importance: medium
+
 == Sub Document Sink Handler
 
 [[couchbase.subdocument.path]]
