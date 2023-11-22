@@ -39,14 +39,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.couchbase.client.core.env.IoConfig.networkResolution;
-import static com.couchbase.client.core.env.TimeoutConfig.connectTimeout;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static java.util.Collections.emptyMap;
 
 public class KafkaCouchbaseClient implements Closeable {
-  private final ClusterEnvironment env;
   private final Cluster cluster;
   private final Bucket bucket;
 
@@ -59,34 +56,37 @@ public class KafkaCouchbaseClient implements Closeable {
     String connectionString = String.join(",", clusterAddress);
     NetworkResolution networkResolution = NetworkResolution.valueOf(config.network());
 
-    SecurityConfig.Builder securityConfig = SecurityConfig.builder()
-        .enableTls(config.enableTls())
-        .enableHostnameVerification(config.enableHostnameVerification());
-    if (!isNullOrEmpty(config.trustStorePath())) {
-      securityConfig.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value(), Optional.empty());
-    }
-    if (!isNullOrEmpty(config.trustCertificatePath())) {
-      securityConfig.trustCertificate(Paths.get(config.trustCertificatePath()));
-    }
-
-    ClusterEnvironment.Builder envBuilder = ClusterEnvironment.builder()
-        .securityConfig(securityConfig)
-        .ioConfig(networkResolution(networkResolution))
-        .timeoutConfig(connectTimeout(config.bootstrapTimeout()));
-
-    applyCustomEnvironmentProperties(envBuilder, clusterEnvProps);
-
-    env = envBuilder.build();
-
     Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
         ? PasswordAuthenticator.create(config.username(), config.password().value())
         : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value(), Optional.empty());
 
-    cluster = Cluster.connect(connectionString,
+    cluster = Cluster.connect(
+        connectionString,
         clusterOptions(authenticator)
-            .environment(env));
+            .environment(env -> {
+              env
+                  .securityConfig(security -> configureSecurity(security, config))
+                  .ioConfig(io -> io.networkResolution(networkResolution))
+                  .timeoutConfig(timeout -> timeout.connectTimeout(config.bootstrapTimeout()));
+
+              applyCustomEnvironmentProperties(env, clusterEnvProps);
+            })
+    );
 
     bucket = config.bucket().isEmpty() ? null : cluster.bucket(config.bucket());
+  }
+
+  private static void configureSecurity(SecurityConfig.Builder security, CommonConfig config) {
+    security
+        .enableTls(config.enableTls())
+        .enableHostnameVerification(config.enableHostnameVerification());
+
+    if (!isNullOrEmpty(config.trustStorePath())) {
+      security.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value(), Optional.empty());
+    }
+    if (!isNullOrEmpty(config.trustCertificatePath())) {
+      security.trustCertificate(Paths.get(config.trustCertificatePath()));
+    }
   }
 
   private static void applyCustomEnvironmentProperties(ClusterEnvironment.Builder envBuilder, Map<String, String> envProps) {
@@ -103,7 +103,7 @@ public class KafkaCouchbaseClient implements Closeable {
   }
 
   public ClusterEnvironment env() {
-    return env;
+    return cluster.environment();
   }
 
   public Cluster cluster() {
@@ -126,6 +126,5 @@ public class KafkaCouchbaseClient implements Closeable {
   @Override
   public void close() {
     cluster.disconnect();
-    env.shutdown();
   }
 }
