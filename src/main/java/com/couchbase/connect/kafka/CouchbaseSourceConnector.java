@@ -58,11 +58,13 @@ public class CouchbaseSourceConnector extends SourceConnector {
       configProperties = properties;
       CouchbaseSourceConfig config = ConfigHelper.parse(CouchbaseSourceConfig.class, properties);
 
+      if (config.bucket().isEmpty()) {
+        String propertyName = keyName(CouchbaseSourceConfig.class, CouchbaseSourceConfig::bucket);
+        throw new ConfigException("Missing required config property: " + propertyName);
+      }
+
       try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
         Bucket bucket = client.bucket();
-        if (bucket == null){
-          throw new ConnectException("Cannot start CouchbaseSourceConnector because bucket name is not present");
-        }
         numPartitions = ((CouchbaseBucketConfig) CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout())).numberOfPartitions();
       }
 
