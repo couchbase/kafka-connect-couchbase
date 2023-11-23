@@ -115,10 +115,11 @@ public class KafkaCouchbaseClient implements Closeable {
     return bucket;
   }
 
-  @Nullable
   public Collection collection(ScopeAndCollection scopeAndCollection) {
-    if (bucket == null) return null;
-    return Objects.requireNonNull(bucket())
+    if (bucket == null) {
+      throw new IllegalStateException("Can't call this method when the sink handler doesn't use KV connections.");
+    }
+    return bucket
         .scope(scopeAndCollection.getScope())
         .collection(scopeAndCollection.getCollection());
   }

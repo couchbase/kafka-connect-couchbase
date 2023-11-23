@@ -17,11 +17,9 @@
 package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.logging.LogRedaction;
-import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.config.sink.SinkBehaviorConfig.DocumentMode;
-import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
-import com.couchbase.connect.kafka.handler.sink.AnalyticsSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkAction;
 import com.couchbase.connect.kafka.handler.sink.SinkDocument;
@@ -75,6 +73,7 @@ public class CouchbaseSinkTask extends SinkTask {
   private JsonConverter converter;
   private DocumentIdExtractor documentIdExtractor;
   private SinkHandler sinkHandler;
+  private boolean sinkHandlerUsesKvConnections;
   private KafkaRetryHelper retryHelper;
 
   private DurabilitySetter durabilitySetter;
@@ -120,16 +119,6 @@ public class CouchbaseSinkTask extends SinkTask {
 
     Class<? extends SinkHandler> sinkHandlerClass = config.sinkHandler();
 
-    if (sinkHandlerClass != AnalyticsSinkHandler.class && client.bucket() == null) {
-      String bucketPropertyName = keyName(
-          CouchbaseSourceTaskConfig.class,
-          CouchbaseSourceTaskConfig::bucket
-      );
-      throw new ConfigException(
-          "Missing required config property: " + bucketPropertyName
-      );
-    }
-
     DocumentMode documentMode = config.documentMode();
     if (documentMode != DocumentMode.DOCUMENT) {
       sinkHandlerClass = documentMode == DocumentMode.N1QL
@@ -143,6 +132,12 @@ public class CouchbaseSinkTask extends SinkTask {
 
     sinkHandler = Utils.newInstance(sinkHandlerClass);
     sinkHandler.init(new SinkHandlerContext(client.cluster().reactive(), unmodifiableMap(properties)));
+    sinkHandlerUsesKvConnections = sinkHandler.usesKvCollections();
+
+    if (sinkHandlerUsesKvConnections && config.bucket().isEmpty()) {
+      String propertyName = keyName(CouchbaseSinkConfig.class, CouchbaseSinkConfig::bucket);
+      throw new ConfigException("Missing required config property: " + propertyName);
+    }
 
     LOGGER.info("Using sink handler: {}", sinkHandler);
 
@@ -190,11 +185,11 @@ public class CouchbaseSinkTask extends SinkTask {
     List<SinkHandlerParams> paramsList = new ArrayList<>();
     for (SinkRecord record : records) {
       ScopeAndCollection destCollectionSpec = topicToCollection.getOrDefault(record.topic(), defaultDestCollection);
-      Collection destCollection = client.collection(destCollectionSpec);
+      ReactiveCollection destCollection = sinkHandlerUsesKvConnections ? client.collection(destCollectionSpec).reactive() : null;
 
       SinkHandlerParams params = new SinkHandlerParams(
           client.cluster().reactive(),
-          destCollection == null ? null : destCollection.reactive(),
+          destCollection,
           destCollectionSpec,
           record,
           toSinkDocument(record),

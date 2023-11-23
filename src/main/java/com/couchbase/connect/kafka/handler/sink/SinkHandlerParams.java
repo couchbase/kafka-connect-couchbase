@@ -88,11 +88,15 @@ public class SinkHandlerParams {
    */
   public ReactiveCollection collection() {
     if (collection == null) {
-      throw new IllegalStateException("Collection is null");
+      throw new IllegalStateException("Can't call this method, because this SinkHandler's usesKvCollections() method returned false.");
     }
     return collection;
   }
 
+  /**
+   * Like {@link #collection()}, but returns the <b>name</b>
+   * of the suggested destination collection, and never throws an exception.
+   */
   @Stability.Internal
   public ScopeAndCollection getScopeAndCollection() {
     return scopeAndCollection;

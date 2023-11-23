@@ -108,6 +108,11 @@ public class AnalyticsSinkHandler implements SinkHandler {
     this.bucketName = config.bucket();
   }
 
+  @Override
+  public boolean usesKvCollections() {
+    return false;
+  }
+
   private String upsertStatement(String keySpace, JsonObject values) {
     return "UPSERT INTO " + keySpace + " ([" + values + "]);";
   }

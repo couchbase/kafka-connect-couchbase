@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.handler.sink;
 
+import com.couchbase.client.core.annotation.Stability;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.nio.ByteBuffer;
@@ -100,5 +101,18 @@ public interface SinkHandler {
     }
 
     return record.topic() + "/" + record.kafkaPartition() + "/" + record.kafkaOffset();
+  }
+
+  /**
+   * Returns true if this handler is going to call {@link SinkHandlerParams#collection()}.
+   * <p>
+   * Called once, after {@link #init(SinkHandlerContext)}.
+   * <p>
+   * This lets the connector avoid opening non-existent KV collections
+   * when {@link AnalyticsSinkHandler} is used.
+   */
+  @Stability.Internal
+  default boolean usesKvCollections() {
+    return true;
   }
 }
