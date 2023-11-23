@@ -85,20 +85,6 @@ public class AnalyticsSinkHandler implements SinkHandler {
     return node;
   }
 
-  protected static String keyspace(String bucketName, String scope, String collection) {
-    if (scope.equals("") || collection.equals("")) {
-      throw new ConfigException("Missing required configuration for scope and collection.");
-    }
-
-    String keySpace = "";
-    if (bucketName != null && !bucketName.isEmpty()) {
-      keySpace += "`" + bucketName + "`.";
-    }
-    keySpace += "`" + scope + "`.`" + collection + "`";
-
-    return keySpace;
-  }
-
   @Override
   public void init(SinkHandlerContext context) {
     CouchbaseSinkConfig config = ConfigHelper.parse(CouchbaseSinkConfig.class, context.configProperties());
@@ -123,7 +109,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
     SinkDocument doc = params.document().orElse(null);
 
     // if bucketName is present then keyspace=bucketName.scopeName.collectionName otherwise keyspace=scopeName.collectionName
-    String keySpace = keyspace(bucketName, params.getScopeAndCollection().getScope(), params.getScopeAndCollection().getCollection());
+    String keySpace = params.getKeyspace().format();
 
     if (doc != null) {
       final String docContent = new String(doc.content(), UTF_8);
@@ -184,7 +170,7 @@ public class AnalyticsSinkHandler implements SinkHandler {
       SinkDocument doc = param.document().orElse(null);
 
       // if bucketName is present then keyspace=bucketName.scopeName.collectionName otherwise keyspace=scopeName.collectionName
-      String keySpace = keyspace(bucketName, param.getScopeAndCollection().getScope(), param.getScopeAndCollection().getCollection());
+      String keySpace = param.getKeyspace().format();
 
       if (doc != null) {
         //Upsertion Case

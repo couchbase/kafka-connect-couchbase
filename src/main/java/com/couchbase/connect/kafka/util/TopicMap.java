@@ -16,6 +16,8 @@
 
 package com.couchbase.connect.kafka.util;
 
+import reactor.util.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,8 +30,11 @@ public class TopicMap {
     throw new AssertionError("not instantiable");
   }
 
-  public static Map<String, ScopeAndCollection> parseTopicToCollection(List<String> topicToCollection) {
-    return mapValues(parseCommon(topicToCollection), ScopeAndCollection::parse);
+  public static Map<String, Keyspace> parseTopicToCollection(
+      List<String> topicToCollection,
+      @Nullable String defaultBucket
+  ) {
+    return mapValues(parseCommon(topicToCollection), it -> Keyspace.parse(it, defaultBucket));
   }
 
   public static Map<ScopeAndCollection, String> parseCollectionToTopic(List<String> collectionToTopic) {

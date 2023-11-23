@@ -20,9 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.ReactiveCluster;
 import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.kv.CommonDurabilityOptions;
-import com.couchbase.connect.kafka.util.ScopeAndCollection;
+import com.couchbase.connect.kafka.util.Keyspace;
 import org.apache.kafka.connect.sink.SinkRecord;
-import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -39,7 +38,7 @@ public class SinkHandlerParams {
   private final ReactiveCluster cluster;
   @Nullable
   private final ReactiveCollection collection;
-  private final ScopeAndCollection scopeAndCollection;
+  private final Keyspace keyspace;
   private final SinkRecord sinkRecord;
   private final Optional<SinkDocument> document;
   private final Consumer<CommonDurabilityOptions<?>> durabilityOptions;
@@ -53,14 +52,14 @@ public class SinkHandlerParams {
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public SinkHandlerParams(ReactiveCluster cluster,
                            @Nullable ReactiveCollection collection,
-                           ScopeAndCollection scopeAndCollection,
+                           Keyspace keyspace,
                            SinkRecord sinkRecord,
                            SinkDocument document,
                            Optional<Duration> expiry,
                            Consumer<CommonDurabilityOptions<?>> durabilityOptions) {
     this.cluster = requireNonNull(cluster);
     this.collection = collection;
-    this.scopeAndCollection = requireNonNull(scopeAndCollection);
+    this.keyspace = requireNonNull(keyspace);
     this.sinkRecord = requireNonNull(sinkRecord);
     this.durabilityOptions = requireNonNull(durabilityOptions);
     this.document = Optional.ofNullable(document);
@@ -94,12 +93,12 @@ public class SinkHandlerParams {
   }
 
   /**
-   * Like {@link #collection()}, but returns the <b>name</b>
-   * of the suggested destination collection, and never throws an exception.
+   * Like {@link #collection()}, but returns the qualified <b>name</b>
+   * of the suggested destination collection.
    */
   @Stability.Internal
-  public ScopeAndCollection getScopeAndCollection() {
-    return scopeAndCollection;
+  public Keyspace getKeyspace() {
+    return keyspace;
   }
 
   /**

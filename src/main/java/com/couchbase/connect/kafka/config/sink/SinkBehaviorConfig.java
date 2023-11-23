@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
-import com.couchbase.connect.kafka.util.ScopeAndCollection;
+import com.couchbase.connect.kafka.util.Keyspace;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import org.apache.kafka.common.config.ConfigDef;
@@ -33,15 +33,23 @@ import static com.couchbase.connect.kafka.util.config.ConfigHelper.validate;
 public interface SinkBehaviorConfig {
 
   /**
-   * Qualified name (scope.collection) of the destination collection for messages
+   * Qualified name (scope.collection or bucket.scope.collection) of the destination collection for messages
    * from topics that don't have an entry in the `couchbase.topic.to.collection` map.
+   * <p>
+   * If the bucket component contains a dot, escape it by enclosing it in backticks.
+   * <p>
+   * If the bucket component is omitted, it defaults to the value of the `couchbase.bucket` property.
    */
   @Default("_default._default")
   String defaultCollection();
 
   @SuppressWarnings("unused")
   static ConfigDef.Validator defaultCollectionValidator() {
-    return validate(ScopeAndCollection::parse, "A collection name qualified by a scope name (scope.collection)");
+    return validate(
+        (String value) -> Keyspace.parse(value, null),
+        "A qualified collection name like 'scope.collection' or 'bucket.scope.collection'." +
+            " If the bucket component contains a dot, escape it by enclosing it in backticks."
+    );
   }
 
   /**
@@ -50,10 +58,14 @@ public interface SinkBehaviorConfig {
    * Topic and collection are joined by an equals sign.
    * Map entries are delimited by commas.
    * <p>
+   * A collection name is of the form `bucket.scope.collection` or `scope.collection`.
+   * If the bucket component is omitted, it defaults to the value of the `couchbase.bucket` property.
+   * If the bucket component contains a dot, escape it by enclosing it in backticks.
+   * <p>
    * For example, if you want to write messages from topic "topic1"
-   * to collection "scope-a.invoices", and messages from topic "topic2"
-   * to collection "scope-a.widgets", you would write:
-   * "topic1=scope-a.invoices,topic2=scope-a.widgets".
+   * to collection "scope-a.invoices" in the default bucket, and messages from topic "topic2"
+   * to collection "scope-a.widgets" in bucket "other-bucket" you would write:
+   * "topic1=scope-a.invoices,topic2=other-bucket.scope-a.widgets".
    * <p>
    * Defaults to an empty map, with all documents going to the collection
    * specified by `couchbase.default.collection`.
@@ -63,7 +75,11 @@ public interface SinkBehaviorConfig {
 
   @SuppressWarnings("unused")
   static ConfigDef.Validator topicToCollectionValidator() {
-    return validate(TopicMap::parseTopicToCollection, "topic=scope.collection,...");
+    return validate(
+        (List<String> value) -> TopicMap.parseTopicToCollection(value, null),
+        "topic1=scope.collection,topic2=other-bucket.scope.collection,..." +
+            " If a bucket component contains a dot, escape it by enclosing it in backticks."
+    );
   }
 
   /**

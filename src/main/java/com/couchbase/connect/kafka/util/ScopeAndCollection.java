@@ -20,17 +20,32 @@ import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Like a {@link Keyspace} where the database component is always null.
+ * It's a distinct type (at least for now) to reinforce the idea that
+ * the source connector can stream from only one bucket.
+ * <p>
+ * In other words, the source connector uses ScopeAndCollection because
+ * it reads from only one bucket, and the sink connector uses Keyspace
+ * because it can write to multiple buckets.
+ */
 public class ScopeAndCollection {
   private final String scope;
   private final String collection;
 
   public static ScopeAndCollection parse(String scopeAndCollection) {
-    String[] split = scopeAndCollection.split("\\.", -1);
-    if (split.length != 2) {
+    try {
+      Keyspace ks = Keyspace.parse(scopeAndCollection, null);
+      if (ks.getBucket() != null) {
+        throw new IllegalArgumentException("Expected 2 components, but got 3; a bucket name is not valid in this context.");
+      }
+      return new ScopeAndCollection(ks.getScope(), ks.getCollection());
+    } catch (Exception e) {
       throw new IllegalArgumentException(
-          "Expected qualified collection name (scope.collection) but got: " + scopeAndCollection);
+          "Expected a qualified collection name (scope.collection) with no bucket component, but got: " + scopeAndCollection,
+          e
+      );
     }
-    return new ScopeAndCollection(split[0], split[1]);
   }
 
   public ScopeAndCollection(String scope, String collection) {

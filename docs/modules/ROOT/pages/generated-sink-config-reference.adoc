@@ -178,11 +178,15 @@ Disabled by default because it generates many log messages.
 [[couchbase.default.collection]]
 === `couchbase.default.collection`
 
-Qualified name (scope.collection) of the destination collection for messages from topics that don't have an entry in the `couchbase.topic.to.collection` map.
+Qualified name (scope.collection or bucket.scope.collection) of the destination collection for messages from topics that don't have an entry in the `couchbase.topic.to.collection` map.
+
+If the bucket component contains a dot, escape it by enclosing it in backticks.
+
+If the bucket component is omitted, it defaults to the value of the `couchbase.bucket` property.
 
 * Type: string
 * Default: `_default._default`
-* Valid Values: A collection name qualified by a scope name (scope.collection)
+* Valid Values: A qualified collection name like 'scope.collection' or 'bucket.scope.collection'. If the bucket component contains a dot, escape it by enclosing it in backticks.
 * Importance: medium
 
 [[couchbase.topic.to.collection]]
@@ -193,13 +197,17 @@ A map from Kafka topic to Couchbase collection.
 Topic and collection are joined by an equals sign.
 Map entries are delimited by commas.
 
-For example, if you want to write messages from topic "topic1" to collection "scope-a.invoices", and messages from topic "topic2" to collection "scope-a.widgets", you would write: "topic1=scope-a.invoices,topic2=scope-a.widgets".
+A collection name is of the form `bucket.scope.collection` or `scope.collection`.
+If the bucket component is omitted, it defaults to the value of the `couchbase.bucket` property.
+If the bucket component contains a dot, escape it by enclosing it in backticks.
+
+For example, if you want to write messages from topic "topic1" to collection "scope-a.invoices" in the default bucket, and messages from topic "topic2" to collection "scope-a.widgets" in bucket "other-bucket" you would write: "topic1=scope-a.invoices,topic2=other-bucket.scope-a.widgets".
 
 Defaults to an empty map, with all documents going to the collection specified by `couchbase.default.collection`.
 
 * Type: list
 * Default: `""`
-* Valid Values: topic=scope.collection,...
+* Valid Values: topic1=scope.collection,topic2=other-bucket.scope.collection,... If a bucket component contains a dot, escape it by enclosing it in backticks.
 * Importance: medium
 
 [[couchbase.sink.handler]]

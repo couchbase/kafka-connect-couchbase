@@ -28,7 +28,7 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.connect.kafka.config.common.CommonConfig;
-import com.couchbase.connect.kafka.util.ScopeAndCollection;
+import com.couchbase.connect.kafka.util.Keyspace;
 import org.apache.kafka.common.config.ConfigException;
 import reactor.util.annotation.Nullable;
 
@@ -36,7 +36,6 @@ import java.io.Closeable;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
@@ -115,13 +114,18 @@ public class KafkaCouchbaseClient implements Closeable {
     return bucket;
   }
 
-  public Collection collection(ScopeAndCollection scopeAndCollection) {
-    if (bucket == null) {
-      throw new IllegalStateException("Can't call this method when the sink handler doesn't use KV connections.");
+  public Collection collection(Keyspace keyspace) {
+    if (keyspace.getBucket() == null) {
+      throw new IllegalArgumentException(
+          "Keyspace has null bucket/database. This is a bug." +
+              " It probably means the sink handler's usesKvConnections() method returned false," +
+              " but the connector tried to open a KV connection anyway."
+      );
     }
-    return bucket
-        .scope(scopeAndCollection.getScope())
-        .collection(scopeAndCollection.getCollection());
+
+    return cluster.bucket(keyspace.getBucket())
+        .scope(keyspace.getScope())
+        .collection(keyspace.getCollection());
   }
 
   @Override
