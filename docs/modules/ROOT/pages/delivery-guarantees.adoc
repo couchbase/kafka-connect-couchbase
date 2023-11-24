@@ -23,6 +23,7 @@ For use cases that require every document version be reflected in the event stre
 The connector publishes every historical document version it encounters.
 Be aware that Couchbase Server does not store historical document versions forever.
 Document changes that are evicted from history become eligible for deduplication.
+See the xref:server:learn:data/change-history.adoc[Change History page].
 
 * Alternatively, treat the documents as immutable, and write a new document for each application event.
 In other words, make `V1`, `V2`, and `V3` separate documents.
