@@ -59,11 +59,17 @@ confluent local services schema-registry start
 ----
 
 If you're not using Confluent, the commands are slightly different, but the idea is the same.
-Start the servers by running these commands, *each in a separate terminal*:
+Start the Zookeeper and Kafka servers by running these commands, *each in a separate terminal*:
 
 [source,bash]
 ----
 zookeeper-server-start.sh $KAFKA_HOME/config/zookeeper.properties
+----
+
+And in a separate terminal:
+
+[source,bash]
+----
 kafka-server-start.sh $KAFKA_HOME/config/server.properties
 ----
 
@@ -100,7 +106,7 @@ For Confluent Platform Kafka:
 [source,bash]
 ----
 cd $KAFKA_CONNECT_COUCHBASE_HOME
-env CLASSPATH=lib/* \
+env CLASSPATH="lib/*" \
     connect-standalone $CONFLUENT_HOME/etc/kafka/connect-standalone.properties \
                        etc/quickstart-couchbase-source.properties
 ----
@@ -110,7 +116,7 @@ Or for Apache Kafka:
 [source,bash]
 ----
 cd $KAFKA_CONNECT_COUCHBASE_HOME
-env CLASSPATH=lib/* \
+env CLASSPATH="lib/*" \
     connect-standalone.sh $KAFKA_HOME/config/connect-standalone.properties \
                        etc/quickstart-couchbase-source.properties
 ----
