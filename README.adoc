@@ -24,5 +24,5 @@ Pre-built distributions are available from the download link above.
 The following instructions are intended for developers working on the connector.
 
 . Clone this GitHub repository.
-. Run `mvn package` in the project's root directory to generate the connector archive.
+. Run `./mvnw package` in the project's root directory to generate the connector archive.
 . Look for `couchbase-kafka-connect-couchbase-<version>.zip` under the `target` directory.
