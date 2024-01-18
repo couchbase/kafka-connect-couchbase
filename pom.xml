@@ -70,13 +70,13 @@
     <properties>
         <java-compat.version>1.8</java-compat.version>
         <kafka.version>2.5.0</kafka.version>
-        <dcp-client.version>0.47.0</dcp-client.version>
-        <java-client.version>3.4.7</java-client.version>
+        <dcp-client.version>0.48.0-SNAPSHOT</dcp-client.version>
+        <java-client.version>3.5.2</java-client.version>
         <runtime.javadoc.version>0.13.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.9.2</junit.version>
+        <junit.version>5.10.1</junit.version>
         <mysql.version>5.1.6</mysql.version>
-        <mockito.version>5.3.1</mockito.version>
+        <mockito.version>5.9.0</mockito.version>
         <dist-archive-name>${project.artifactId}-${project.version}.zip</dist-archive-name>
 
         <!-- Don't sign artifacts unless the 'stage' or 'release' profile is active -->
@@ -151,7 +151,7 @@
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.16.1</version>
+            <version>1.17.2</version>
         </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -162,7 +162,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>31.1-jre</version>
+            <version>33.0.0-jre</version>
             <scope>test</scope>
         </dependency>
         <dependency>
