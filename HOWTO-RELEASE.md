@@ -61,7 +61,10 @@ If any AsciiDoc files are modified as a result, make sure the changes look good 
 1. Edit `pom.xml` and remove the `-SNAPSHOT` suffix from the version string.
 2. Edit `examples/custom-extensions/pom.xml` and update the `kafka-connect-couchbase.version` property.
 3. Edit `README.md` and bump the version numbers if applicable.
-4. Commit these changes, with message "Prepare x.y.z release"
+4. Edit `docs/antora.yml` and bump the version number if application.
+5. Verify `compatibility.adoc` is up-to-date.
+6. Verify the connector metadata `pom.xml` is up-to-date, particularly the `<requirements>` section. 
+7. Commit these changes, with message "Prepare x.y.z release"
 (where x.y.z is the version you're releasing).
 
 
@@ -89,6 +92,8 @@ set this additional property:
     mvn clean deploy -Prelease -DautoReleaseAfterClose=false
 
 Remember, you can add `-DskipITs` to either command to skip integration tests if appropriate.
+
+If publishing failed, see the troubleshooting section below.
 
 If publishing to Maven Central was successful, you're ready to publish the distribution archive to S3 with this shell command:
 
@@ -145,3 +150,28 @@ some tips for making git and gpg play nice together.
 * If deployment fails because the artifacts are missing PGP signatures, make sure your Maven
 command line includes `-Prelease` when running `mvn deploy`.
 Note that this is a *profile* so it's specified with `-P`.
+
+### Maven Central timeouts
+
+Did you get an error like this? 
+
+```
+[INFO] Remote staged 1 repositories, finished with success.
+[INFO] Remote staging repositories are being released...
+
+Waiting for operation to complete...
+.......Jan 26, 2024 1:47:55 PM com.sun.jersey.api.client.ClientResponse getEntity
+SEVERE: A message body reader for Java class com.sonatype.nexus.staging.api.dto.StagingProfileRepositoryDTO, and Java type class com.sonatype.nexus.staging.api.dto.StagingProfileRepositoryDTO, and MIME media type text/html was not found
+```
+
+It might just mean the Sonatype server is having a busy day. 
+It might have published the connector eventually, but not before the client timed out.
+Log in to https://oss.sonatype.org and inspect the released connector versions at
+https://oss.sonatype.org/#nexus-search;quick~kafka-connect-couchbase
+
+If you don't see the new version listed there, then publication probably failed.
+Try the Maven command again.
+
+If you see the new version there, the release probably succeeded.
+Wait several minutes, then verify the new version appears in Maven Central at
+https://repo1.maven.org/maven2/com/couchbase/client/kafka-connect-couchbase/
