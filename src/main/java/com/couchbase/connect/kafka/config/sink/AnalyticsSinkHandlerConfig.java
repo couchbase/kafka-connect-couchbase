@@ -45,7 +45,7 @@ public interface AnalyticsSinkHandlerConfig {
    * <p>
    * This property is specific to `AnalyticsSinkHandler`.
    *
-   * @since 4.1.15
+   * @since 4.2.0
    */
   @Stability.Uncommitted
   @Default("5m")
@@ -56,7 +56,7 @@ public interface AnalyticsSinkHandlerConfig {
    * <p>
    * This property is specific to `AnalyticsSinkHandler`.
    *
-   * @since 4.1.15
+   * @since 4.2.0
    */
   @Stability.Uncommitted
   @Default("5m")

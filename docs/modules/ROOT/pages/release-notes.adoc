@@ -24,6 +24,41 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+[[v4.2.0]]
+== Version 4.2.0 (26 Jan 2024)
+
+https://packages.couchbase.com/clients/kafka/4.2.0/couchbase-kafka-connect-couchbase-4.2.0.zip[Download]
+
+With this minor version bump, the sink connector can now write documents to different buckets depending on the Kafka topic they were received from.
+
+This release also improves the robustness of the source connector in certain conditions.
+
+Apache Kafka 2.8 and Confluent Platform 6.2 are now the minimum supported versions.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-327[KAFKAC-327]:
+*Sink* The `couchbase.default.collection` and `couchbase.topic.to.collection`  config properties now support qualifying the collection with a bucket name, like `my-bucket.my-scope.my-collection`.
+This lets a single instance of the sink connector write to different buckets.
+
+* https://issues.couchbase.com/browse/KAFKAC-331[KAFKAC-331]:
+Upgrade Couchbase Java SDK from `3.4.7` to `3.5.2`.
+
+* https://issues.couchbase.com/browse/KAFKAC-330[KAFKAC-330]:
+Upgrade Couchbase DCP client from `0.47.0` to `0.48.0`.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/JDCP-239[JDCP-239]:
+*Source* Improved reliability of initial startup during a Couchbase Server cluster rebalance, or before a newly-created bucket is ready.
+
+* https://issues.couchbase.com/browse/JDCP-240[JDCP-240]:
+*Source* When `couchbase.stream.from` is set to `NOW` or `SAVED_OFFSET_OR_NOW` and there is an inactive partition when the connector starts up, the connector now waits for the partition to become active, instead of starting from the beginning for that partition.
+
+* https://issues.couchbase.com/browse/JDCP-241[JDCP-241]:
+*Source* Improved handling of an edge case that could cause the connector to stop streaming for a partition.
+If a DCP socket connection is lost after receiving a snapshot marker for a partition and before receiving the first item in the snapshot, the connector now recovers instead of failing to resume streaming for that partition.
+
 [[v4.1.14]]
 == Version 4.1.14 (3 Oct 2023)
 

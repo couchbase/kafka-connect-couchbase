@@ -401,7 +401,7 @@ This property is specific to `AnalyticsSinkHandler`.
 
 UNCOMMITTED; this feature may change in a patch release without notice.
 
-* Since: 4.1.15
+* Since: 4.2.0
 
 * Type: string
 * Default: `5m`
@@ -417,7 +417,7 @@ This property is specific to `AnalyticsSinkHandler`.
 
 UNCOMMITTED; this feature may change in a patch release without notice.
 
-* Since: 4.1.15
+* Since: 4.2.0
 
 * Type: string
 * Default: `5m`
