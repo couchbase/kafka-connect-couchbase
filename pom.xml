@@ -23,7 +23,7 @@
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
     <packaging>jar</packaging>
-    <version>4.2.0</version>
+    <version>4.2.1-SNAPSHOT</version>
     <name>Kafka Connector for Couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
@@ -303,8 +303,8 @@
                             </tags>
 
                             <requirements>
-                                <requirement>Couchbase Server 5.0 or later</requirement>
-                                <requirement>Confluent Platform 5.4 or later</requirement>
+                                <requirement>Couchbase Server 7.0 or later</requirement>
+                                <requirement>Confluent Platform 6.2 or later</requirement>
                             </requirements>
 
                             <deliveryGuarantee>
