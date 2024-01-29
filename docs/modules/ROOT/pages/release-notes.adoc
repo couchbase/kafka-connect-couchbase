@@ -11,6 +11,8 @@ For earlier versions, please see the xref:3.4@release-notes.adoc[3.x Release Not
 Scroll down to the version you want, then click the "Download" link to get the full connector distribution.
 Refer to the xref:quickstart.adoc[Quickstart Guide] for detailed installation instructions.
 
+Alternatively, Confluent Platform users can https://www.confluent.io/hub/couchbase/kafka-connect-couchbase[install the connector via Confluent Hub].
+
 === Java API Maven Coordinates
 You can optionally extend the connector's functionality by writing custom components.
 When developing a custom component, include the connector's Java API in your Maven project by adding this dependency to your POM:
