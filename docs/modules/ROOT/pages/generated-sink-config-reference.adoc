@@ -284,8 +284,6 @@ The KV timeout affects an individual write attempt, while the retry timeout span
 
 TIP: Try not to confuse this with the Kafka Connect framework's built-in `errors.retry.timeout` config property, which applies only to failures occurring _before_ the framework delivers the record to the Couchbase connector.
 
-UNCOMMITTED; this feature may change in a patch release without notice.
-
 * Since: 4.1.4
 
 * Type: string

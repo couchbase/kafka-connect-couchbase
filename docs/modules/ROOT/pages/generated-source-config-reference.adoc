@@ -250,8 +250,6 @@ Otherwise, a long sequence of ignored events in a low-traffic deployment might c
 After a record is published to this topic, the record is no longer important, and should be deleted as soon as possible.
 To reduce disk usage, configure this topic to use small segments and the lowest possible retention settings.
 
-UNCOMMITTED; this feature may change in a patch release without notice.
-
 * Since: 4.1.8
 
 * Type: string
@@ -401,8 +399,6 @@ Otherwise, trace information is not logged.
 
 Disabled by default because it generates many log messages.
 
-UNCOMMITTED; this feature may change in a patch release without notice.
-
 * Since: 4.1.6
 
 * Type: boolean
@@ -416,8 +412,6 @@ UNCOMMITTED; this feature may change in a patch release without notice.
 When DCP trace is enabled, set this property to limit the trace to only documents whose IDs match this Java regular expression.
 
 Ignored if `couchbase.enable.dcp.trace` is false.
-
-UNCOMMITTED; this feature may change in a patch release without notice.
 
 * Since: 4.1.6
 

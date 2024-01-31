@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.config.source;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
@@ -109,7 +108,6 @@ public interface SourceBehaviorConfig {
    *
    * @since 4.1.8
    */
-  @Stability.Uncommitted
   @Default
   String blackHoleTopic();
 

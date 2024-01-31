@@ -16,7 +16,6 @@
 
 package com.couchbase.connect.kafka.config.sink;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
@@ -149,7 +148,6 @@ public interface SinkBehaviorConfig {
    * @since 4.1.4
    */
   @Default("0")
-  @Stability.Uncommitted
   Duration retryTimeout();
 
   /**
