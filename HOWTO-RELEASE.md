@@ -63,8 +63,9 @@ If any AsciiDoc files are modified as a result, make sure the changes look good 
 3. Edit `README.md` and bump the version numbers if applicable.
 4. Edit `docs/antora.yml` and bump the version number if application.
 5. Verify `compatibility.adoc` is up-to-date.
-6. Verify the connector metadata `pom.xml` is up-to-date, particularly the `<requirements>` section. 
-7. Commit these changes, with message "Prepare x.y.z release"
+6. For major or minor version bumps, review uncommitted API and consider promoting to committed.
+7. Verify the connector metadata `pom.xml` is up-to-date, particularly the `<requirements>` section. 
+8. Commit these changes, with message "Prepare x.y.z release"
 (where x.y.z is the version you're releasing).
 
 
