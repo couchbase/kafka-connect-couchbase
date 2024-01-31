@@ -43,6 +43,13 @@ Apache Kafka 2.8 and Confluent Platform 6.2 are now the minimum supported versio
 *Sink* The `couchbase.default.collection` and `couchbase.topic.to.collection`  config properties now support qualifying the collection with a bucket name, like `my-bucket.my-scope.my-collection`.
 This lets a single instance of the sink connector write to different buckets.
 
+* https://issues.couchbase.com/browse/KAFKAC-332[KAFKAC-332]:
+The following connector config options, which were added in previous versions as "uncommitted" API, are now part of the "committed" (stable) API:
+** `couchbase.retry.timeout`
+** `couchbase.black.hole.topic`
+** `couchbase.enable.dcp.trace`
+** `couchbase.dcp.trace.document.id.regex`
+
 * https://issues.couchbase.com/browse/KAFKAC-331[KAFKAC-331]:
 Upgrade Couchbase Java SDK from `3.4.7` to `3.5.2`.
 
