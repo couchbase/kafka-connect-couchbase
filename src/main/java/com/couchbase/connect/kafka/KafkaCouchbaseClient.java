@@ -59,6 +59,10 @@ public class KafkaCouchbaseClient implements Closeable {
         ? PasswordAuthenticator.create(config.username(), config.password().value())
         : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value(), Optional.empty());
 
+    // Suppress "TooManyInstancesDetectedEvent" events. Each task has its own Cluster,
+    // and we don't know how many tasks might be running on the same worker node.
+    Cluster.maxAllowedInstances(Integer.MAX_VALUE);
+
     cluster = Cluster.connect(
         connectionString,
         clusterOptions(authenticator)
