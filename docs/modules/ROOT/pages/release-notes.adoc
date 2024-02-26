@@ -26,6 +26,28 @@ When developing a custom component, include the connector's Java API in your Mav
 </dependency>
 ----
 
+
+[[v4.2.1]]
+== Version 4.2.1 (26 Feb 2024)
+
+https://packages.couchbase.com/clients/kafka/4.2.1/couchbase-kafka-connect-couchbase-4.2.1.zip[Download]
+
+This maintenance release fixes an issue that sometimes prevented the connector from starting successfully.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-337[KAFKAC-337]:
+*Sink* The connector no longer logs `TooManyInstancesDetectedEvent` warnings on startup.
+These warnings were harmless, but annoying.
+
+* https://issues.couchbase.com/browse/KAFKAC-334[KAFKAC-334]:
+Upgrade Couchbase DCP client from `0.48.0` to `0.49.0`.
+
+=== Bug Fixes
+
+* https://issues.couchbase.com/browse/KAFKAC-333[KAFKAC-333]:
+Fixed a race condition that could cause the connector to fail at startup with a `ConcurrentModificationException`.
+
 [[v4.2.0]]
 == Version 4.2.0 (26 Jan 2024)
 
