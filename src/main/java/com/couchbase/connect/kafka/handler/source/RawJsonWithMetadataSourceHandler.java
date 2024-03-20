@@ -97,7 +97,7 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
     try {
       byte[] value = objectMapper.writeValueAsBytes(metadata);
       if (docEvent.isMutation() && !params.noValue()) {
-        value = withContentField(value, docEvent.content());
+        value = withContent(value, docEvent.content());
       }
       builder.value(null, value);
       return true;
@@ -108,7 +108,14 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
 
   private static final byte[] contentFieldNameBytes = ",\"content\":".getBytes(UTF_8);
 
+
+  private static final RawJsonWithMetadataSourceHandler RAW_JSON_WITH_METADATA_SOURCE_HANDLER_HOLDER = new RawJsonWithMetadataSourceHandler();
+  @Deprecated
   protected static byte[] withContentField(byte[] metadata, byte[] documentContent) {
+    return RAW_JSON_WITH_METADATA_SOURCE_HANDLER_HOLDER.withContent(metadata,documentContent);
+  }
+
+  protected byte[] withContent(byte[] metadata, byte[] documentContent) {
     final int resultLength = metadata.length + contentFieldNameBytes.length + documentContent.length;
     return new ByteArrayBuilder(resultLength)
         .append(metadata, metadata.length - 1) // omit trailing brace; we'll add it later
