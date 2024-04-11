@@ -27,6 +27,24 @@ When developing a custom component, include the connector's Java API in your Mav
 ----
 
 
+[[v4.2.2]]
+== Version 4.2.2 (16 Apr 2024)
+
+https://packages.couchbase.com/clients/kafka/4.2.2/couchbase-kafka-connect-couchbase-4.2.2.zip[Download]
+
+This maintenance release updates the Couchbase Java SDK to the most recent version.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-340[KAFKAC-340]:
+Upgrade Couchbase Java SDK from `3.5.2` to `3.6.1`.
++
+Notably:
+
+** https://issues.couchbase.com/browse/JVMCBC-1499[JVMCBC-1499]
+Disabled DNS SRV caching.
+The connector now responds quicker to DNS changes in dynamic environments like Kubernetes.
+
 [[v4.2.1]]
 == Version 4.2.1 (26 Feb 2024)
 
