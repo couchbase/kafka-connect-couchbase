@@ -74,7 +74,7 @@
         <java-client.version>3.5.2</java-client.version>
         <runtime.javadoc.version>0.13.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.10.1</junit.version>
+        <junit.version>5.10.2</junit.version>
         <mysql.version>5.1.6</mysql.version>
         <mockito.version>5.9.0</mockito.version>
         <dist-archive-name>${project.artifactId}-${project.version}.zip</dist-archive-name>
@@ -146,7 +146,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.12.0</version>
+            <version>3.14.0</version>
         </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>
@@ -162,7 +162,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>33.0.0-jre</version>
+            <version>33.1.0-jre</version>
             <scope>test</scope>
         </dependency>
         <dependency>
