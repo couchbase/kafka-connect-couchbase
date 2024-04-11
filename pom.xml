@@ -70,8 +70,8 @@
     <properties>
         <java-compat.version>1.8</java-compat.version>
         <kafka.version>2.8.2</kafka.version>
-        <dcp-client.version>0.49.0</dcp-client.version>
-        <java-client.version>3.5.2</java-client.version>
+        <dcp-client.version>0.50.0-SNAPSHOT</dcp-client.version>
+        <java-client.version>3.6.1</java-client.version>
         <runtime.javadoc.version>0.13.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
