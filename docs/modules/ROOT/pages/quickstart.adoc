@@ -368,9 +368,9 @@ If the Kafka key is a primitive type, the connector will use it as the document 
 If the Kafka key is absent or of complex type (array or struct), the document ID will be generated as `topic/partition/offset`.
 
 Alternatively, the document ID can come from the body of the Kafka message.
-Provide a `couchbase.document.id` property whose value is a JSON Pointer identifying the document ID node.
+Provide a `couchbase.document.id` property whose value is a JSON Pointer identifying the document ID field.
 If you want the connector to remove this node before persisting the document to Couchbase, provide a `couchbase.remove.document.id` property with value `true`.
-If the connector fails to locate the document ID node, it will fall back to using the Kafka key or `topic/partition/offset` as described above.
+If the connector fails to locate the document ID field, it will fall back to using the Kafka key or `topic/partition/offset` as described above.
 
 If the Kafka message body is null, the sink connector will delete the Couchbase document whose ID matches the Kafka message key.
 
