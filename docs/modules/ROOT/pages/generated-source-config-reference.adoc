@@ -293,7 +293,7 @@ Otherwise you should ignore this property.
 [[couchbase.stream.from]]
 === `couchbase.stream.from`
 
-Controls when in history then connector starts streaming from.
+Controls when in the history the connector starts streaming from.
 
 * Type: string
 * Default: `SAVED_OFFSET_OR_BEGINNING`

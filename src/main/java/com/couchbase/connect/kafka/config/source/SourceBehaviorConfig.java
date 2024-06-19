@@ -142,7 +142,7 @@ public interface SourceBehaviorConfig {
   boolean connectorNameInOffsets();
 
   /**
-   * Controls when in history then connector starts streaming from.
+   * Controls when in the history the connector starts streaming from.
    */
   @Default("SAVED_OFFSET_OR_BEGINNING")
   StreamFrom streamFrom();
