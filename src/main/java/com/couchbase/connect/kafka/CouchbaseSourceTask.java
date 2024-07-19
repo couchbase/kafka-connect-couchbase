@@ -28,10 +28,14 @@ import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
+import com.couchbase.connect.kafka.util.ConnectHelper;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.core.instrument.logging.LoggingMeterRegistry;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
@@ -41,11 +45,15 @@ import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.util.annotation.Nullable;
 
+import javax.management.ObjectName;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,6 +65,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -77,6 +86,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private boolean connectorNameInOffsets;
   private boolean noValue;
   private SourceDocumentLifecycle lifecycle;
+  private MeterRegistry meterRegistry;
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<String> blackHoleTopic;
@@ -113,6 +123,8 @@ public class CouchbaseSourceTask extends SourceTask {
     } catch (ConfigException e) {
       throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
     }
+
+    this.meterRegistry = newMeterRegistry(connectorName, config);
 
     LogRedaction.setRedactionLevel(config.logRedaction());
     RedactionLevel.set(toDcp(config.logRedaction()));
@@ -153,8 +165,45 @@ public class CouchbaseSourceTask extends SourceTask {
 
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
-    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle);
+    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry);
     couchbaseReader.start();
+  }
+
+  private static MeterRegistry newMeterRegistry(String connectorName, CouchbaseSourceTaskConfig config) {
+    String taskId = ConnectHelper.getTaskIdFromLoggingContext().orElse(config.maybeTaskId());
+    LinkedHashMap<String, String> commonKeyProperties = new LinkedHashMap<>();
+    commonKeyProperties.put("connector", ObjectName.quote(connectorName));
+    commonKeyProperties.put("task", taskId);
+    MeterRegistry jmx = newJmxMeterRegistry("kafka.connect.couchbase", commonKeyProperties);
+
+    CompositeMeterRegistry composite = new CompositeMeterRegistry();
+    composite.add(jmx);
+    Optional.ofNullable(newLoggingMeterRegistry(config)).ifPresent(composite::add);
+
+    return composite;
+  }
+
+  private static @Nullable MeterRegistry newLoggingMeterRegistry(CouchbaseSourceTaskConfig config) {
+    Duration interval = config.metricsInterval();
+    String configKey = ConfigHelper.keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::metricsInterval);
+
+    if (interval.isZero()) {
+      LOGGER.info("Metrics logging is disabled because config property '" + configKey + "' is set to 0.");
+      return null;
+
+    } else {
+      String metricsCategory = "com.couchbase.connect.kafka.metrics";
+      Logger metricsLogger = LoggerFactory.getLogger(metricsCategory);
+      LOGGER.info("Will log metrics to logging category '" + metricsCategory + "' at interval: " + interval);
+
+      // Don't need to set "connector" or "task" tags because this info is already in the
+      // "connector.context" Mapped Diagnostic Context (MDC) attribute, which is included in the
+      // Kafka Connect logging pattern by default.
+      return LoggingMeterRegistry
+          .builder(k -> "logging.step".equals(k) ? interval.toMillis() + "ms" : null)
+          .loggingSink(metricsLogger::info)
+          .build();
+    }
   }
 
   private RedactionLevel toDcp(com.couchbase.client.core.logging.RedactionLevel level) {
@@ -320,6 +369,10 @@ public class CouchbaseSourceTask extends SourceTask {
   @Override
   public void stop() {
     taskLifecycle.logTaskStopped();
+
+    if (this.meterRegistry != null) {
+      this.meterRegistry.close();
+    }
 
     if (couchbaseReader != null) {
       couchbaseReader.shutdown();

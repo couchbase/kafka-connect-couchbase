@@ -173,6 +173,22 @@ Disabled by default because it generates many log messages.
 * Default: `false`
 * Importance: medium
 
+[[couchbase.metrics.interval]]
+=== `couchbase.metrics.interval`
+
+The connector writes metrics to the log at this interval.
+
+Disable metric logging by setting this to `0`.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.2.3
+
+* Type: string
+* Default: `10m`
+* Valid Values: An integer followed by a time unit (ms = milliseconds, s = seconds, m = minutes, h = hours, d = days). For example, to specify 30 minutes: 30m
+* Importance: medium
+
 == Source Behavior
 
 [[couchbase.topic]]

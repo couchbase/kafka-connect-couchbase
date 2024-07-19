@@ -16,8 +16,11 @@
 
 package com.couchbase.connect.kafka.config.common;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.logging.RedactionLevel;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
+
+import java.time.Duration;
 
 public interface LoggingConfig {
   /**
@@ -36,4 +39,15 @@ public interface LoggingConfig {
    */
   @Default("false")
   boolean logDocumentLifecycle();
+
+  /**
+   * The connector writes metrics to the log at this interval.
+   * <p>
+   * Disable metric logging by setting this to `0`.
+   *
+   * @since 4.2.3
+   */
+  @Stability.Uncommitted
+  @Default("10m")
+  Duration metricsInterval();
 }

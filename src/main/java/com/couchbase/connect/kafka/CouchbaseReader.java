@@ -36,15 +36,12 @@ import com.couchbase.client.dcp.metrics.LogLevel;
 import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
-import com.couchbase.connect.kafka.util.ConnectHelper;
 import com.couchbase.connect.kafka.util.Version;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.management.ObjectName;
 import java.nio.file.Paths;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -56,7 +53,6 @@ import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
-import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
 import static java.util.Objects.requireNonNull;
 
 public class CouchbaseReader extends Thread {
@@ -67,7 +63,6 @@ public class CouchbaseReader extends Thread {
   private final Map<Integer, SourceOffset> partitionToSavedOffset;
   private final StreamFrom streamFrom;
   private final BlockingQueue<Throwable> errorQueue;
-  private final MeterRegistry meterRegistry;
 
   /**
    * As a workaround for JDCP-237 and the fact that the DCP client's `connect()` method
@@ -77,10 +72,16 @@ public class CouchbaseReader extends Thread {
    */
   private volatile boolean connected;
 
-  public CouchbaseReader(final CouchbaseSourceTaskConfig config, final String connectorName,
-                         final BlockingQueue<DocumentChange> queue, final BlockingQueue<Throwable> errorQueue,
-                         final List<Integer> partitions, final Map<Integer, SourceOffset> partitionToSavedOffset,
-                         final SourceDocumentLifecycle lifecycle) {
+  public CouchbaseReader(
+      final CouchbaseSourceTaskConfig config,
+      final String connectorName,
+      final BlockingQueue<DocumentChange> queue,
+      final BlockingQueue<Throwable> errorQueue,
+      final List<Integer> partitions,
+      final Map<Integer, SourceOffset> partitionToSavedOffset,
+      final SourceDocumentLifecycle lifecycle,
+      final MeterRegistry meterRegistry
+  ) {
     requireNonNull(connectorName);
     requireNonNull(lifecycle);
     requireNonNull(queue);
@@ -108,8 +109,6 @@ public class CouchbaseReader extends Thread {
         security.trustCertificates(com.couchbase.client.core.env.SecurityConfig.defaultCaCertificates());
       }
     };
-
-    meterRegistry = newMeterRegistry(connectorName, config);
 
     Client.Builder builder = Client.builder()
         .userAgent("kafka-connector", Version.getVersion(), connectorName)
@@ -171,14 +170,6 @@ public class CouchbaseReader extends Thread {
         errorQueue.offer(streamFailure.getCause());
       }
     });
-  }
-
-  private static MeterRegistry newMeterRegistry(String connectorName, CouchbaseSourceTaskConfig config) {
-    String taskId = ConnectHelper.getTaskIdFromLoggingContext().orElse(config.maybeTaskId());
-    LinkedHashMap<String, String> commonKeyProperties = new LinkedHashMap<>();
-    commonKeyProperties.put("connector", ObjectName.quote(connectorName));
-    commonKeyProperties.put("task", taskId);
-    return newJmxMeterRegistry("kafka.connect.couchbase", commonKeyProperties);
   }
 
   @Override
@@ -257,13 +248,9 @@ public class CouchbaseReader extends Thread {
   }
 
   public void shutdown() {
-    try {
-      if (connected) {
-        connected = false;
-        client.disconnect().block();
-      }
-    } finally {
-      meterRegistry.close();
+    if (connected) {
+      connected = false;
+      client.disconnect().block();
     }
   }
 }
