@@ -17,10 +17,12 @@
 package com.couchbase.connect.kafka;
 
 import com.couchbase.client.core.logging.LogRedaction;
+import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.dcp.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
+import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CollectionMetadata;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
@@ -33,7 +35,9 @@ import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.logging.LoggingMeterRegistry;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -81,12 +85,19 @@ public class CouchbaseSourceTask extends SourceTask {
   private Map<ScopeAndCollection, String> collectionToTopic;
   private String bucket;
   private Filter filter;
+  private boolean filterIsNoop;
   private SourceHandler sourceHandler;
   private int batchSizeMax;
   private boolean connectorNameInOffsets;
   private boolean noValue;
   private SourceDocumentLifecycle lifecycle;
+
   private MeterRegistry meterRegistry;
+  private Counter filteredCounter;
+  private Timer handlerTimer;
+  private Timer filterTimer;
+  private Timer timeBetweenPollsTimer;
+  private NanoTimestamp endOfLastPoll;
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<String> blackHoleTopic;
@@ -125,6 +136,10 @@ public class CouchbaseSourceTask extends SourceTask {
     }
 
     this.meterRegistry = newMeterRegistry(connectorName, config);
+    this.handlerTimer = meterRegistry.timer("handler");
+    this.filterTimer = meterRegistry.timer("filter");
+    this.filteredCounter = meterRegistry.counter("filtered.out");
+    this.timeBetweenPollsTimer = meterRegistry.timer("time.between.polls");
 
     LogRedaction.setRedactionLevel(config.logRedaction());
     RedactionLevel.set(toDcp(config.logRedaction()));
@@ -135,6 +150,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
     filter = Utils.newInstance(config.eventFilter());
     filter.init(unmodifiableProperties);
+    filterIsNoop = filter.getClass().equals(AllPassFilter.class); // not just instanceof, because user could do something silly like extend AllPassFilter.
 
     sourceHandler = Utils.newInstance(config.sourceHandler());
     sourceHandler.init(unmodifiableProperties);
@@ -167,6 +183,8 @@ public class CouchbaseSourceTask extends SourceTask {
     errorQueue = new LinkedBlockingQueue<>(1);
     couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry);
     couchbaseReader.start();
+
+    endOfLastPoll = NanoTimestamp.now();
   }
 
   private static MeterRegistry newMeterRegistry(String connectorName, CouchbaseSourceTaskConfig config) {
@@ -221,30 +239,37 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @Override
   public List<SourceRecord> poll() throws InterruptedException {
-    // If a fatal error occurred in another thread, propagate it.
-    checkErrorQueue();
+    timeBetweenPollsTimer.record(endOfLastPoll.elapsed());
 
-    // Block until at least one item is available or until the
-    // courtesy timeout expires, giving the framework a chance
-    // to pause the connector.
-    DocumentChange firstEvent = queue.poll(1, SECONDS);
-    if (firstEvent == null) {
-      LOGGER.debug("Poll returns 0 results");
-      return null; // Looks weird, but caller expects it.
-    }
-
-    List<DocumentChange> events = new ArrayList<>();
     try {
-      events.add(firstEvent);
-      queue.drainTo(events, batchSizeMax - 1);
+      // If a fatal error occurred in another thread, propagate it.
+      checkErrorQueue();
 
-      ConversionResult results = convertToSourceRecords(events);
+      // Block until at least one item is available or until the
+      // courtesy timeout expires, giving the framework a chance
+      // to pause the connector.
+      DocumentChange firstEvent = queue.poll(1, SECONDS);
+      if (firstEvent == null) {
+        LOGGER.debug("Poll returns 0 results");
+        return null; // Looks weird, but caller expects it.
+      }
 
-      LOGGER.info("Poll returns {} result(s) (filtered out {})", results.published, results.dropped);
-      return results.records;
+      List<DocumentChange> events = new ArrayList<>();
+      try {
+        events.add(firstEvent);
+        queue.drainTo(events, batchSizeMax - 1);
 
+        ConversionResult results = convertToSourceRecords(events);
+
+        filteredCounter.increment(results.dropped);
+        LOGGER.info("Poll returns {} result(s) (filtered out {})", results.published, results.dropped);
+        return results.records;
+
+      } finally {
+        events.forEach(DocumentChange::flowControlAck);
+      }
     } finally {
-      events.forEach(DocumentChange::flowControlAck);
+      endOfLastPoll = NanoTimestamp.now();
     }
   }
 
@@ -304,7 +329,9 @@ public class CouchbaseSourceTask extends SourceTask {
     for (DocumentChange e : events) {
       DocumentEvent docEvent = DocumentEvent.create(e, bucket);
 
-      if (!filter.pass(docEvent)) {
+      // Don't record filter timings unless the filter is actually doing something.
+      boolean passed = filterIsNoop || filterTimer.record(() -> filter.pass(docEvent));
+      if (!passed) {
         lifecycle.logSkippedBecauseFilterSaysIgnore(e);
         dropped++;
         blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e, docEvent)));
@@ -356,7 +383,9 @@ public class CouchbaseSourceTask extends SourceTask {
         getDefaultTopic(docEvent)
     );
 
-    SourceRecordBuilder builder = sourceHandler.handle(new SourceHandlerParams(docEvent, topic, noValue));
+    SourceRecordBuilder builder = handlerTimer.record(() ->
+        sourceHandler.handle(new SourceHandlerParams(docEvent, topic, noValue))
+    );
     if (builder == null) {
       return null;
     }
