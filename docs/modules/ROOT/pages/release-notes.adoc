@@ -27,6 +27,32 @@ When developing a custom component, include the connector's Java API in your Mav
 ----
 
 
+[[v4.2.3]]
+== Version 4.2.3 (25 Jul 2024)
+
+https://packages.couchbase.com/clients/kafka/4.2.3/couchbase-kafka-connect-couchbase-4.2.3.zip[Download]
+
+This maintenance release updates the Couchbase Java SDK to the most recent version, and writes metrics to the connector log.
+
+=== Enhancements
+
+* https://issues.couchbase.com/browse/KAFKAC-347[KAFKAC-347]:
+The connector now writes its metrics to the log (in addition to exposing them via JMX like before).
+Configure the logging interval by setting the new `couchbase.metrics.interval` connector property.
+The default interval is 10 minutes.
+
+* https://issues.couchbase.com/browse/KAFKAC-348[KAFKAC-348]:
+*Source* The connector now captures additional metrics related to `Filter` and `SourceHandler` performance.
+** `handler` -- A timer for `SourceHandler.handle()`
+** `filter` -- A timer for `Filter.pass()`
+** `filtered.out` -- A counter for events discarded by the `Filter` or `SourceHandler`.
+
+* https://issues.couchbase.com/browse/KAFKAC-350[KAFKAC-350]:
+Upgrade Couchbase Java SDK from `3.6.1` to `3.7.1`
+
+* https://issues.couchbase.com/browse/KAFKAC-343[KAFKAC-343]:
+Upgrade DCP client from `0.50.0` to `0.51.0`
+
 [[v4.2.2]]
 == Version 4.2.2 (16 Apr 2024)
 
