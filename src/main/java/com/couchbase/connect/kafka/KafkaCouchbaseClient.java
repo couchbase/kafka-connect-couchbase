@@ -57,9 +57,11 @@ public class KafkaCouchbaseClient implements Closeable {
 
     Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
         ? PasswordAuthenticator.create(config.username(), config.password().value())
-        : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value(), Optional.empty());
+        : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()),
+            config.clientCertificatePassword().value(), Optional.empty());
 
-    // Suppress "TooManyInstancesDetectedEvent" events. Each task has its own Cluster,
+    // Suppress "TooManyInstancesDetectedEvent" events. Each task has its own
+    // Cluster,
     // and we don't know how many tasks might be running on the same worker node.
     Cluster.maxAllowedInstances(Integer.MAX_VALUE);
 
@@ -73,8 +75,7 @@ public class KafkaCouchbaseClient implements Closeable {
                   .timeoutConfig(timeout -> timeout.connectTimeout(config.bootstrapTimeout()));
 
               applyCustomEnvironmentProperties(env, clusterEnvProps);
-            })
-    );
+            }));
 
     bucket = config.bucket().isEmpty() ? null : cluster.bucket(config.bucket());
   }
@@ -82,17 +83,21 @@ public class KafkaCouchbaseClient implements Closeable {
   private static void configureSecurity(SecurityConfig.Builder security, CommonConfig config) {
     security
         .enableTls(config.enableTls())
-        .enableHostnameVerification(config.enableHostnameVerification());
+        .enableHostnameVerification(config.enableHostnameVerification())
+        .enableCertificateVerification(config.enableCertificateVerification());
 
-    if (!isNullOrEmpty(config.trustStorePath())) {
-      security.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value(), Optional.empty());
-    }
-    if (!isNullOrEmpty(config.trustCertificatePath())) {
-      security.trustCertificate(Paths.get(config.trustCertificatePath()));
+    if (config.enableCertificateVerification()) {
+      if (!isNullOrEmpty(config.trustStorePath())) {
+        security.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value(), Optional.empty());
+      }
+      if (!isNullOrEmpty(config.trustCertificatePath())) {
+        security.trustCertificate(Paths.get(config.trustCertificatePath()));
+      }
     }
   }
 
-  private static void applyCustomEnvironmentProperties(ClusterEnvironment.Builder envBuilder, Map<String, String> envProps) {
+  private static void applyCustomEnvironmentProperties(ClusterEnvironment.Builder envBuilder,
+      Map<String, String> envProps) {
     try {
       envBuilder.load(new AbstractMapPropertyLoader<CoreEnvironment.Builder>() {
         @Override
@@ -123,8 +128,7 @@ public class KafkaCouchbaseClient implements Closeable {
       throw new IllegalArgumentException(
           "Keyspace has null bucket/database. This is a bug." +
               " It probably means the sink handler's usesKvConnections() method returned false," +
-              " but the connector tried to open a KV connection anyway."
-      );
+              " but the connector tried to open a KV connection anyway.");
     }
 
     return cluster.bucket(keyspace.getBucket())

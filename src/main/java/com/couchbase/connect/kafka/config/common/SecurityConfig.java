@@ -47,6 +47,15 @@ public interface SecurityConfig {
   boolean enableTls();
 
   /**
+   * Set this to 'false' to disable TLS certificate validation for Couchbase
+   * connections. WARNING: this is less secure and should only be used for
+   * testing and development in a trusted environment.
+   */
+  @Default("true")
+  @DisplayName("Enable TLS Certificate Verification")
+  boolean enableCertificateVerification();
+
+  /**
    * Set this to `false` to disable TLS hostname verification for Couchbase
    * connections. Less secure, but might be required if for some reason you
    * can't issue a certificate whose Subject Alternative Names match the
