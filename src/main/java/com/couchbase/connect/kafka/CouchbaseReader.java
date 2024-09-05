@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.dcp.Authenticator;
 import com.couchbase.client.dcp.CertificateAuthenticator;
@@ -65,10 +66,14 @@ public class CouchbaseReader extends Thread {
   private final BlockingQueue<Throwable> errorQueue;
 
   /**
-   * As a workaround for JDCP-237 and the fact that the DCP client's `connect()` method
-   * calls `disconnect()` internally if the connection failed, we need to keep track of
-   * whether the connection was successful, so we don't end up calling `disconnect()`
-   * if the client has already been disconnected due to a failed connection attempt.
+   * As a workaround for JDCP-237 and the fact that the DCP client's `connect()`
+   * method
+   * calls `disconnect()` internally if the connection failed, we need to keep
+   * track of
+   * whether the connection was successful, so we don't end up calling
+   * `disconnect()`
+   * if the client has already been disconnected due to a failed connection
+   * attempt.
    */
   private volatile boolean connected;
 
@@ -80,8 +85,7 @@ public class CouchbaseReader extends Thread {
       final List<Integer> partitions,
       final Map<Integer, SourceOffset> partitionToSavedOffset,
       final SourceDocumentLifecycle lifecycle,
-      final MeterRegistry meterRegistry
-  ) {
+      final MeterRegistry meterRegistry) {
     requireNonNull(connectorName);
     requireNonNull(lifecycle);
     requireNonNull(queue);
@@ -92,21 +96,25 @@ public class CouchbaseReader extends Thread {
 
     Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
         ? new PasswordAuthenticator(new StaticCredentialsProvider(config.username(), config.password().value()))
-        : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()), config.clientCertificatePassword().value());
+        : CertificateAuthenticator.fromKeyStore(Paths.get(config.clientCertificatePath()),
+            config.clientCertificatePassword().value());
 
     Consumer<SecurityConfig.Builder> securityConfig = security -> {
       security
           .enableTls(config.enableTls())
           .enableHostnameVerification(config.enableHostnameVerification());
-
-      if (!isNullOrEmpty(config.trustStorePath())) {
-        security.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value());
-      }
-      if (!isNullOrEmpty(config.trustCertificatePath())) {
-        security.trustCertificate(Paths.get(config.trustCertificatePath()));
-      }
-      if (isNullOrEmpty(config.trustStorePath()) && isNullOrEmpty(config.trustCertificatePath())) {
-        security.trustCertificates(com.couchbase.client.core.env.SecurityConfig.defaultCaCertificates());
+      if (!config.enableCertificateVerification()) {
+        security.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE);
+      } else {
+        if (!isNullOrEmpty(config.trustStorePath())) {
+          security.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value());
+        }
+        if (!isNullOrEmpty(config.trustCertificatePath())) {
+          security.trustCertificate(Paths.get(config.trustCertificatePath()));
+        }
+        if (isNullOrEmpty(config.trustStorePath()) && isNullOrEmpty(config.trustCertificatePath())) {
+          security.trustCertificates(com.couchbase.client.core.env.SecurityConfig.defaultCaCertificates());
+        }
       }
     };
 
@@ -183,13 +191,16 @@ public class CouchbaseReader extends Thread {
       StreamFrom fallbackStreamFrom = streamFrom.withoutSavedOffset();
       client.initializeState(fallbackStreamFrom.asDcpStreamFrom(), StreamTo.INFINITY).block();
 
-      // Overlay any saved offsets (might have saved offsets for only some partitions).
+      // Overlay any saved offsets (might have saved offsets for only some
+      // partitions).
       if (streamFrom.isSavedOffset()) {
         // As of DCP client version 0.12.0, Client.initializeState(BEGINNING, INFINITY)
-        // doesn't fetch the failover logs. Do it ourselves to avoid a spurious rollback :-/
+        // doesn't fetch the failover logs. Do it ourselves to avoid a spurious rollback
+        // :-/
         initFailoverLogs();
 
-        // Then restore the partition state and use saved vBucket UUIDs to overlay synthetic failover log entries.
+        // Then restore the partition state and use saved vBucket UUIDs to overlay
+        // synthetic failover log entries.
         restoreSavedOffsets();
       }
 
@@ -204,8 +215,7 @@ public class CouchbaseReader extends Thread {
     LOGGER.info("Resuming from saved offsets for {} of {} partitions: {}",
         partitionToSavedOffset.size(),
         partitions.size(),
-        PartitionSet.from(partitionToSavedOffset.keySet())
-    );
+        PartitionSet.from(partitionToSavedOffset.keySet()));
 
     SortedMap<Integer, Long> partitionToFallbackUuid = new TreeMap<>();
 
@@ -216,7 +226,8 @@ public class CouchbaseReader extends Thread {
       StreamOffset streamOffset = offset.asStreamOffset();
 
       if (streamOffset.getVbuuid() == 0) {
-        // If we get here, we're probably restoring the stream offset from a previous version of the connector
+        // If we get here, we're probably restoring the stream offset from a previous
+        // version of the connector
         // which didn't save vbucket UUIDs. Hope the current vbuuid is the correct one.
         // CAVEAT: This doesn't always work, and sometimes triggers a rollback to zero.
         long currentVbuuid = client.sessionState().get(partition).getLastUuid();
@@ -233,8 +244,7 @@ public class CouchbaseReader extends Thread {
               " This is normal if you're upgrading from connector version 3.4.5 or earlier." +
               " This message should go away after a document from each partition is published to Kafka." +
               " Here is the map from partition number to the latest partition UUID used as a fallback: {}",
-          partitionToFallbackUuid
-      );
+          partitionToFallbackUuid);
     }
   }
 
