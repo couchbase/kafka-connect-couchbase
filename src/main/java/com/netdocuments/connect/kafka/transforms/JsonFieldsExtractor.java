@@ -48,11 +48,11 @@ public class JsonFieldsExtractor<R extends ConnectRecord<R>> implements Transfor
         return record;
       } else if (value instanceof byte[]) {
         newValue = JsonPropertyExtractor.extract(new ByteArrayInputStream((byte[]) value), fields);
-        log.info("Extracted fields: {}", newValue);
+        log.debug("Extracted fields: {}", newValue);
       } else if (value instanceof ByteBuffer) {
         try (ByteBufferInputStream in = new ByteBufferInputStream((ByteBuffer) value)) {
           newValue = JsonPropertyExtractor.extract(in, fields);
-          log.info("Extracted fields: {}", newValue);
+          log.debug("Extracted fields: {}", newValue);
         }
       } else {
         throw new DataException(getClass().getSimpleName()
@@ -70,8 +70,6 @@ public class JsonFieldsExtractor<R extends ConnectRecord<R>> implements Transfor
           record.keySchema(), record.key(),
           record.valueSchema(), newValueBytes,
           record.timestamp());
-
-      // log.info("New Record: {}", newRecord);
 
       return newRecord;
 
