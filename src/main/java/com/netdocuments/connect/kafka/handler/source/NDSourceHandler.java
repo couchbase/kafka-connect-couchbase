@@ -41,7 +41,8 @@ import java.util.List;
 /**
  * This handler extracts specific fields from a Couchbase document. It
  * includes the event and key fields in the output. It also allows
- * filtering based on the key provided a regular expression.
+ * filtering based on the key provided a regular expression. If no fields
+ * are provided it behaves like the RawJsonWithMetadataSourceHandler.
  * <p>
  * The key of the Kafka message is a String, the ID of the Couchbase document.
  * <p>
@@ -54,8 +55,8 @@ import java.util.List;
  *
  * @see RawJsonWithMetadataSourceHandler
  */
-public class RawJsonFieldsExtractorSourceHandler extends RawJsonWithMetadataSourceHandler {
-  private static final Logger LOGGER = LoggerFactory.getLogger(RawJsonFieldsExtractorSourceHandler.class);
+public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
+  private static final Logger LOGGER = LoggerFactory.getLogger(NDSourceHandler.class);
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS_CONFIG = "couchbase.custom.handler.nd.fields";
@@ -116,6 +117,10 @@ public class RawJsonFieldsExtractorSourceHandler extends RawJsonWithMetadataSour
         LOGGER.info("key {} does not match pattern `{}`", params.documentEvent().key(), key.pattern());
         return false;
       }
+    }
+    if (fields.isEmpty()) {
+      super.buildValue(params, builder);
+      return true;
     }
     final DocumentEvent docEvent = params.documentEvent();
     final DocumentEvent.Type type = docEvent.type();
