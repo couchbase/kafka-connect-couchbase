@@ -19,6 +19,7 @@ package com.netdocuments.connect.kafka.handler.source;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
+import com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler;
 import com.couchbase.connect.kafka.handler.source.RawJsonWithMetadataSourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
@@ -122,8 +123,47 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
       super.buildValue(params, builder);
       return true;
     }
+
     final DocumentEvent docEvent = params.documentEvent();
     final DocumentEvent.Type type = docEvent.type();
+
+    if (fields.size() == 1 && fields.get(0).equals("*")) {
+      // If the fields list contains only "*", then we want to extract all fields
+      // but not act like RawJasonWithMetadataSourceHandler
+      switch (type) {
+        case EXPIRATION:
+        case DELETION:
+          final Map<String, Object> newValue = new HashMap<String, Object>();
+          newValue.put("event", type.schemaName());
+          newValue.put("key", docEvent.key());
+          try {
+            byte[] value = objectMapper.writeValueAsBytes(newValue);
+            builder.value(null, value);
+            return true;
+          } catch (JsonProcessingException e) {
+            throw new DataException("Failed to serialize data", e);
+          }
+
+        case MUTATION:
+          if (params.noValue()) {
+            builder.value(null, null);
+            return true;
+          }
+
+          final byte[] document = docEvent.content();
+          if (!isValidJson(document)) {
+            LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());
+            return false;
+          }
+
+          builder.value(null, document);
+          return true;
+
+        default:
+          LOGGER.warn("unexpected event type {}", type);
+          return false;
+      }
+    }
 
     final byte[] content = docEvent.content();
     final Map<String, Object> newValue;
