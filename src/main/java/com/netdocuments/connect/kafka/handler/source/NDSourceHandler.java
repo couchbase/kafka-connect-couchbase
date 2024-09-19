@@ -19,7 +19,6 @@ package com.netdocuments.connect.kafka.handler.source;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
-import com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler;
 import com.couchbase.connect.kafka.handler.source.RawJsonWithMetadataSourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
@@ -32,12 +31,16 @@ import org.apache.kafka.connect.errors.DataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.OffsetDateTime;
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 import java.util.List;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This handler extracts specific fields from a Couchbase document. It
@@ -63,6 +66,7 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   public static final String FIELDS_CONFIG = "couchbase.custom.handler.nd.fields";
   public static final String TYPES_CONFIG = "couchbase.custom.handler.nd.types";
   public static final String KEY_REGEX_CONFIG = "couchbase.custom.handler.nd.key.regex";
+  public static final String OUTPUT_FORMAT = "couchbase.custom.handler.nd.output.format";
   private static final ConfigDef configDef = new ConfigDef()
       .define(FIELDS_CONFIG,
           ConfigDef.Type.LIST,
@@ -78,10 +82,16 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
           ConfigDef.Type.STRING,
           null,
           ConfigDef.Importance.LOW,
-          "The regular expression to filter the keys");
+          "The regular expression to filter the keys")
+      .define(OUTPUT_FORMAT,
+          ConfigDef.Type.STRING,
+          null,
+          ConfigDef.Importance.LOW,
+          "The output format of the message. The only current valid value is 'cloudeevent' anything else designates the default format");
   List<String> fields;
   HashSet<String> types;
   Pattern key;
+  Boolean cloudevent = false;
 
   @Override
   public void init(Map<String, String> configProperties) {
@@ -94,6 +104,9 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
     }
     String keyRaw = configProperties.get(KEY_REGEX_CONFIG);
     key = keyRaw == null ? null : Pattern.compile(keyRaw.toLowerCase(), Pattern.CASE_INSENSITIVE);
+    String cloudEventRaw = config.getString(OUTPUT_FORMAT);
+    if (cloudEventRaw != null)
+      cloudevent = cloudEventRaw.equals("cloudevent");
   }
 
   @Override
@@ -107,6 +120,59 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
     return builder
         .topic(getTopic(params))
         .key(Schema.STRING_SCHEMA, params.documentEvent().key());
+  }
+
+  private static final byte[] dataFieldNameBytes = ",\"data\":".getBytes(UTF_8);
+
+  protected byte[] withCloudEvent(byte[] value, DocumentEvent documentEvent) {
+    final Map<String, Object> data = new HashMap<String, Object>();
+    data.put("specversion", "1.0");
+    data.put("id", documentEvent.key() + "-" + documentEvent.revisionSeqno());
+    data.put("type", "com.netdocuments.ndserver." + documentEvent.bucket() + "." + documentEvent.type().schemaName());
+    data.put("source", "netdocs://ndserver/" + documentEvent.bucket());
+    data.put("time", OffsetDateTime.now().toString());
+    data.put("datacontenttype", "application/json;charset=utf-8");
+    data.put("partitionkey", documentEvent.key());
+    data.put("traceparent", UUID.randomUUID().toString());
+    byte[] dataBytes;
+    try {
+      dataBytes = objectMapper.writeValueAsBytes(data);
+    } catch (JsonProcessingException e) {
+      throw new DataException("Failed to serialize data", e);
+    }
+    ByteArrayBuilder result = new ByteArrayBuilder(value.length + dataFieldNameBytes.length + dataBytes.length)
+        .append(dataBytes, dataBytes.length - 1)
+        .append(dataFieldNameBytes)
+        .append(value)
+        .append((byte) '}');
+    return result.build();
+  }
+
+  protected byte[] convertToBytes(Map<String, Object> value, DocumentEvent docEvent) {
+    /*
+     * {
+     * "specversion": "1.0",
+     * "id": "3a20f7c4-5f94-44e8-81eb-2a4e057bed82",
+     * "type": "com.netdocuments.documents.metadata.document.updated.v1",
+     * "source": "netdocs://documents/metadata",
+     * "datacontenttype": "application/json;charset=utf-8",
+     * "time": "2024-09-03T19:42:41.4741209Z",
+     * "traceparent": "21168e25-34af-41e9-92f2-58f6e239a605",
+     * "partitionkey": "0068-8919-8786",
+     * "data": { }
+     */
+    if (!cloudevent) {
+      try {
+        return objectMapper.writeValueAsBytes(value);
+      } catch (JsonProcessingException e) {
+        throw new DataException("Failed to serialize data", e);
+      }
+    }
+    try {
+      return withCloudEvent(objectMapper.writeValueAsBytes(value), docEvent);
+    } catch (JsonProcessingException e) {
+      throw new DataException("Failed to serialize data", e);
+    }
   }
 
   protected boolean buildValue(SourceHandlerParams params, SourceRecordBuilder builder) {
@@ -137,16 +203,16 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
           newValue.put("event", type.schemaName());
           newValue.put("key", docEvent.key());
           try {
-            byte[] value = objectMapper.writeValueAsBytes(newValue);
+            byte[] value = convertToBytes(newValue, docEvent);
             builder.value(null, value);
             return true;
-          } catch (JsonProcessingException e) {
-            throw new DataException("Failed to serialize data", e);
+          } catch (DataException e) {
+            throw e;
           }
 
         case MUTATION:
           if (params.noValue()) {
-            builder.value(null, null);
+            builder.value(null, convertToBytes(null, docEvent));
             return true;
           }
 
@@ -155,8 +221,10 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
             LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());
             return false;
           }
-
-          builder.value(null, document);
+          if (cloudevent)
+            builder.value(null, withCloudEvent(document, docEvent));
+          else
+            builder.value(null, document);
           return true;
 
         default:
@@ -197,10 +265,9 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
     }
 
     try {
-      byte[] value = objectMapper.writeValueAsBytes(newValue);
-      builder.value(null, value);
+      builder.value(null, convertToBytes(newValue, docEvent));
       return true;
-    } catch (JsonProcessingException e) {
+    } catch (DataException e) {
       throw new DataException("Failed to serialize data", e);
     }
   }
