@@ -27,6 +27,7 @@ import com.couchbase.connect.kafka.util.JsonPropertyExtractor;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.DataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +113,10 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   @Override
   public SourceRecordBuilder handle(SourceHandlerParams params) {
     SourceRecordBuilder builder = new SourceRecordBuilder();
-
+    if (cloudevent) {
+      builder.headers().add("ce_specversion", new SchemaAndValue(Schema.STRING_SCHEMA, "1.0"));
+      builder.headers().add("content-type", new SchemaAndValue(Schema.STRING_SCHEMA, "application/cloudevents"));
+    }
     if (!buildValue(params, builder)) {
       return null;
     }
