@@ -19,22 +19,11 @@ package com.couchbase.connect.kafka.filter;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 
 /**
- * Allows publication of any event, except for events in Couchbase system scopes.
- * <p>
- * A system scope is any scope whose name start with percent or underscore,
- * except for the default scope (whose name is "_default").
- *
- * @see AllPassIncludingSystemFilter
+ * Allows publication of any event, including events in system scopes.
  */
-public class AllPassFilter implements Filter {
-
+public class AllPassIncludingSystemFilter implements Filter {
   @Override
   public boolean pass(final DocumentEvent event) {
-    return !isSystemScope(event);
-  }
-
-  private static boolean isSystemScope(DocumentEvent event) {
-    String scopeName = event.collectionMetadata().scopeName();
-    return scopeName.startsWith("%") || (scopeName.startsWith("_") && !scopeName.equals("_default"));
+    return true;
   }
 }
