@@ -58,9 +58,9 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
 
   // Configuration definition
   private static final ConfigDef CONFIG_DEF = new ConfigDef()
-      .define(FIELDS_CONFIG, ConfigDef.Type.LIST, "", ConfigDef.Importance.HIGH,
+      .define(FIELDS_CONFIG, ConfigDef.Type.LIST, "*", ConfigDef.Importance.HIGH,
           "The fields to extract from the document")
-      .define(OUTPUT_FORMAT, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
+      .define(OUTPUT_FORMAT, ConfigDef.Type.STRING, "cloudevent", ConfigDef.Importance.LOW,
           "The output format of the message. The only current valid value is 'cloudevent' anything else designates the default format")
       .define(S3_BUCKET_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
           "The S3 bucket to upload documents to")
@@ -215,14 +215,16 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
       return true;
     }
 
-    final byte[] document = docEvent.content();
+    byte[] document = docEvent.content();
     if (!isValidJson(document)) {
       LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());
       return false;
     }
 
-    uploadToS3(docEvent, document);
-
+    if (isS3Enabled) {
+      uploadToS3(docEvent, document);
+      document = String.format("{\"s3Bucket\":\"%s\",\"s3Key\":\"%s\"}", s3Bucket, generateS3Key(docEvent)).getBytes();
+    }
     if (cloudevent) {
       builder.value(null, withCloudEvent(document, docEvent));
     } else {
@@ -235,9 +237,7 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
    * Uploads the document content to S3.
    */
   private void uploadToS3(DocumentEvent docEvent, byte[] document) {
-    if (!isS3Enabled) {
-      return;
-    }
+
     String s3Key = generateS3Key(docEvent);
     try {
       PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -250,15 +250,70 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
       LOGGER.info("Uploaded document to S3: s3://{}/{}", s3Bucket, s3Key);
     } catch (Exception e) {
       LOGGER.error("Failed to upload document to S3: {}", e.getMessage(), e);
+      throw e;
     }
   }
 
   /**
-   * Generates a unique S3 key for the document.
+   * Generates a unique S3 key for the document based on its key, document
+   * property ID,
+   * and revision sequence number.
+   *
+   * @param docEvent The document event containing metadata about the document
+   * @return A unique S3 key string
    */
   private String generateS3Key(DocumentEvent docEvent) {
-    return String.format("%s/%s/%s.json", docEvent.bucket(), Instant.now().toString().replace(":", "-"),
-        docEvent.key());
+    String originalKey = docEvent.key();
+    long revisionSeqno = docEvent.revisionSeqno();
+
+    // Extract the 'documents.1.docProps.id' field value from the document content
+    String docPropsId = extractDocPropsId(docEvent.content());
+
+    // Modify the key to add '/' after each of the next four letters after the
+    // existing '/'
+    String modifiedKey = modifyKey(originalKey);
+
+    // Combine modified key, docProps.id, and revision sequence number to form the
+    // S3 key
+    return String.format("%s/%s/%d.json", modifiedKey, docPropsId, revisionSeqno);
+  }
+
+  /**
+   * Extracts the 'documents.1.docProps.id' field value from the document content.
+   *
+   * @param content The byte array containing the document content
+   * @return The extracted docProps.id value, or "unknown" if extraction fails
+   */
+  String extractDocPropsId(byte[] content) {
+    try {
+      Map<String, Object> extracted = JsonPropertyExtractor.extract(
+          new ByteArrayInputStream(content),
+          new String[] { "documents.1.docProps.id" });
+      return (String) extracted.get("documents.1.docProps.id");
+    } catch (Exception e) {
+      LOGGER.error("Failed to extract docProps.id", e);
+      return "unknown";
+    }
+  }
+
+  /**
+   * Modifies the original key by adding '/' after each of the next four letters
+   * after the existing '/'.
+   *
+   * @param originalKey The original document key
+   * @return The modified key with additional '/' characters
+   */
+  String modifyKey(String originalKey) {
+    int firstSlashIndex = originalKey.indexOf('/');
+    if (firstSlashIndex == -1 || firstSlashIndex + 5 > originalKey.length()) {
+      return originalKey;
+    }
+
+    StringBuilder modifiedKey = new StringBuilder(originalKey);
+    for (int i = 1; i <= 4; i++) {
+      modifiedKey.insert(firstSlashIndex + i * 2, '/');
+    }
+    return modifiedKey.toString();
   }
 
   /**
