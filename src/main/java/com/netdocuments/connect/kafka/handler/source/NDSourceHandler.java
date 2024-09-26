@@ -15,6 +15,9 @@
  */
 package com.netdocuments.connect.kafka.handler.source;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -55,6 +58,7 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   private static final String OUTPUT_FORMAT = "couchbase.custom.handler.nd.output.format";
   private static final String S3_BUCKET_CONFIG = "couchbase.custom.handler.nd.s3.bucket";
   private static final String S3_REGION_CONFIG = "couchbase.custom.handler.nd.s3.region";
+  private static final String AWS_PROFILE_CONFIG = "couchbase.custom.handler.nd.aws.profile";
 
   // Configuration definition
   private static final ConfigDef CONFIG_DEF = new ConfigDef()
@@ -65,13 +69,16 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
       .define(S3_BUCKET_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
           "The S3 bucket to upload documents to")
       .define(S3_REGION_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
-          "The AWS region for the S3 bucket");
+          "The AWS region for the S3 bucket")
+      .define(AWS_PROFILE_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
+          "The AWS profile to use for S3 operations");
 
   private List<String> fields;
   private boolean cloudevent;
   private S3Client s3Client;
   private String s3Bucket;
   private boolean isS3Enabled;
+  private String awsProfile;
 
   /**
    * Initializes the handler with the given configuration properties.
@@ -111,9 +118,25 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
       isS3Enabled = false;
     } else {
       isS3Enabled = true;
-      s3Client = S3Client.builder()
-          .region(Region.of(s3Region))
-          .build();
+      awsProfile = config.getString(AWS_PROFILE_CONFIG);
+      LOGGER.info("Initializing S3 client with bucket={}, region={}, profile={}", s3Bucket, s3Region, awsProfile);
+      if (awsProfile != null) {
+        ProfileCredentialsProvider credentialsProvider = ProfileCredentialsProvider.builder()
+            .profileName(awsProfile) // Your desired profile name
+            .build();
+        AwsCredentialsProviderChain credentialsProviderChain = AwsCredentialsProviderChain.builder()
+            .addCredentialsProvider(credentialsProvider)
+            .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
+            .build();
+        s3Client = S3Client.builder()
+            .region(Region.of(s3Region))
+            .credentialsProvider(credentialsProviderChain)
+            .build();
+      } else {
+        s3Client = S3Client.builder()
+            .region(Region.of(s3Region))
+            .build();
+      }
     }
   }
 
@@ -247,7 +270,7 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
           .build();
 
       s3Client.putObject(putObjectRequest, RequestBody.fromBytes(document));
-      LOGGER.info("Uploaded document to S3: s3://{}/{}", s3Bucket, s3Key);
+      LOGGER.debug("Uploaded document to S3: s3://{}/{}", s3Bucket, s3Key);
     } catch (Exception e) {
       LOGGER.error("Failed to upload document to S3: {}", e.getMessage(), e);
       throw e;
