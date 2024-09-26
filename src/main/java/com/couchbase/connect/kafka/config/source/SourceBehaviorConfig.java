@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.config.source;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
@@ -110,6 +111,27 @@ public interface SourceBehaviorConfig {
    */
   @Default
   String blackHoleTopic();
+
+  /**
+   * If `couchbase.stream.from` is `SAVED_OFFSET_OR_NOW`, and this property is non-blank,
+   * on startup the connector publishes to the named topic one tiny synthetic record
+   * for each source partition that does not yet have a saved offset.
+   * <p>
+   * This lets the connector initialize the missing source offsets to "now" (the current
+   * state of Couchbase).
+   * <p>
+   * The synthetic records have a value of null, and the same key:
+   * `__COUCHBASE_INITIAL_OFFSET_TOMBSTONE__a54ee32b-4a7e-4d98-aa36-45d8417e942a`.
+   * <p>
+   * Consumers of this topic must ignore (or tolerate) these records.
+   * <p>
+   * If you specify a value for `couchbase.black.hole.topic`, specify the same value here.
+   *
+   * @since 4.2.4
+   */
+  @Stability.Uncommitted
+  @Default
+  String initialOffsetTopic();
 
   /**
    * Controls maximum size of the batch for writing into topic.

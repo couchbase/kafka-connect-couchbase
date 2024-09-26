@@ -38,6 +38,7 @@ public class SourceTaskLifecycle {
     TASK_STARTED,
     TASK_STOPPED,
     SOURCE_OFFSETS_READ,
+    MISSING_SOURCE_OFFSETS_SET_TO_NOW,
     OFFSET_COMMIT_HOOK,
   }
 
@@ -68,6 +69,12 @@ public class SourceTaskLifecycle {
     details.put("partitionsWithNoSavedOffset", partitionsWithoutSavedOffsets.format());
     details.put("sourceOffsets", new TreeMap<>(sourceOffsets));
     logMilestone(Milestone.SOURCE_OFFSETS_READ, details);
+  }
+
+  public void logMissingSourceOffsetsSetToNow(PartitionSet partitionsSetToNow) {
+    Map<String, Object> details = new LinkedHashMap<>();
+    details.put("partitionsSetToNow", partitionsSetToNow.format());
+    logMilestone(Milestone.MISSING_SOURCE_OFFSETS_SET_TO_NOW, details);
   }
 
   public void logTaskStopped() {

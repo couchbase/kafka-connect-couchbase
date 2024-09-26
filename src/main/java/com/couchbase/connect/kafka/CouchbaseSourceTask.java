@@ -69,6 +69,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static com.couchbase.connect.kafka.CouchbaseReader.isSyntheticInitialOffsetTombstone;
 import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -101,6 +102,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<String> blackHoleTopic;
+  private Optional<String> intialOffsetTopic;
 
   private final SourceTaskLifecycle taskLifecycle = new SourceTaskLifecycle();
 
@@ -156,6 +158,7 @@ public class CouchbaseSourceTask extends SourceTask {
     sourceHandler.init(unmodifiableProperties);
 
     blackHoleTopic = Optional.ofNullable(emptyToNull(config.blackHoleTopic().trim()));
+    intialOffsetTopic = Optional.ofNullable(emptyToNull(config.initialOffsetTopic().trim()));
 
     defaultTopicTemplate = config.topic();
     collectionToTopic = TopicMap.parseCollectionToTopic(config.collectionToTopic());
@@ -181,7 +184,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
     queue = new LinkedBlockingQueue<>();
     errorQueue = new LinkedBlockingQueue<>(1);
-    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry);
+    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry, intialOffsetTopic.isPresent(), taskLifecycle);
     couchbaseReader.start();
 
     endOfLastPoll = NanoTimestamp.now();
@@ -262,7 +265,11 @@ public class CouchbaseSourceTask extends SourceTask {
         ConversionResult results = convertToSourceRecords(events);
 
         filteredCounter.increment(results.dropped);
-        LOGGER.info("Poll returns {} result(s) (filtered out {})", results.published, results.dropped);
+        if (results.synthetic > 0) {
+          LOGGER.info("Poll returns {} result(s) ({} synthetic; filtered out {})", results.published + results.synthetic, results.synthetic, results.dropped);
+        } else {
+          LOGGER.info("Poll returns {} result(s) (filtered out {})", results.published, results.dropped);
+        }
         return results.records;
 
       } finally {
@@ -277,11 +284,13 @@ public class CouchbaseSourceTask extends SourceTask {
     public final List<SourceRecord> records;
     public final int published; // excluding those published to black hole (those are included in "dropped")
     public final int dropped;
+    public final int synthetic;
 
-    public ConversionResult(List<SourceRecord> records, int published, int dropped) {
+    public ConversionResult(List<SourceRecord> records, int published, int dropped, int synthetic) {
       this.records = records;
       this.published = published;
       this.dropped = dropped;
+      this.synthetic = synthetic;
     }
   }
 
@@ -326,15 +335,31 @@ public class CouchbaseSourceTask extends SourceTask {
   private ConversionResult convertToSourceRecords(List<DocumentChange> events) {
     List<SourceRecord> results = new ArrayList<>(events.size());
     int dropped = 0;
+    int initialOffsets = 0;
+
     for (DocumentChange e : events) {
       DocumentEvent docEvent = DocumentEvent.create(e, bucket);
+
+      // Handle synthetic tombstones separately to ensure they
+      // don't get dropped by filters
+      //
+      // We could assume the topic config is always present, but maybe a trickster
+      // inserted a real document with the same key as a synthetic tombstone.
+      if (isSyntheticInitialOffsetTombstone(e) && intialOffsetTopic.isPresent()) {
+        String topic = intialOffsetTopic.get();
+        SourceRecord sourceRecord = createSourceOffsetUpdateRecord(e.getKey(), topic, e);
+        lifecycle.logConvertedToKafkaRecord(e, sourceRecord);
+        results.add(sourceRecord);
+        initialOffsets++;
+        continue;
+      }
 
       // Don't record filter timings unless the filter is actually doing something.
       boolean passed = filterIsNoop || filterTimer.record(() -> filter.pass(docEvent));
       if (!passed) {
         lifecycle.logSkippedBecauseFilterSaysIgnore(e);
         dropped++;
-        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e, docEvent)));
+        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e)));
         continue;
       }
 
@@ -342,7 +367,7 @@ public class CouchbaseSourceTask extends SourceTask {
       if (sourceRecord == null) {
         lifecycle.logSkippedBecauseHandlerSaysIgnore(e);
         dropped++;
-        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e, docEvent)));
+        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e)));
         continue;
       }
 
@@ -350,12 +375,12 @@ public class CouchbaseSourceTask extends SourceTask {
       results.add(sourceRecord);
     }
 
-    int published = results.size();
+    int published = results.size() - initialOffsets;
     if (blackHoleTopic.isPresent()) {
       published -= dropped;
     }
 
-    return new ConversionResult(results, published, dropped);
+    return new ConversionResult(results, published, dropped, initialOffsets);
   }
 
   /**
@@ -365,13 +390,18 @@ public class CouchbaseSourceTask extends SourceTask {
    * These records are published to the configured "black hole" topic
    * as a way to tell Kafka Connect about the source offset of the ignored event.
    */
-  private SourceRecord createSourceOffsetUpdateRecord(String topic, DocumentChange change, DocumentEvent docEvent) {
+  private SourceRecord createSourceOffsetUpdateRecord(String topic, DocumentChange change) {
+    // Include vbucket in key so records aren't all assigned to the same Kafka partition
+    String key = "ignored-" + change.getVbucket();
+    return createSourceOffsetUpdateRecord(key, topic, change);
+  }
+
+  private SourceRecord createSourceOffsetUpdateRecord(String key, String topic, DocumentChange change) {
     return new SourceRecordBuilder()
-        // Include vbucket in key so records aren't all assigned to the same Kafka partition
-        .key("ignored-" + change.getVbucket())
+        .key(key)
         .build(
             change,
-            sourcePartition(docEvent.partition()),
+            sourcePartition(change.getVbucket()),
             sourceOffset(change),
             topic
         );

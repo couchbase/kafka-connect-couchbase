@@ -16,6 +16,8 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.dcp.Authenticator;
 import com.couchbase.client.dcp.CertificateAuthenticator;
@@ -30,10 +32,14 @@ import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.client.dcp.highlevel.Mutation;
 import com.couchbase.client.dcp.highlevel.StreamFailure;
 import com.couchbase.client.dcp.highlevel.StreamOffset;
+import com.couchbase.client.dcp.highlevel.internal.CollectionsManifest;
+import com.couchbase.client.dcp.highlevel.internal.FlowControlReceipt;
 import com.couchbase.client.dcp.message.DcpFailoverLogResponse;
+import com.couchbase.client.dcp.message.MessageUtil;
 import com.couchbase.client.dcp.message.StreamFlag;
 import com.couchbase.client.dcp.metrics.LogLevel;
 import com.couchbase.client.dcp.state.PartitionState;
+import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.util.Version;
@@ -42,8 +48,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
@@ -58,11 +66,16 @@ import static java.util.Objects.requireNonNull;
 public class CouchbaseReader extends Thread {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseReader.class);
 
+  static final String INITIAL_OFFSET_TOMBSTONE_KEY = "__COUCHBASE_INITIAL_OFFSET_TOMBSTONE__a54ee32b-4a7e-4d98-aa36-45d8417e942a";
+
   private final Client client;
   private final List<Integer> partitions;
   private final Map<Integer, SourceOffset> partitionToSavedOffset;
   private final StreamFrom streamFrom;
+  private final boolean emitSyntheticInitialOffsets;
+  private final BlockingQueue<DocumentChange> queue;
   private final BlockingQueue<Throwable> errorQueue;
+  private final SourceTaskLifecycle taskLifecycle;
 
   /**
    * As a workaround for JDCP-237 and the fact that the DCP client's `connect()` method
@@ -72,6 +85,10 @@ public class CouchbaseReader extends Thread {
    */
   private volatile boolean connected;
 
+  static boolean isSyntheticInitialOffsetTombstone(DocumentChange e) {
+    return INITIAL_OFFSET_TOMBSTONE_KEY.equals(e.getKey());
+  }
+
   public CouchbaseReader(
       final CouchbaseSourceTaskConfig config,
       final String connectorName,
@@ -80,15 +97,19 @@ public class CouchbaseReader extends Thread {
       final List<Integer> partitions,
       final Map<Integer, SourceOffset> partitionToSavedOffset,
       final SourceDocumentLifecycle lifecycle,
-      final MeterRegistry meterRegistry
+      final MeterRegistry meterRegistry,
+      final boolean emitSyntheticInitialOffsets,
+      final SourceTaskLifecycle taskLifecycle
   ) {
     requireNonNull(connectorName);
     requireNonNull(lifecycle);
-    requireNonNull(queue);
+    this.queue = requireNonNull(queue);
     this.partitions = requireNonNull(partitions);
     this.partitionToSavedOffset = requireNonNull(partitionToSavedOffset);
     this.streamFrom = config.streamFrom();
     this.errorQueue = requireNonNull(errorQueue);
+    this.emitSyntheticInitialOffsets = emitSyntheticInitialOffsets;
+    this.taskLifecycle = requireNonNull(taskLifecycle);
 
     Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
         ? new PasswordAuthenticator(new StaticCredentialsProvider(config.username(), config.password().value()))
@@ -200,12 +221,55 @@ public class CouchbaseReader extends Thread {
     }
   }
 
+  private static final FlowControlReceipt DUMMY_FLOW_CONTROL_RECEIPT = new FlowControlReceipt(ChannelFlowController.dummy, 0) {
+    @Override
+    public void acknowledge() {
+    }
+  };
+
+  private void enqueueInitialOffsetTombstones() {
+    if (!emitSyntheticInitialOffsets || streamFrom != StreamFrom.SAVED_OFFSET_OR_NOW) {
+      return;
+    }
+
+    Set<Integer> partitionsWithoutSavedOffset = new HashSet<>(partitions);
+    partitionsWithoutSavedOffset.removeAll(partitionToSavedOffset.keySet());
+
+    partitionsWithoutSavedOffset.forEach(partition -> {
+      // The Deletion constructor requires a DCP packet,
+      // so create a synthetic deletion packet and populate
+      // just enough of the fields to satisfy it.
+      ByteBuf buf = Unpooled.buffer();
+      MessageUtil.initRequest(MessageUtil.DCP_DELETION_OPCODE, buf);
+      MessageUtil.setVbucket(partition, buf);
+
+      Deletion syntheticInitialOffsetTombstone = new Deletion(
+          buf,
+          CollectionsManifest.DEFAULT.getCollection(0),
+          INITIAL_OFFSET_TOMBSTONE_KEY,
+          DUMMY_FLOW_CONTROL_RECEIPT,
+          client.sessionState().get(partition).getOffset(),
+          false
+      );
+
+      try {
+        queue.add(syntheticInitialOffsetTombstone);
+      } catch (Exception t) {
+        throw new RuntimeException("Failed to enqueue synthetic initial offset", t);
+      }
+    });
+
+    taskLifecycle.logMissingSourceOffsetsSetToNow(PartitionSet.from(partitionsWithoutSavedOffset));
+  }
+
   private void restoreSavedOffsets() {
     LOGGER.info("Resuming from saved offsets for {} of {} partitions: {}",
         partitionToSavedOffset.size(),
         partitions.size(),
         PartitionSet.from(partitionToSavedOffset.keySet())
     );
+
+    enqueueInitialOffsetTombstones();
 
     SortedMap<Integer, Long> partitionToFallbackUuid = new TreeMap<>();
 
