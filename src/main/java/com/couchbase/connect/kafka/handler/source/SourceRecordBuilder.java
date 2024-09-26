@@ -53,7 +53,7 @@ public class SourceRecordBuilder {
   /**
    * Sets the record's key.
    *
-   * @param key (nullable) The key to associate with the record
+   * @param key       (nullable) The key to associate with the record
    * @param keySchema (nullable) the key's schema
    * @return this object to facilitate chaining multiple methods; never null
    */
@@ -67,6 +67,7 @@ public class SourceRecordBuilder {
    * Sets the record's key.
    * <p>
    * Convenience method for String keys. Shortcut for
+   * 
    * <pre>
    * key(Schema.STRING_SCHEMA, key);
    * </pre>
@@ -81,7 +82,7 @@ public class SourceRecordBuilder {
   /**
    * Sets the record's value.
    *
-   * @param value (nullable) The value to associate with the record
+   * @param value       (nullable) The value to associate with the record
    * @param valueSchema (nullable) the schema for the record's value
    * @return this object to facilitate chaining multiple methods; never null
    */
@@ -95,6 +96,7 @@ public class SourceRecordBuilder {
    * Sets the record's value.
    * <p>
    * Convenience method for String values. Shortcut for
+   * 
    * <pre>
    * value(Schema.STRING_SCHEMA, value);
    * </pre>
@@ -107,7 +109,8 @@ public class SourceRecordBuilder {
   }
 
   /**
-   * Sets the topic the record should be published to, or null for the connector's default topic.
+   * Sets the topic the record should be published to, or null for the connector's
+   * default topic.
    *
    * @return this object to facilitate chaining multiple methods; never null
    */
@@ -119,7 +122,8 @@ public class SourceRecordBuilder {
   /**
    * Sets the Kafka partition the record should be published to.
    *
-   * @param kafkaPartition (nullable) The value to associate with the record, or null for default partition
+   * @param kafkaPartition (nullable) The value to associate with the record, or
+   *                       null for default partition
    * @return this object to facilitate chaining multiple methods; never null
    */
   public SourceRecordBuilder kafkaPartition(Integer kafkaPartition) {
@@ -130,7 +134,8 @@ public class SourceRecordBuilder {
   /**
    * Sets the record's timestamp.
    *
-   * @param timestamp (nullable) The timestamp to associate with the record, or null for default timestamp assignment.
+   * @param timestamp (nullable) The timestamp to associate with the record, or
+   *                  null for default timestamp assignment.
    * @return this object to facilitate chaining multiple methods; never null
    */
   public SourceRecordBuilder timestamp(Long timestamp) {
@@ -151,9 +156,9 @@ public class SourceRecordBuilder {
 
   @Stability.Internal
   public CouchbaseSourceRecord build(DocumentChange change,
-                                     Map<String, ?> sourcePartition,
-                                     Map<String, ?> sourceOffset,
-                                     String defaultTopic) {
+      Map<String, ?> sourcePartition,
+      Map<String, ?> sourceOffset,
+      String defaultTopic) {
     return new CouchbaseSourceRecord(
         change,
         sourcePartition,
@@ -166,5 +171,18 @@ public class SourceRecordBuilder {
         value,
         timestamp,
         headers);
+  }
+
+  // Test Functions
+  public Schema keySchema() {
+    return keySchema;
+  }
+
+  public Object value() {
+    return value;
+  }
+
+  public Object key() {
+    return key;
   }
 }
