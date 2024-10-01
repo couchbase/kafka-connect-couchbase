@@ -42,7 +42,7 @@ public class JsonFieldsExtractor<R extends ConnectRecord<R>> implements Transfor
   @Override
   public R apply(R record) {
     final Object value = record.value();
-    final Map newValue;
+    final Map<String, Object> newValue;
     try {
       if (value == null) {
         return record;

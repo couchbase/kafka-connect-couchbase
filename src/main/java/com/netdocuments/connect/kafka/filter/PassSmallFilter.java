@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Couchbase, Inc.
+ * Copyright 2024 NetDocuments Software, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.couchbase.connect.kafka.filter;
+package com.netdocuments.connect.kafka.filter;
 
+import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
