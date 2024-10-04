@@ -1,0 +1,1 @@
+com.amazonaws.kafka.config.providers.SecretsManagerConfigProvider
