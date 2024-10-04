@@ -68,7 +68,7 @@
     </developers>
 
     <properties>
-        <java-compat.version>17</java-compat.version>
+        <java-compat.version>11</java-compat.version>
         <kafka.version>2.8.2</kafka.version>
         <dcp-client.version>0.51.0</dcp-client.version>
         <java-client.version>3.7.1</java-client.version>
@@ -183,6 +183,14 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>secretsmanager</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+        </dependency>
         <!-- Test dependencies -->
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -222,7 +230,7 @@
                 To refresh the generated docs, run:
                     mvn clean test-compile exec:java
              -->
-            <plugin>
+            <!-- <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
@@ -230,7 +238,7 @@
                     <mainClass>com.couchbase.connect.kafka.util.config.AsciiDocGenerator</mainClass>
                     <classpathScope>test</classpathScope>
                 </configuration>
-            </plugin>
+            </plugin> -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -249,7 +257,7 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            <plugin>
+            <!-- <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>3.2.1</version>
@@ -292,8 +300,10 @@
                             <head>Implementation Note:</head>
                         </tag>
                     </tags>
+                    <doclint>none</doclint>
+                    <source>8</source>
                 </configuration>
-            </plugin>
+            </plugin> -->
             <plugin>
                 <groupId>io.confluent</groupId>
                 <version>0.12.0</version>

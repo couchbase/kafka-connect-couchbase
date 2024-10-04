@@ -18,8 +18,6 @@ package com.couchbase.connect.kafka.config.source;
 
 import com.couchbase.client.dcp.util.PartitionSet;
 
-import java.util.List;
-
 public interface CouchbaseSourceTaskConfig extends CouchbaseSourceConfig {
   /**
    * Set of partitions for this task to watch for changes.
