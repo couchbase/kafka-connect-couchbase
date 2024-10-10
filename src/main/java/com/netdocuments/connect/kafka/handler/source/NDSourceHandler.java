@@ -55,30 +55,39 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
 
   // Configuration keys
   private static final String FIELDS_CONFIG = "couchbase.custom.handler.nd.fields";
-  private static final String OUTPUT_FORMAT = "couchbase.custom.handler.nd.output.format";
   private static final String S3_BUCKET_CONFIG = "couchbase.custom.handler.nd.s3.bucket";
   private static final String S3_REGION_CONFIG = "couchbase.custom.handler.nd.s3.region";
   private static final String AWS_PROFILE_CONFIG = "couchbase.custom.handler.nd.aws.profile";
+  private static final String S3_THRESHOLD_CONFIG = "couchbase.custom.handler.nd.s3.threshold";
+  private static final String CLOUD_EVENT_TYPE_CONFIG = "couchbase.custom.handler.nd.cloudevent.type";
+  private static final String S3_SUFFIX_CONFIG = "couchbase.custom.handler.nd.s3.suffix";
 
   // Configuration definition
   private static final ConfigDef CONFIG_DEF = new ConfigDef()
       .define(FIELDS_CONFIG, ConfigDef.Type.LIST, "*", ConfigDef.Importance.HIGH,
           "The fields to extract from the document")
-      .define(OUTPUT_FORMAT, ConfigDef.Type.STRING, "cloudevent", ConfigDef.Importance.LOW,
-          "The output format of the message. The only current valid value is 'cloudevent' anything else designates the default format")
       .define(S3_BUCKET_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
           "The S3 bucket to upload documents to")
       .define(S3_REGION_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
           "The AWS region for the S3 bucket")
       .define(AWS_PROFILE_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.LOW,
-          "The AWS profile to use for S3 operations");
+          "The AWS profile to use for S3 operations")
+      .define(S3_THRESHOLD_CONFIG, ConfigDef.Type.LONG, 81920L, ConfigDef.Importance.MEDIUM,
+          "The size threshold (in bytes) above which messages should be pushed to S3")
+      .define(CLOUD_EVENT_TYPE_CONFIG, ConfigDef.Type.STRING, "com.netdocuments.ndserver.{bucket}.{type}",
+          ConfigDef.Importance.MEDIUM,
+          "The type of message that will be listed on cloud event")
+      .define(S3_SUFFIX_CONFIG, ConfigDef.Type.STRING, ".S3", ConfigDef.Importance.LOW,
+          "The suffix to append to S3 keys for uploaded messages");
 
   private List<String> fields;
-  private boolean cloudevent;
   private S3Client s3Client;
   private String s3Bucket;
   private boolean isS3Enabled;
   private String awsProfile;
+  private long s3Threshold;
+  private String cloudEventType;
+  private String s3Suffix;
 
   /**
    * Initializes the handler with the given configuration properties.
@@ -103,9 +112,8 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
     // Initialize fields
     fields = config.getList(FIELDS_CONFIG);
 
-    // Initialize CloudEvent setting
-    String cloudEventRaw = config.getString(OUTPUT_FORMAT);
-    cloudevent = "cloudevent".equals(cloudEventRaw);
+    // Initialize CloudEvent type
+    cloudEventType = config.getString(CLOUD_EVENT_TYPE_CONFIG);
   }
 
   /**
@@ -114,9 +122,14 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   private void initializeS3Client(AbstractConfig config) {
     s3Bucket = config.getString(S3_BUCKET_CONFIG);
     String s3Region = config.getString(S3_REGION_CONFIG);
+    // Initialize S3 threshold
+    s3Threshold = config.getLong(S3_THRESHOLD_CONFIG);
+    // Initialize S3 suffix
+    s3Suffix = config.getString(S3_SUFFIX_CONFIG);
     if (s3Bucket == null || s3Region == null) {
       isS3Enabled = false;
     } else {
+      // Initialize S3 client
       isS3Enabled = true;
       awsProfile = config.getString(AWS_PROFILE_CONFIG);
       LOGGER.info("Initializing S3 client with bucket={}, region={}, profile={}", s3Bucket, s3Region, awsProfile);
@@ -150,9 +163,8 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   @Override
   public SourceRecordBuilder handle(SourceHandlerParams params) {
     SourceRecordBuilder builder = new SourceRecordBuilder();
-    if (cloudevent) {
-      addCloudEventHeaders(builder);
-    }
+
+    addCloudEventHeaders(builder);
 
     if (!buildValue(params, builder)) {
       return null;
@@ -180,34 +192,23 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
    */
   @Override
   protected boolean buildValue(SourceHandlerParams params, SourceRecordBuilder builder) {
-    if (fields.isEmpty() && !cloudevent && !isS3Enabled) {
-      return super.buildValue(params, builder);
-    }
-
     final DocumentEvent docEvent = params.documentEvent();
     final DocumentEvent.Type type = docEvent.type();
 
-    if (fields.size() == 1 && fields.get(0).equals("*")) {
-      return handleAllFieldsExtraction(docEvent, type, params, builder);
-    }
-
-    return handleSpecificFieldsExtraction(docEvent, type, params, builder);
-  }
-
-  /**
-   * Handles extraction of all fields from the document.
-   */
-  private boolean handleAllFieldsExtraction(DocumentEvent docEvent, DocumentEvent.Type type, SourceHandlerParams params,
-      SourceRecordBuilder builder) {
-    switch (type) {
-      case EXPIRATION:
-      case DELETION:
-        return handleDeletionOrExpiration(docEvent, type, builder);
-      case MUTATION:
-        return handleMutation(docEvent, params, builder);
-      default:
-        LOGGER.warn("unexpected event type {}", type);
+    if (type == DocumentEvent.Type.EXPIRATION || type == DocumentEvent.Type.DELETION) {
+      return handleDeletionOrExpiration(docEvent, type, builder);
+    } else if (type == DocumentEvent.Type.MUTATION) {
+      if (!isValidJson(docEvent.content())) {
+        LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());
         return false;
+      }
+      if (fields.size() == 1 && fields.get(0).equals("*")) {
+        return handleFullDocumentMutation(docEvent, params, builder);
+      }
+      return handleSpecificFieldsExtractionMutation(docEvent, type, params, builder);
+    } else {
+      LOGGER.warn("unexpected event type {}", type);
+      return false;
     }
   }
 
@@ -220,7 +221,7 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
     newValue.put("event", type.schemaName());
     newValue.put("key", docEvent.key());
     try {
-      byte[] value = convertToBytes(newValue, docEvent);
+      byte[] value = convertToBytes(newValue, docEvent, "");
       builder.value(null, value);
       return true;
     } catch (DataException e) {
@@ -232,36 +233,29 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   /**
    * Handles mutation events, including uploading to S3.
    */
-  private boolean handleMutation(DocumentEvent docEvent, SourceHandlerParams params, SourceRecordBuilder builder) {
+  private boolean handleFullDocumentMutation(DocumentEvent docEvent, SourceHandlerParams params,
+      SourceRecordBuilder builder) {
     if (params.noValue()) {
-      builder.value(null, convertToBytes(null, docEvent));
+      builder.value(null, convertToBytes(null, docEvent, ""));
       return true;
     }
 
     byte[] document = docEvent.content();
-    if (!isValidJson(document)) {
-      LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());
-      return false;
+    String typeSuffix = "";
+    if (isS3Enabled && document.length > s3Threshold) {
+      typeSuffix = s3Suffix;
+      String s3Key = generateS3Key(docEvent);
+      uploadToS3(s3Key, document);
+      document = String.format("{\"s3Bucket\":\"%s\",\"s3Key\":\"%s\"}", s3Bucket, s3Key).getBytes();
     }
-
-    if (isS3Enabled) {
-      uploadToS3(docEvent, document);
-      document = String.format("{\"s3Bucket\":\"%s\",\"s3Key\":\"%s\"}", s3Bucket, generateS3Key(docEvent)).getBytes();
-    }
-    if (cloudevent) {
-      builder.value(null, withCloudEvent(document, docEvent));
-    } else {
-      builder.value(null, document);
-    }
+    builder.value(null, withCloudEvent(document, docEvent, typeSuffix));
     return true;
   }
 
   /**
    * Uploads the document content to S3.
    */
-  private void uploadToS3(DocumentEvent docEvent, byte[] document) {
-
-    String s3Key = generateS3Key(docEvent);
+  private void uploadToS3(String s3Key, byte[] document) {
     try {
       PutObjectRequest putObjectRequest = PutObjectRequest.builder()
           .bucket(s3Bucket)
@@ -342,40 +336,23 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   /**
    * Handles extraction of specific fields from the document.
    */
-  private boolean handleSpecificFieldsExtraction(DocumentEvent docEvent, DocumentEvent.Type type,
+  private boolean handleSpecificFieldsExtractionMutation(DocumentEvent docEvent, DocumentEvent.Type type,
       SourceHandlerParams params, SourceRecordBuilder builder) {
     final byte[] content = docEvent.content();
     final Map<String, Object> newValue;
 
-    if (type == DocumentEvent.Type.DELETION || type == DocumentEvent.Type.EXPIRATION) {
-      newValue = createDeletionOrExpirationValue(docEvent, type);
-    } else if (type == DocumentEvent.Type.MUTATION) {
-      newValue = createMutationValue(docEvent, content);
-      if (newValue == null) {
-        return false;
-      }
-    } else {
-      LOGGER.warn("unexpected event type {}", type);
+    newValue = createMutationValue(docEvent, content);
+    if (newValue == null) {
       return false;
     }
 
     try {
-      builder.value(null, convertToBytes(newValue, docEvent));
+      builder.value(null, convertToBytes(newValue, docEvent, ""));
       return true;
     } catch (DataException e) {
       LOGGER.error("Failed to serialize data", e);
       return false;
     }
-  }
-
-  /**
-   * Creates a value map for deletion or expiration events.
-   */
-  private Map<String, Object> createDeletionOrExpirationValue(DocumentEvent docEvent, DocumentEvent.Type type) {
-    Map<String, Object> newValue = new HashMap<>();
-    newValue.put("event", type.schemaName());
-    newValue.put("key", docEvent.key());
-    return newValue;
   }
 
   /**
@@ -397,11 +374,8 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   /**
    * Converts a value to bytes, applying CloudEvent format if necessary.
    */
-  private byte[] convertToBytes(Map<String, Object> value, DocumentEvent docEvent) {
-    if (!cloudevent) {
-      return serializeToJson(value);
-    }
-    return withCloudEvent(serializeToJson(value), docEvent);
+  private byte[] convertToBytes(Map<String, Object> value, DocumentEvent docEvent, String typeSuffix) {
+    return withCloudEvent(serializeToJson(value), docEvent, typeSuffix);
   }
 
   /**
@@ -418,8 +392,8 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   /**
    * Wraps the given value in a CloudEvent format.
    */
-  private byte[] withCloudEvent(byte[] value, DocumentEvent documentEvent) {
-    Map<String, Object> cloudEventData = createCloudEventData(documentEvent);
+  private byte[] withCloudEvent(byte[] value, DocumentEvent documentEvent, String typeSuffix) {
+    Map<String, Object> cloudEventData = createCloudEventData(documentEvent, typeSuffix);
     byte[] cloudEventBytes = serializeToJson(cloudEventData);
 
     ByteArrayBuilder result = new ByteArrayBuilder(
@@ -434,17 +408,25 @@ public class NDSourceHandler extends RawJsonWithMetadataSourceHandler {
   /**
    * Creates the CloudEvent metadata for a document event.
    */
-  private Map<String, Object> createCloudEventData(DocumentEvent documentEvent) {
+  private Map<String, Object> createCloudEventData(DocumentEvent documentEvent, String typeSuffix) {
     Map<String, Object> data = new HashMap<>();
     data.put("specversion", "1.0");
     data.put("id", documentEvent.key() + "-" + documentEvent.revisionSeqno());
-    data.put("type", "com.netdocuments.ndserver." + documentEvent.bucket() + "." + documentEvent.type().schemaName());
+    data.put("type", getCloudEventType(documentEvent, typeSuffix));
     data.put("source", "netdocs://ndserver/" + documentEvent.bucket());
     data.put("time", Instant.now().toString());
     data.put("datacontenttype", "application/json;charset=utf-8");
     data.put("partitionkey", documentEvent.key());
     data.put("traceparent", UUID.randomUUID().toString());
     return data;
+  }
+
+  /**
+   * Gets the CloudEvent type for a document event.
+   */
+  private String getCloudEventType(DocumentEvent documentEvent, String suffix) {
+    return String.format("%s%s", cloudEventType.replace("{bucket}", documentEvent.bucket())
+        .replace("{type}", documentEvent.type().schemaName()), suffix);
   }
 
   // For testing purposes

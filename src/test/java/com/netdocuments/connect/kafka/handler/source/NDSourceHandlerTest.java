@@ -42,24 +42,26 @@ class NDSourceHandlerTest {
         objectMapper = new ObjectMapper();
     }
 
-    private void initializeHandler(boolean useS3, String fields) {
+    private void initializeHandler(boolean useS3, String fields, long s3Threshold, String cloudEventType,
+            String s3Suffix) {
         Map<String, String> config = new HashMap<>();
         config.put("couchbase.custom.handler.nd.fields", fields);
-        config.put("couchbase.custom.handler.nd.output.format", "cloudevent");
-
+        config.put("couchbase.custom.handler.nd.cloudevent.type", cloudEventType);
         if (useS3) {
             config.put("couchbase.custom.handler.nd.s3.bucket", "test-bucket");
             config.put("couchbase.custom.handler.nd.s3.region", "us-west-2");
+            config.put("couchbase.custom.handler.nd.s3.threshold", String.valueOf(s3Threshold));
+            config.put("couchbase.custom.handler.nd.s3.suffix", s3Suffix);
         }
 
         handler.init(config);
     }
 
     @Test
-    void testHandleMutation() throws Exception {
-        initializeHandler(false, "field1,field2,type");
-        setupMockEvent(DocumentEvent.Type.MUTATION, "test-key",
-                "{\"field1\":\"value1\",\"field2\":\"value2\",\"type\":\"type1\"}");
+    void testHandleMutationBelowS3Threshold() throws Exception {
+        initializeHandler(true, "field1,field2,type", 100000, "test.event", ".json");
+        String content = "{\"field1\":\"value1\",\"field2\":\"value2\",\"type\":\"type1\"}";
+        setupMockEvent(DocumentEvent.Type.MUTATION, "test-key", content, "test-bucket");
 
         SourceHandlerParams params = new SourceHandlerParams(mockEvent, "test-topic", false);
         SourceRecordBuilder result = handler.handle(params);
@@ -72,32 +74,58 @@ class NDSourceHandlerTest {
         assertEquals("value1", data.get("field1").asText());
         assertEquals("value2", data.get("field2").asText());
         assertEquals("type1", data.get("type").asText());
-    }
-
-    @Test
-    void testHandleDeletion() throws Exception {
-        initializeHandler(false, "field1,field2,type");
-        setupMockEvent(DocumentEvent.Type.DELETION, "test-key", null);
-
-        SourceHandlerParams params = new SourceHandlerParams(mockEvent, "test-topic", false);
-        SourceRecordBuilder result = handler.handle(params);
-
-        assertNotNull(result);
-        assertEquals(Schema.STRING_SCHEMA, result.keySchema());
-        assertEquals("test-key", result.key());
-
-        JsonNode jsonNode = objectMapper.readTree((byte[]) result.value());
-        JsonNode data = jsonNode.get("data");
-        assertEquals("deletion", data.get("event").asText());
-        assertEquals("test-key", data.get("key").asText());
 
         verify(mockS3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
     }
 
     @Test
+    void testHandleMutationAboveS3Threshold() throws Exception {
+        initializeHandler(true, "*", 10, "test.event", ".json");
+        String content = "{\"field1\":\"value1\",\"field2\":\"value2\",\"type\":\"type1\"}";
+        setupMockEvent(DocumentEvent.Type.MUTATION, "test-key", content, "test-bucket");
+        when(mockEvent.bucket()).thenReturn("test-bucket");
+        when(mockEvent.revisionSeqno()).thenReturn(1L);
+
+        handler.setS3Client(mockS3Client);
+
+        SourceHandlerParams params = new SourceHandlerParams(mockEvent, "test-topic", false);
+        SourceRecordBuilder result = handler.handle(params);
+
+        assertNotNull(result);
+        assertEquals("test-key", result.key());
+
+        JsonNode jsonNode = objectMapper.readTree((byte[]) result.value());
+        JsonNode data = jsonNode.get("data");
+        assertNotNull(data.get("s3Bucket"));
+        assertNotNull(data.get("s3Key"));
+
+        ArgumentCaptor<PutObjectRequest> requestCaptor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+        verify(mockS3Client).putObject(requestCaptor.capture(), bodyCaptor.capture());
+
+        PutObjectRequest putObjectRequest = requestCaptor.getValue();
+        assertEquals("test-bucket", putObjectRequest.bucket());
+        assertTrue(putObjectRequest.key().startsWith("test-key/"));
+        assertTrue(putObjectRequest.key().endsWith(".json"));
+    }
+
+    @Test
+    void testCloudEventHeaders() {
+        initializeHandler(false, "field1,field2,type", 100000, "test.event", ".json");
+        setupMockEvent(DocumentEvent.Type.MUTATION, "test-key",
+                "{\"field1\":\"value1\",\"field2\":\"value2\",\"type\":\"type1\"}", "test-bucket");
+
+        SourceHandlerParams params = new SourceHandlerParams(mockEvent, "test-topic", false);
+        SourceRecordBuilder result = handler.handle(params);
+
+        assertNotNull(result);
+        assertCloudEventHeaders(result.headers());
+    }
+
+    @Test
     void testHandleExpiration() throws Exception {
-        initializeHandler(false, "field1,field2,type");
-        setupMockEvent(DocumentEvent.Type.EXPIRATION, "test-key", null);
+        initializeHandler(false, "field1,field2,type", 100000, "test.event", ".s3");
+        setupMockEvent(DocumentEvent.Type.EXPIRATION, "test-key", null, "test-bucket");
 
         SourceHandlerParams params = new SourceHandlerParams(mockEvent, "test-topic", false);
         SourceRecordBuilder result = handler.handle(params);
@@ -115,25 +143,12 @@ class NDSourceHandlerTest {
     }
 
     @Test
-    void testCloudEventHeaders() {
-        initializeHandler(false, "field1,field2,type");
-        setupMockEvent(DocumentEvent.Type.MUTATION, "test-key",
-                "{\"field1\":\"value1\",\"field2\":\"value2\",\"type\":\"type1\"}");
-
-        SourceHandlerParams params = new SourceHandlerParams(mockEvent, "test-topic", false);
-        SourceRecordBuilder result = handler.handle(params);
-
-        assertNotNull(result);
-        assertCloudEventHeaders(result.headers());
-    }
-
-    @Test
     void testS3Upload() {
         String content = "{\"documents\":{\"1\": {\"docProps\":{\"id\":\"doc123\"}}}}";
-        initializeHandler(true, "*");
+        initializeHandler(true, "*", 10, "test.event", ".s3");
         handler.setS3Client(mockS3Client);
         setupMockEvent(DocumentEvent.Type.MUTATION, "test-key",
-                content);
+                content, "test-bucket");
         when(mockEvent.bucket()).thenReturn("test-bucket");
 
         SourceHandlerParams params = new SourceHandlerParams(mockEvent, "test-topic", false);
@@ -178,9 +193,10 @@ class NDSourceHandlerTest {
         assertEquals("short", modifiedKey);
     }
 
-    private void setupMockEvent(DocumentEvent.Type type, String key, String content) {
+    private void setupMockEvent(DocumentEvent.Type type, String key, String content, String bucket) {
         when(mockEvent.type()).thenReturn(type);
         when(mockEvent.key()).thenReturn(key);
+        when(mockEvent.bucket()).thenReturn(bucket);
         if (content != null) {
             when(mockEvent.content()).thenReturn(content.getBytes());
         }
