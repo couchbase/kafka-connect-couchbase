@@ -72,6 +72,22 @@ public interface SinkBehaviorConfig {
   @Default
   List<String> topicToCollection();
   
+  /**
+   * A map from Kafka topic to Document Id of Couchbase collection.
+   * <p>
+   * Topic and document id are joined by an equals sign.
+   * Map entries are delimited by commas.
+   * <p>
+   * A document id is of the form `/column_id` or `/field/column_id`.
+   * <p>
+   * For example, if you want to pick document id from topic "topic1"
+   * to document id "id" in the message, and document id from topic "topic2"
+   * to document id "field.column_id" in the message you would write:
+   * "topic1=/id,topic2=/field/column_id".
+   * <p>
+   * Defaults to an empty map, with all messages going to the collection
+   * as document id of specified by `couchbase.document.id`.
+   */
   @Default
   List<String> topicToDocumentId();
 
