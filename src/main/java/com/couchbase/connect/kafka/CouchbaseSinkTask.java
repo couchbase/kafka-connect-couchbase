@@ -69,12 +69,14 @@ public class CouchbaseSinkTask extends SinkTask {
 
   private Keyspace defaultDestCollection;
   private Map<String, Keyspace> topicToCollection;
+  private Map<String, String> topicToDocumentId;
   private KafkaCouchbaseClient client;
   private JsonConverter converter;
   private DocumentIdExtractor documentIdExtractor;
   private SinkHandler sinkHandler;
   private boolean sinkHandlerUsesKvConnections;
   private KafkaRetryHelper retryHelper;
+  private Boolean removeDocumentId;
 
   private DurabilitySetter durabilitySetter;
 
@@ -108,6 +110,8 @@ public class CouchbaseSinkTask extends SinkTask {
     client = new KafkaCouchbaseClient(config, clusterEnvProperties);
     defaultDestCollection = Keyspace.parse(config.defaultCollection(), config.bucket());
     topicToCollection = TopicMap.parseTopicToCollection(config.topicToCollection(), config.bucket());
+    topicToDocumentId = TopicMap.parseTopicToDcumentId(config.topicToDocumentId());
+    removeDocumentId = config.removeDocumentId();
 
     converter = new JsonConverter();
     converter.configure(mapOf("schemas.enable", false), false);
@@ -246,9 +250,18 @@ public class CouchbaseSinkTask extends SinkTask {
 
     byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
     try {
-      if (documentIdExtractor != null) {
-        return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
-      }
+    	String docIdPointer = topicToDocumentId.getOrDefault(record.topic(), null);
+    	DocumentIdExtractor topicToDocumentIdExtractor = null;
+        if (docIdPointer != null && !docIdPointer.isEmpty()) {
+        	topicToDocumentIdExtractor = new DocumentIdExtractor(docIdPointer, removeDocumentId);
+        }
+        
+        if(topicToDocumentIdExtractor != null) {
+        	return topicToDocumentIdExtractor.extractDocumentId(valueAsJsonBytes);
+        }
+        else if(documentIdExtractor != null) {
+        	return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
+        }
 
     } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
       LOGGER.warn(e.getMessage() + "; letting sink handler use fallback ID");

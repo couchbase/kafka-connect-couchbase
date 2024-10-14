@@ -71,6 +71,9 @@ public interface SinkBehaviorConfig {
    */
   @Default
   List<String> topicToCollection();
+  
+  @Default
+  List<String> topicToDocumentId();
 
   @SuppressWarnings("unused")
   static ConfigDef.Validator topicToCollectionValidator() {

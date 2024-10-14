@@ -36,6 +36,12 @@ public class TopicMap {
   ) {
     return mapValues(parseCommon(topicToCollection), it -> Keyspace.parse(it, defaultBucket));
   }
+  
+  public static Map<String, String> parseTopicToDcumentId(
+		  List<String> topicToDocumentId) {
+	  
+	  return parseCommon(topicToDocumentId);
+  }
 
   public static Map<ScopeAndCollection, String> parseCollectionToTopic(List<String> collectionToTopic) {
     return mapKeys(parseCommon(collectionToTopic), ScopeAndCollection::parse);
