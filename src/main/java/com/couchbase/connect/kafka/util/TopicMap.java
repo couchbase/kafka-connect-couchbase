@@ -30,6 +30,13 @@ public class TopicMap {
     throw new AssertionError("not instantiable");
   }
 
+  public static Map<String, DocumentIdExtractor> parseTopicToDocumentId(
+      List<String> topicToDocumentIdFormat,
+      boolean removeDocumentId
+  ) {
+    return mapValues(parseCommon(topicToDocumentIdFormat), docIdFormat -> new DocumentIdExtractor(docIdFormat, removeDocumentId));
+  }
+
   public static Map<String, Keyspace> parseTopicToCollection(
       List<String> topicToCollection,
       @Nullable String defaultBucket
@@ -46,7 +53,7 @@ public class TopicMap {
     for (String entry : map) {
       String[] components = entry.split("=", -1);
       if (components.length != 2) {
-        throw new IllegalArgumentException("Bad entry: '" + entry + "'. Expected exactly one equals (=) character separating topic and collection.");
+        throw new IllegalArgumentException("Bad entry: '" + entry + "'. Expected exactly one equals (=) character separating key and value.");
       }
       result.put(components[0], components[1]);
     }

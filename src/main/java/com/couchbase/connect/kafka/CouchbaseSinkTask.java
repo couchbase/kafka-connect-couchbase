@@ -71,7 +71,8 @@ public class CouchbaseSinkTask extends SinkTask {
   private Map<String, Keyspace> topicToCollection;
   private KafkaCouchbaseClient client;
   private JsonConverter converter;
-  private DocumentIdExtractor documentIdExtractor;
+  private DocumentIdExtractor defaultDocumentIdExtractor;
+  private Map<String, DocumentIdExtractor> topicToDocumentIdExtractor;
   private SinkHandler sinkHandler;
   private boolean sinkHandlerUsesKvConnections;
   private KafkaRetryHelper retryHelper;
@@ -114,8 +115,9 @@ public class CouchbaseSinkTask extends SinkTask {
 
     String docIdPointer = config.documentId();
     if (docIdPointer != null && !docIdPointer.isEmpty()) {
-      documentIdExtractor = new DocumentIdExtractor(docIdPointer, config.removeDocumentId());
+      defaultDocumentIdExtractor = new DocumentIdExtractor(docIdPointer, config.removeDocumentId());
     }
+    topicToDocumentIdExtractor = TopicMap.parseTopicToDocumentId(config.topicToDocumentId(), config.removeDocumentId());
 
     Class<? extends SinkHandler> sinkHandlerClass = config.sinkHandler();
 
@@ -246,6 +248,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
     byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
     try {
+      DocumentIdExtractor documentIdExtractor = topicToDocumentIdExtractor.getOrDefault(record.topic(), defaultDocumentIdExtractor);
       if (documentIdExtractor != null) {
         return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
       }

@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.config.sink;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
@@ -71,6 +72,34 @@ public interface SinkBehaviorConfig {
    */
   @Default
   List<String> topicToCollection();
+
+  /**
+   * A map of per-topic overrides for the `couchbase.document.id` configuration property.
+   * <p>
+   * Topic and document ID format are joined by an equals sign.
+   * Map entries are delimited by commas.
+   * <p>
+   * For example, if documents from topic "topic1" should be assigned document IDs that match their "id" field,
+   * and documents from topic "topic2" should be assigned documents IDs that match their "identifier" field,
+   * you would write:
+   * "topic1=${/id},topic2=${/identifier}".
+   * <p>
+   * Defaults to an empty map, which means the value of the `couchbase.document.id`
+   * configuration property is applied to documents from all topics.
+   *
+   * @since 4.2.4
+   */
+  @Stability.Volatile
+  @Default
+  List<String> topicToDocumentId();
+
+  @SuppressWarnings("unused")
+  static ConfigDef.Validator topicToDocumentIdValidator() {
+    return validate(
+        (List<String> value) -> TopicMap.parseTopicToDocumentId(value, true),
+        "topic1=${/id},topic2=${/some/other/path},..."
+    );
+  }
 
   @SuppressWarnings("unused")
   static ConfigDef.Validator topicToCollectionValidator() {
