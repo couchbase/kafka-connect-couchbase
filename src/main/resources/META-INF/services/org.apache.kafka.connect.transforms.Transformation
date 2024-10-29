@@ -1,0 +1,2 @@
+com.couchbase.connect.kafka.transform.DropIfNullValue
+com.couchbase.connect.kafka.transform.DeserializeJson
