@@ -248,8 +248,10 @@ See that property's documentation for details.
 The class name of the event filter to use.
 The event filter determines whether a database change event is ignored.
 
-When using a non-default filter, consider also configuring `couchbase.black.hole.topic`.
-See that property's documentation for details.
+As of version 4.2.4, the default filter ignores events from the Couchbase `_system` scope.
+If you are interested in those events too, set this property to `com.couchbase.connect.kafka.filter.AllPassIncludingSystemFilter`.
+
+See also `couchbase.black.hole.topic`.
 
 * Type: class
 * Default: `com.couchbase.connect.kafka.filter.AllPassFilter`
