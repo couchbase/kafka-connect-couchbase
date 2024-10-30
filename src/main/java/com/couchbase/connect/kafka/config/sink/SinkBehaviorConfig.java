@@ -89,7 +89,7 @@ public interface SinkBehaviorConfig {
    *
    * @since 4.2.4
    */
-  @Stability.Volatile
+  @Stability.Uncommitted
   @Default
   List<String> topicToDocumentId();
 

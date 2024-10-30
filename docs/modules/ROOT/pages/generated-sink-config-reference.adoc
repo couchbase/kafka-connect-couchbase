@@ -226,6 +226,27 @@ Defaults to an empty map, with all documents going to the collection specified b
 * Valid Values: topic1=scope.collection,topic2=other-bucket.scope.collection,... If a bucket component contains a dot, escape it by enclosing it in backticks.
 * Importance: medium
 
+[[couchbase.topic.to.document.id]]
+=== `couchbase.topic.to.document.id`
+
+A map of per-topic overrides for the `couchbase.document.id` configuration property.
+
+Topic and document ID format are joined by an equals sign.
+Map entries are delimited by commas.
+
+For example, if documents from topic "topic1" should be assigned document IDs that match their "id" field, and documents from topic "topic2" should be assigned documents IDs that match their "identifier" field, you would write: "topic1=${/id},topic2=${/identifier}".
+
+Defaults to an empty map, which means the value of the `couchbase.document.id` configuration property is applied to documents from all topics.
+
+UNCOMMITTED; this feature may change in a patch release without notice.
+
+* Since: 4.2.4
+
+* Type: list
+* Default: `""`
+* Valid Values: topic1=${/id},topic2=${/some/other/path},...
+* Importance: medium
+
 [[couchbase.sink.handler]]
 === `couchbase.sink.handler`
 
