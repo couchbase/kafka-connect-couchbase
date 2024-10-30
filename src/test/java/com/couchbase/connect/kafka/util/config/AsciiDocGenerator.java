@@ -40,7 +40,11 @@ import static org.apache.kafka.common.config.ConfigDef.convertToString;
 public class AsciiDocGenerator {
 
   public static void main(String[] args) throws IOException {
-    File docParent = new File("docs/modules/ROOT/pages");
+    String docsRepo = System.getenv("KAFKAC_DOCS_REPO");
+    if (docsRepo == null || docsRepo.isEmpty()) {
+      throw new RuntimeException("Missing KAFKAC_DOCS_REPO environment variable. Please clone https://github.com/couchbase/docs-kafka and set that variable to the repository root directory.");
+    }
+    File docParent = new File(docsRepo, "modules/ROOT/pages");
     File sinkFile = new File(docParent, "generated-sink-config-reference.adoc");
     File sourceFile = new File(docParent, "generated-source-config-reference.adoc");
 

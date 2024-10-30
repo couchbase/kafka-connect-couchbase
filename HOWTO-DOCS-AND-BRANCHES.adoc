@@ -13,10 +13,12 @@ The `master` branch is for the latest minor version.
 Patch versions (for example, `2.1.3`) are tagged on the `master` branch (or one of the release branches, in the rare case you need to do a new release on an older minor version).
 
 There's one set of documentation for each minor version.
-The documentation lives in the same repo as the code, and branches along with the code.
+The documentation lives in a separate repository: https://github.com/couchbase/docs-kafka
 
-CAUTION: Changes to the docs are automatically published to `docs.couchbase.com`, including docs in the `master` branch.
-If you're writing docs for an upcoming minor version, you might want to do that in a temporary branch instead of `master`, and/or only commit the changes after the minor version is released.
+The documentation repository uses the same branch strategy.
+
+CAUTION: Changes to the docs are automatically published to `docs.couchbase.com`, including docs in the `main` branch.
+If you're writing docs for an upcoming minor version, you might want to do that in a temporary branch instead of `main`, and/or only commit the changes after the minor version is released.
 
 
 

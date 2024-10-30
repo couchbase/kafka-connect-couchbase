@@ -1,5 +1,0 @@
-name: kafka-connector
-title: Kafka Connector
-version: '4.2'
-nav:
-- modules/ROOT/nav.adoc

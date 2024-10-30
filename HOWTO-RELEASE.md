@@ -50,22 +50,33 @@ When you're satisfied with the test results, it's time to...
 ## Refresh the generated documentation
 
 Some reference documentation is generated from Javadoc.
+
+Before you start, make sure you have cloned the connector documentation repository: https://github.com/couchbase/docs-kafka
+
+Set the `KAFKAC_DOCS_REPO` environment variable to the path to the root directory of that repo.
+
+
 Run this command to regenerate the docs:
 
     mvn clean test-compile exec:java
 
-If any AsciiDoc files are modified as a result, make sure the changes look good and then commit them.
+If any AsciiDoc files in the docs repo are modified as a result, make sure the changes look good and then commit them.
+
+## Update documentation
+
+In the `docs-kafka` repo:
+
+1. Edit `docs/antora.yml` and bump the version number if application.
+2. Verify `compatibility.adoc` is up-to-date.
 
 ## Bump the project version number
 
 1. Edit `pom.xml` and remove the `-SNAPSHOT` suffix from the version string.
 2. Edit `examples/custom-extensions/pom.xml` and update the `kafka-connect-couchbase.version` property.
 3. Edit `README.md` and bump the version numbers if applicable.
-4. Edit `docs/antora.yml` and bump the version number if application.
-5. Verify `compatibility.adoc` is up-to-date.
-6. For major or minor version bumps, review uncommitted API and consider promoting to committed.
-7. Verify the connector metadata `pom.xml` is up-to-date, particularly the `<requirements>` section. 
-8. Commit these changes, with message "Prepare x.y.z release"
+4. For major or minor version bumps, review uncommitted API and consider promoting to committed.
+5. Verify the connector metadata `pom.xml` is up-to-date, particularly the `<requirements>` section. 
+6. Commit these changes, with message "Prepare x.y.z release"
 (where x.y.z is the version you're releasing).
 
 

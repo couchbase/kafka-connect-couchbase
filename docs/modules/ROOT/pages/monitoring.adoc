@@ -1,8 +1,0 @@
-= Monitoring the Connector
-
-[abstract]
-Resources for monitoring the connector's performance.
-
-The Kafka Connect framework exposes basic status information over a REST interface.
-Fine-grained metrics, including the number of processed messages and the rate of processing, are available via JMX.
-For more information, see https://docs.confluent.io/current/connect/managing/monitoring.html[Monitoring Kafka Connect and Connectors] (published by Confluent, also applies to a standard Apache Kafka distribution).
