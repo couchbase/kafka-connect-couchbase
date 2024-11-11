@@ -94,6 +94,10 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
       return false;
     }
 
+    CollectionMetadata collectionMetadata = docEvent.collectionMetadata();
+    metadata.put("collectionName", collectionMetadata.collectionName());
+    metadata.put("scopeName", collectionMetadata.scopeName());
+
     try {
       byte[] value = objectMapper.writeValueAsBytes(metadata);
       if (docEvent.isMutation() && !params.noValue()) {
