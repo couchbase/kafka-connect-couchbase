@@ -25,6 +25,7 @@ import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CollectionMetadata;
+import com.couchbase.connect.kafka.handler.source.CouchbaseHeaderSetter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
@@ -88,6 +89,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private Filter filter;
   private boolean filterIsNoop;
   private SourceHandler sourceHandler;
+  private CouchbaseHeaderSetter headerSetter;
   private int batchSizeMax;
   private boolean connectorNameInOffsets;
   private boolean noValue;
@@ -156,6 +158,8 @@ public class CouchbaseSourceTask extends SourceTask {
 
     sourceHandler = Utils.newInstance(config.sourceHandler());
     sourceHandler.init(unmodifiableProperties);
+
+    headerSetter = new CouchbaseHeaderSetter(config.headerNamePrefix(), config.headers());
 
     blackHoleTopic = Optional.ofNullable(emptyToNull(config.blackHoleTopic().trim()));
     intialOffsetTopic = Optional.ofNullable(emptyToNull(config.initialOffsetTopic().trim()));
@@ -419,6 +423,9 @@ public class CouchbaseSourceTask extends SourceTask {
     if (builder == null) {
       return null;
     }
+
+    headerSetter.setHeaders(builder.headers(), docEvent);
+
     return builder.build(change,
         sourcePartition(docEvent.partition()),
         sourceOffset(change),

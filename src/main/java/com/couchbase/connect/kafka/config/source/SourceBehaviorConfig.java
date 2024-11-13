@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka.config.source;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
+import com.couchbase.connect.kafka.handler.source.CouchbaseHeaderSetter;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
@@ -81,6 +82,57 @@ public interface SourceBehaviorConfig {
    * See that property's documentation for details.
    */
   Class<? extends SourceHandler> sourceHandler();
+
+  /**
+   * Comma-delimited list of Couchbase metadata headers to add to records.
+   * Recognized values:
+   * <p>
+   * - *`bucket`* - Name of the bucket the document came from.
+   * <p>
+   * - *`scope`* - Name of the scope the document came from.
+   * <p>
+   * - *`collection`* - Name of the collection the document came from.
+   * <p>
+   * - *`key`* - The Couchbase document ID.
+   * <p>
+   * - *`qualifiedKey`* - The document's scope, collection, and document ID, delimited by dots.
+   * Example: `myScope.myCollection.myDocumentId`
+   * <p>
+   * - *`cas`* - The document's "compare and swap" value.
+   * <p>
+   * - *`partition`* - The index of the Couchbase partition the document came from.
+   * <p>
+   * - *`partitionUuid`* - Identifies the history branch of the partition the document came from.
+   * <p>
+   * - *`seqno`* - The DCP sequence number of the event.
+   * <p>
+   * - *`rev`* - The revision number of the event.
+   * <p>
+   * - *`expiry`* - The epoch second when the document expires, or null if the document has no expiry (or if the event is a deletion).
+   *
+   * @since 4.2.5
+   */
+  @Stability.Uncommitted
+  @Default
+  List<String> headers();
+
+  static ConfigDef.Validator headersValidator() {
+    return validate((List<String> headers) -> new CouchbaseHeaderSetter("somePrefix", headers), "Zero or more of " + CouchbaseHeaderSetter.validHeaders());
+  }
+
+  /**
+   * The connector prepends this value to header names to prevent collision with
+   * headers set by other parts of the system.
+   * <p>
+   * For example, if `couchbase.headers` is set to `bucket,qualifiedKey`
+   * and `header.name.prefix` is set to `example.`
+   * then records will have headers named `example.bucket` and `example.qualifiedKey`.
+   *
+   * @since 4.2.5
+   */
+  @Stability.Uncommitted
+  @Default("couchbase.")
+  String headerNamePrefix();
 
   /**
    * The class name of the event filter to use.
