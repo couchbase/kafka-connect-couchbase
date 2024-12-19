@@ -22,7 +22,7 @@ import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.kv.CommonDurabilityOptions;
 import com.couchbase.connect.kafka.util.Keyspace;
 import org.apache.kafka.connect.sink.SinkRecord;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -36,8 +36,7 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class SinkHandlerParams {
   private final ReactiveCluster cluster;
-  @Nullable
-  private final ReactiveCollection collection;
+  private final @Nullable ReactiveCollection collection;
   private final Keyspace keyspace;
   private final SinkRecord sinkRecord;
   private final Optional<SinkDocument> document;

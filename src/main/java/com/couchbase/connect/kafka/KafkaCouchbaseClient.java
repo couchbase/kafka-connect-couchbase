@@ -30,7 +30,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.connect.kafka.config.common.CommonConfig;
 import com.couchbase.connect.kafka.util.Keyspace;
 import org.apache.kafka.common.config.ConfigException;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
 import java.nio.file.Paths;
@@ -113,8 +113,7 @@ public class KafkaCouchbaseClient implements Closeable {
     return cluster;
   }
 
-  @Nullable
-  public Bucket bucket() {
+  public @Nullable Bucket bucket() {
     return bucket;
   }
 

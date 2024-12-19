@@ -18,7 +18,7 @@ package com.couchbase.connect.kafka.util;
 
 import com.couchbase.connect.kafka.handler.sink.AnalyticsSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkHandler;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,7 @@ import static java.util.stream.Collectors.joining;
  * always reads from only one bucket, and the sink connector uses Keyspace.
  */
 public class Keyspace {
-  @Nullable private final String bucket;
+  private final @Nullable String bucket;
   private final String scope;
   private final String collection;
   private final String formatted;
@@ -96,8 +96,7 @@ public class Keyspace {
   /**
    * Ensures we don't end up with a SQL injection issue.
    */
-  @Nullable
-  private static String requireNoBackticks(@Nullable String s) {
+  private static @Nullable String requireNoBackticks(@Nullable String s) {
     if (s != null && s.contains("`")) {
       throw new IllegalArgumentException("Keyspace component may not contain a backtick (`), but got: " + s);
     }
@@ -110,8 +109,7 @@ public class Keyspace {
    * (like AnalyticsSourceHandler does), AND the user does not specify
    * a value for the `couchbase.bucket` config property.
    */
-  @Nullable
-  public String getBucket() {
+  public @Nullable String getBucket() {
     return bucket;
   }
 

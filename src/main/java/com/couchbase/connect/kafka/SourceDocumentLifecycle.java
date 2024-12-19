@@ -23,9 +23,9 @@ import com.couchbase.connect.kafka.config.common.LoggingConfig;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceRecord;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.util.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;

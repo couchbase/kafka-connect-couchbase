@@ -16,7 +16,7 @@
 
 package com.couchbase.connect.kafka.util;
 
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;

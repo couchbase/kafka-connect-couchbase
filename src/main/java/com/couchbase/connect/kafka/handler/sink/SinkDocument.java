@@ -16,7 +16,7 @@
 
 package com.couchbase.connect.kafka.handler.sink;
 
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -27,7 +27,7 @@ import static java.util.Objects.requireNonNull;
  * derived from fields of the document.
  */
 public class SinkDocument {
-  @Nullable private final String id;
+  private final @Nullable String id;
   private final byte[] content;
 
   public SinkDocument(@Nullable String id, byte[] content) {
