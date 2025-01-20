@@ -18,6 +18,9 @@ package com.couchbase.connect.kafka.handler.source;
 
 import java.util.Map;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.source.SourceRecord;
+
 /**
  * Primary extension point for customizing how the Source Connector publishes messages to Kafka.
  */
@@ -29,6 +32,18 @@ public interface SourceHandler {
    */
   default void init(Map<String, String> configProperties) {
   }
+
+  /**
+   * Function called as acknowledgement of a SourceRecord being published to a Kafka topic, propagated from Kafka Connect SourceTask.commitRecord().
+   * SourceHandlers are not required to implement this function, by default it is a no-op.
+   * 
+   * @param sourceRecord {@link SourceRecord} that was successfully sent via the producer or filtered by a transformation
+   * @param recordMetadata {@link RecordMetadata} record metadata returned from the broker, or null if the record was filtered
+   * @param isBlackHole boolean indicating whether the topic is a black hole topic (ignored events) [true] or regular topic [false]
+   */
+  default void recordCommited(SourceRecord sourceRecord, RecordMetadata recordMetadata, boolean isBlackHole) {
+      
+  } 
 
   /**
    * Translates a DocumentEvent into a SourceRecord for publication to a Kafka topic.
