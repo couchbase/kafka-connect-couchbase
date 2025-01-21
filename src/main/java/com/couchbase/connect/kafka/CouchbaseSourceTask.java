@@ -312,11 +312,10 @@ public class CouchbaseSourceTask extends SourceTask {
       CouchbaseSourceRecord couchbaseRecord = (CouchbaseSourceRecord) record;
       if (isSourceOffsetUpdate(couchbaseRecord)) {
         lifecycle.logSourceOffsetUpdateCommittedToBlackHoleTopic(couchbaseRecord, metadata);
-        sourceHandler.recordCommited(record, metadata, true);
       } else {
         lifecycle.logCommittedToKafkaTopic(couchbaseRecord, metadata);
-        sourceHandler.recordCommited(record, metadata, false);
       }
+      sourceHandler.recordCommited(record, metadata);
     } else {
       LOGGER.warn("Committed a record we didn't create? Record key {}", record.key());
     }
