@@ -318,6 +318,8 @@ public class CouchbaseSourceTask extends SourceTask {
     } else {
       LOGGER.warn("Committed a record we didn't create? Record key {}", record.key());
     }
+
+    sourceHandler.onRecordCommitted(record, metadata);
   }
 
   private void checkErrorQueue() throws ConnectException {

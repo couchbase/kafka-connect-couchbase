@@ -16,6 +16,13 @@
 
 package com.couchbase.connect.kafka.handler.source;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.connect.kafka.config.common.LoggingConfig;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTask;
+import org.jspecify.annotations.Nullable;
+
 import java.util.Map;
 
 /**
@@ -47,4 +54,20 @@ public interface SourceHandler {
    * @return (nullable) The record to publish to Kafka, or {@code null} to skip this event.
    */
   SourceRecordBuilder handle(SourceHandlerParams params);
+
+  /**
+   * Called whenever the Kafka Connect framework calls {@link SourceTask#commitRecord(SourceRecord, RecordMetadata)}.
+   * <p>
+   * Subclasses may override this method to do something special with committed record metadata
+   * beyond the usual document lifecycle logging.
+   * <p>
+   * This method should return quickly.
+   * <p>
+   * The default implementation does nothing, which is always okay.
+   *
+   * @see LoggingConfig#logDocumentLifecycle()
+   */
+  @Stability.Volatile
+  default void onRecordCommitted(SourceRecord record, @Nullable RecordMetadata metadata) {
+  }
 }
