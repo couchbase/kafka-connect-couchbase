@@ -28,6 +28,7 @@ import com.couchbase.connect.kafka.handler.source.CollectionMetadata;
 import com.couchbase.connect.kafka.handler.source.CouchbaseHeaderSetter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseSourceRecord;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
+import com.couchbase.connect.kafka.handler.source.MultiSourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
@@ -48,6 +49,7 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.source.SourceTaskContext;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +74,10 @@ import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.connect.kafka.CouchbaseReader.isSyntheticInitialOffsetTombstone;
 import static com.couchbase.connect.kafka.util.JmxHelper.newJmxMeterRegistry;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableMap;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class CouchbaseSourceTask extends SourceTask {
@@ -88,7 +93,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private String bucket;
   private Filter filter;
   private boolean filterIsNoop;
-  private SourceHandler sourceHandler;
+  private MultiSourceHandler sourceHandler;
   private CouchbaseHeaderSetter headerSetter;
   private int batchSizeMax;
   private boolean connectorNameInOffsets;
@@ -156,7 +161,7 @@ public class CouchbaseSourceTask extends SourceTask {
     filter.init(unmodifiableProperties);
     filterIsNoop = filter.getClass().equals(AllPassFilter.class); // not just instanceof, because user could do something silly like extend AllPassFilter.
 
-    sourceHandler = Utils.newInstance(config.sourceHandler());
+    sourceHandler = createSourceHandler(config);
     sourceHandler.init(unmodifiableProperties);
 
     headerSetter = new CouchbaseHeaderSetter(config.headerNamePrefix(), config.headers());
@@ -369,16 +374,16 @@ public class CouchbaseSourceTask extends SourceTask {
         continue;
       }
 
-      SourceRecord sourceRecord = convertToSourceRecord(e, docEvent);
-      if (sourceRecord == null) {
+      List<CouchbaseSourceRecord> sourceRecords = convertToSourceRecords(e, docEvent);
+      if (sourceRecords.isEmpty()) {
         lifecycle.logSkippedBecauseHandlerSaysIgnore(e);
         dropped++;
         blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e)));
         continue;
       }
 
-      lifecycle.logConvertedToKafkaRecord(e, sourceRecord);
-      results.add(sourceRecord);
+      sourceRecords.forEach(it -> lifecycle.logConvertedToKafkaRecord(e, it));
+      results.addAll(sourceRecords);
     }
 
     int published = results.size() - initialOffsets;
@@ -413,25 +418,37 @@ public class CouchbaseSourceTask extends SourceTask {
         );
   }
 
-  private CouchbaseSourceRecord convertToSourceRecord(DocumentChange change, DocumentEvent docEvent) {
+  private List<CouchbaseSourceRecord> convertToSourceRecords(DocumentChange change, DocumentEvent docEvent) {
     String topic = collectionToTopic.getOrDefault(
         scopeAndCollection(docEvent),
         getDefaultTopic(docEvent)
     );
 
-    SourceRecordBuilder builder = handlerTimer.record(() ->
-        sourceHandler.handle(new SourceHandlerParams(docEvent, topic, noValue))
+    List<SourceRecordBuilder> builders = handlerTimer.record(() ->
+        sourceHandler.convertToSourceRecords(new SourceHandlerParams(docEvent, topic, noValue))
     );
-    if (builder == null) {
-      return null;
+
+    requireNonNull(builders, "The source handler's convertToSourceRecords() method returned null instead of a List; this is forbidden.");
+
+    if (builders.isEmpty()) {
+      return emptyList();
     }
 
-    headerSetter.setHeaders(builder.headers(), docEvent);
+    List<CouchbaseSourceRecord> result = new ArrayList<>(builders.size());
+    for (SourceRecordBuilder builder : builders) {
+      requireNonNull(builder, "The source handler's convertToSourceRecords() method returned a list containing a null item; this is forbidden.");
 
-    return builder.build(change,
-        sourcePartition(docEvent.partition()),
-        sourceOffset(change),
-        topic);
+      headerSetter.setHeaders(builder.headers(), docEvent);
+      CouchbaseSourceRecord record = builder.build(
+          change,
+          sourcePartition(docEvent.partition()),
+          sourceOffset(change),
+          topic
+      );
+      result.add(record);
+    }
+
+    return result;
   }
 
   @Override
@@ -526,6 +543,43 @@ public class CouchbaseSourceTask extends SourceTask {
   private static ScopeAndCollection scopeAndCollection(DocumentEvent docEvent) {
     CollectionMetadata md = docEvent.collectionMetadata();
     return new ScopeAndCollection(md.scopeName(), md.collectionName());
+  }
+
+  @NullMarked
+  private static MultiSourceHandler createSourceHandler(CouchbaseSourceTaskConfig config) {
+    Object handlerObject = Utils.newInstance(config.sourceHandler());
+
+    if (handlerObject instanceof MultiSourceHandler) {
+      return (MultiSourceHandler) handlerObject;
+    }
+
+    if (!(handlerObject instanceof SourceHandler)) {
+      String configKey = ConfigHelper.keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::sourceHandler);
+      throw new ConfigException(
+          "Invalid value for connector config property '" + configKey + "' ;" +
+          " Source handler must be an instance of " + SourceHandler.class.getName()
+              + " or " + MultiSourceHandler.class.getName()
+              + ", but got: " + handlerObject.getClass().getName());
+    }
+
+    SourceHandler sourceHandler = (SourceHandler) handlerObject;
+    return new MultiSourceHandler() {
+      @Override
+      public void init(Map<String, String> configProperties) {
+        sourceHandler.init(configProperties);
+      }
+
+      @Override
+      public List<SourceRecordBuilder> convertToSourceRecords(SourceHandlerParams params) {
+        SourceRecordBuilder result = sourceHandler.handle(params);
+        return result == null ? emptyList() : singletonList(result);
+      }
+
+      @Override
+      public void onRecordCommitted(SourceRecord record, @Nullable RecordMetadata metadata) {
+        sourceHandler.onRecordCommitted(record, metadata);
+      }
+    };
   }
 
 }

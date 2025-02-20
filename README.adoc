@@ -23,6 +23,8 @@ The example project in `examples/custom-extensions` shows how to extend the sour
 Pre-built distributions are available from the download link above.
 The following instructions are intended for developers working on the connector.
 
+JDK 9 or later is required when building the connector.
+
 . Clone this GitHub repository.
 . Run `./mvnw package` in the project's root directory to generate the connector archive.
 . Look for `couchbase-kafka-connect-couchbase-<version>.zip` under the `target` directory.

@@ -73,6 +73,9 @@ public interface SourceBehaviorConfig {
    * The fully-qualified class name of the source handler to use.
    * The source handler determines how the Couchbase document is converted into a Kafka record.
    * <p>
+   * The class must implement either `com.couchbase.connect.kafka.handler.source.SourceHandler`
+   * or `com.couchbase.connect.kafka.handler.source.MultiSourceHandler`.
+   * <p>
    * To publish JSON messages identical to the Couchbase documents, use
    * `com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler`
    * and set `value.converter` to `org.apache.kafka.connect.converters.ByteArrayConverter`.
@@ -81,7 +84,7 @@ public interface SourceBehaviorConfig {
    * consider also configuring `couchbase.black.hole.topic`.
    * See that property's documentation for details.
    */
-  Class<? extends SourceHandler> sourceHandler();
+  Class<?> sourceHandler();
 
   /**
    * Comma-delimited list of Couchbase metadata headers to add to records.

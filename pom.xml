@@ -68,7 +68,6 @@
     </developers>
 
     <properties>
-        <java-compat.version>1.8</java-compat.version>
         <kafka.version>2.8.2</kafka.version>
         <dcp-client.version>0.52.0</dcp-client.version>
         <java-client.version>3.7.5</java-client.version>
@@ -210,8 +209,7 @@
                 <version>3.10.1</version>
                 <inherited>true</inherited>
                 <configuration>
-                    <source>${java-compat.version}</source>
-                    <target>${java-compat.version}</target>
+                    <release>8</release>
                     <annotationProcessorPaths>
                         <!-- Save Javadoc for use in Kafka config definitions. -->
                         <annotationProcessorPath>
