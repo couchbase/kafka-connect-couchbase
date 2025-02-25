@@ -36,6 +36,7 @@ import com.couchbase.connect.kafka.util.ConnectHelper;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
+import com.couchbase.connect.kafka.util.Watchdog;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -107,6 +108,8 @@ public class CouchbaseSourceTask extends SourceTask {
   private Timer timeBetweenPollsTimer;
   private NanoTimestamp endOfLastPoll;
 
+  private final Watchdog watchdog = new Watchdog();
+
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<String> blackHoleTopic;
   private Optional<String> intialOffsetTopic;
@@ -132,6 +135,8 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @Override
   public void start(Map<String, String> properties) {
+    watchdog.start();
+
     this.connectorName = properties.get("name");
 
     CouchbaseSourceTaskConfig config;
@@ -197,6 +202,7 @@ public class CouchbaseSourceTask extends SourceTask {
     couchbaseReader.start();
 
     endOfLastPoll = NanoTimestamp.now();
+    watchdog.enterState("started");
   }
 
   private static MeterRegistry newMeterRegistry(String connectorName, CouchbaseSourceTaskConfig config) {
@@ -252,6 +258,7 @@ public class CouchbaseSourceTask extends SourceTask {
   @Override
   public List<SourceRecord> poll() throws InterruptedException {
     timeBetweenPollsTimer.record(endOfLastPoll.elapsed());
+    watchdog.enterState("polling");
 
     try {
       // If a fatal error occurred in another thread, propagate it.
@@ -263,14 +270,17 @@ public class CouchbaseSourceTask extends SourceTask {
       DocumentChange firstEvent = queue.poll(1, SECONDS);
       if (firstEvent == null) {
         LOGGER.debug("Poll returns 0 results");
+        watchdog.enterState("waiting for next poll (after 0 records)");
         return null; // Looks weird, but caller expects it.
       }
 
       List<DocumentChange> events = new ArrayList<>();
       try {
+        watchdog.enterState("draining queue");
         events.add(firstEvent);
         queue.drainTo(events, batchSizeMax - 1);
 
+        watchdog.enterState("converting to source records (" + events.size() + " events)");
         ConversionResult results = convertToSourceRecords(events);
 
         filteredCounter.increment(results.dropped);
@@ -279,11 +289,16 @@ public class CouchbaseSourceTask extends SourceTask {
         } else {
           LOGGER.info("Poll returns {} result(s) (filtered out {})", results.published, results.dropped);
         }
+
+        watchdog.enterState("waiting for next poll (after " + results.records.size() + " records)");
         return results.records;
 
       } finally {
         events.forEach(DocumentChange::flowControlAck);
       }
+    } catch (Throwable t) {
+      watchdog.enterState("polling reported error: " + t);
+      throw t;
     } finally {
       endOfLastPoll = NanoTimestamp.now();
     }
@@ -454,6 +469,8 @@ public class CouchbaseSourceTask extends SourceTask {
   @Override
   public void stop() {
     taskLifecycle.logTaskStopped();
+
+    this.watchdog.stop();
 
     if (this.meterRegistry != null) {
       this.meterRegistry.close();
