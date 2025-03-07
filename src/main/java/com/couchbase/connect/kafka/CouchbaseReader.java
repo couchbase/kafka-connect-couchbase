@@ -42,12 +42,14 @@ import com.couchbase.client.dcp.state.PartitionState;
 import com.couchbase.client.dcp.transport.netty.ChannelFlowController;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
+import com.couchbase.connect.kafka.util.FirstCallTracker;
 import com.couchbase.connect.kafka.util.Version;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -76,6 +79,9 @@ public class CouchbaseReader extends Thread {
   private final BlockingQueue<DocumentChange> queue;
   private final BlockingQueue<Throwable> errorQueue;
   private final SourceTaskLifecycle taskLifecycle;
+  private final CountDownLatch connectionAttemptComplete = new CountDownLatch(1);
+  private final Duration bootstrapTimeout;
+  private final FirstCallTracker shutdown = new FirstCallTracker();
 
   /**
    * As a workaround for JDCP-237 and the fact that the DCP client's `connect()` method
@@ -92,6 +98,7 @@ public class CouchbaseReader extends Thread {
   public CouchbaseReader(
       final CouchbaseSourceTaskConfig config,
       final String connectorName,
+      final String taskNumber,
       final BlockingQueue<DocumentChange> queue,
       final BlockingQueue<Throwable> errorQueue,
       final List<Integer> partitions,
@@ -110,6 +117,7 @@ public class CouchbaseReader extends Thread {
     this.errorQueue = requireNonNull(errorQueue);
     this.emitSyntheticInitialOffsets = emitSyntheticInitialOffsets;
     this.taskLifecycle = requireNonNull(taskLifecycle);
+    this.bootstrapTimeout = config.bootstrapTimeout();
 
     Authenticator authenticator = isNullOrEmpty(config.clientCertificatePath())
         ? new PasswordAuthenticator(new StaticCredentialsProvider(config.username(), config.password().value()))
@@ -132,7 +140,7 @@ public class CouchbaseReader extends Thread {
     };
 
     Client.Builder builder = Client.builder()
-        .userAgent("kafka-connector", Version.getVersion(), connectorName)
+        .userAgent("kafka-connector", Version.getVersion(), connectorName, "task-" + taskNumber, "taskUuid=" + taskLifecycle.taskUuid())
         .bootstrapTimeout(config.bootstrapTimeout())
         .socketConnectTimeout(config.bootstrapTimeout().toMillis())
         .seedNodes(config.seedNodes())
@@ -218,6 +226,9 @@ public class CouchbaseReader extends Thread {
 
     } catch (Throwable t) {
       errorQueue.offer(t);
+
+    } finally {
+      connectionAttemptComplete.countDown();
     }
   }
 
@@ -311,10 +322,55 @@ public class CouchbaseReader extends Thread {
     }).blockLast();
   }
 
+  /**
+   * There's no good way to interrupt an in-progress DCP client connection request,
+   * so settle for waiting for it to succeed or fail.
+   *
+   * @return true if the attempt completed, or false if the attempt did not complete within the timeout.
+   */
+  private boolean waitForConnectionSuccessOrFailure() {
+    try {
+      Duration safeguardTimeout = bootstrapTimeout.multipliedBy(2).plus(Duration.ofSeconds(30));
+      boolean attemptCompletedBeforeTimeout = connectionAttemptComplete.await(safeguardTimeout.toMillis(), TimeUnit.MILLISECONDS);
+      if (!attemptCompletedBeforeTimeout) {
+        LOGGER.error("Connection attempt did not succeed or fail within safeguard timeout of {}; taskUuid={}", safeguardTimeout, taskLifecycle.taskUuid());
+      }
+      return attemptCompletedBeforeTimeout;
+
+    } catch (InterruptedException e) {
+      LOGGER.error("Interrupted while waiting for connection attempt completion; taskUuid={}", taskLifecycle.taskUuid());
+      return false;
+    }
+  }
+
   public void shutdown() {
-    if (connected) {
-      connected = false;
+    if (shutdown.alreadyCalled()) {
+      LOGGER.info("Ignoring redundant shutdown request; taskUuid={}", taskLifecycle.taskUuid());
+      return;
+    }
+
+    if (connectionAttemptComplete.getCount() != 0) {
+      LOGGER.info("CouchbaseReader was asked to shut down before it had finished connecting; deferring until connection succeeds or fails. taskUuid={}", taskLifecycle.taskUuid());
+    }
+
+    boolean completedWithinTimeout = waitForConnectionSuccessOrFailure();
+
+    if (!connected && completedWithinTimeout) {
+      LOGGER.info("Skipping DCP client disconnect because the connection attempt was unsuccessful. taskUuid={}", taskLifecycle.taskUuid());
+      return;
+    }
+
+    if (completedWithinTimeout) {
+      LOGGER.info("Disconnecting DCP client. taskUuid={}", taskLifecycle.taskUuid());
+    } else {
+      LOGGER.error("DCP client connection attempt did not succeed or fail within safeguard timeout. Making a last ditch effort to disconnect it. taskUuid={}", taskLifecycle.taskUuid());
+    }
+
+    try {
       client.disconnect().block();
+    } catch (Exception e) {
+      LOGGER.error("Failed to disconnect DCP client. taskUuid={}", taskLifecycle.taskUuid(), e);
+      throw e;
     }
   }
 }

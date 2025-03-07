@@ -28,26 +28,41 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbCollections.transformValues;
 import static com.couchbase.connect.kafka.util.ConnectHelper.getConnectorContextFromLoggingContext;
 import static java.util.Collections.emptyMap;
+import static java.util.Objects.requireNonNull;
 
 public class SourceTaskLifecycle {
 
   public enum Milestone {
     TASK_INITIALIZED,
     TASK_STARTED,
-    TASK_STOPPED,
+    TASK_STOPPED, // stop requested; framework called SourceConnector.stop()
+    TASK_CLEANUP_COMPLETE,
     SOURCE_OFFSETS_READ,
     MISSING_SOURCE_OFFSETS_SET_TO_NOW,
-    OFFSET_COMMIT_HOOK,
-  }
+    OFFSET_COMMIT_HOOK(LogLevel.DEBUG),
+    ;
 
-  private final LogLevel logLevel = LogLevel.INFO;
+    private final LogLevel logLevel;
+
+    Milestone() {
+      this(LogLevel.INFO);
+    }
+
+    Milestone(LogLevel logLevel) {
+      this.logLevel = requireNonNull(logLevel);
+    }
+  }
 
   private static final Logger log = LoggerFactory.getLogger(SourceTaskLifecycle.class);
 
   private final String uuid = UUID.randomUUID().toString();
 
+  public String taskUuid() {
+    return uuid;
+  }
 
   public void logTaskInitialized(String connectorName) {
     logMilestone(Milestone.TASK_INITIALIZED, mapOf("connectorName", connectorName));
@@ -67,7 +82,7 @@ public class SourceTaskLifecycle {
   public void logSourceOffsetsRead(Map<Integer, SourceOffset> sourceOffsets, PartitionSet partitionsWithoutSavedOffsets) {
     Map<String, Object> details = new LinkedHashMap<>();
     details.put("partitionsWithNoSavedOffset", partitionsWithoutSavedOffsets.format());
-    details.put("sourceOffsets", new TreeMap<>(sourceOffsets));
+    details.put("sourceOffsets", new TreeMap<>(transformValues(sourceOffsets, SourceOffset::toString)));
     logMilestone(Milestone.SOURCE_OFFSETS_READ, details);
   }
 
@@ -81,6 +96,10 @@ public class SourceTaskLifecycle {
     logMilestone(Milestone.TASK_STOPPED, emptyMap());
   }
 
+  public void logTaskCleanupComplete() {
+    logMilestone(Milestone.TASK_CLEANUP_COMPLETE, emptyMap());
+  }
+
   private void logMilestone(SourceTaskLifecycle.Milestone milestone, Map<String, Object> milestoneDetails) {
     if (enabled()) {
       LinkedHashMap<String, Object> message = new LinkedHashMap<>();
@@ -88,15 +107,15 @@ public class SourceTaskLifecycle {
       message.put("taskUuid", uuid);
       getConnectorContextFromLoggingContext().ifPresent(it -> message.put("context", it));
       message.putAll(milestoneDetails);
-      doLog(message);
+      doLog(milestone.logLevel, message);
     }
   }
 
-  private void doLog(Object message) {
+  private void doLog(LogLevel level, Object message) {
     try {
-      logLevel.log(log, Mapper.encodeAsString(message));
+      level.log(log, "{}", Mapper.encodeAsString(message));
     } catch (Exception e) {
-      logLevel.log(log, message.toString());
+      level.log(log, "{}", message);
     }
   }
 

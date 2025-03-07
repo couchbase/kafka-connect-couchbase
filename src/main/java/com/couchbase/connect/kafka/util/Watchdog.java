@@ -45,13 +45,18 @@ public final class Watchdog {
     }
   }
 
+  private final String taskUuid;
   private ScheduledExecutorService executor;
   private volatile State lastObservedState = new State("stopped");
   private volatile State currentState = new State("initial");
 
+  public Watchdog(String taskUuid) {
+    this.taskUuid = requireNonNull(taskUuid);
+  }
+
   public void enterState(String s) {
     this.currentState = new State(s);
-    log.debug("Transitioned to state: {}", s);
+    log.debug("Transitioned to state: {}; taskUuid={}", s, taskUuid);
   }
 
   public synchronized void start() {
@@ -68,7 +73,7 @@ public final class Watchdog {
     executor.scheduleWithFixedDelay(() -> {
       if (currentState == lastObservedState) {
         Duration elapsed = lastObservedState.startTime.elapsed();
-        log.warn("Connector has been in same state ({}) for {}", lastObservedState.name, elapsed);
+        log.warn("SourceTask has been in same state ({}) for {}; taskUuid={} ", lastObservedState.name, elapsed, taskUuid);
       }
       lastObservedState = currentState;
     }, 10, 10, SECONDS);

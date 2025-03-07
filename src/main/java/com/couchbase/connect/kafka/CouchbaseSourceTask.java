@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka;
 
+import com.couchbase.client.core.env.CouchbaseThreadFactory;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.dcp.core.logging.RedactionLevel;
@@ -33,6 +34,7 @@ import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
 import com.couchbase.connect.kafka.util.ConnectHelper;
+import com.couchbase.connect.kafka.util.FirstCallTracker;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
@@ -69,7 +71,9 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 
 import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
@@ -79,14 +83,17 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class CouchbaseSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSourceTask.class);
   private static final long STOP_TIMEOUT_MILLIS = SECONDS.toMillis(10);
 
+  private static final ThreadFactory cleanupThreadFactory = new CouchbaseThreadFactory("cb-source-task-cleanup-");
+
   private String connectorName;
-  private CouchbaseReader couchbaseReader;
+  private volatile CouchbaseReader couchbaseReader; // volatile because non-final and referenced by cleanup thread
   private BlockingQueue<DocumentChange> queue;
   private BlockingQueue<Throwable> errorQueue;
   private String defaultTopicTemplate;
@@ -101,20 +108,30 @@ public class CouchbaseSourceTask extends SourceTask {
   private boolean noValue;
   private SourceDocumentLifecycle lifecycle;
 
-  private MeterRegistry meterRegistry;
+  private volatile MeterRegistry meterRegistry; // volatile because non-final and referenced by cleanup thread
   private Counter filteredCounter;
   private Timer handlerTimer;
   private Timer filterTimer;
   private Timer timeBetweenPollsTimer;
   private NanoTimestamp endOfLastPoll;
 
-  private final Watchdog watchdog = new Watchdog();
+  // Guard against race condition where the framework calls stop() before start() is complete,
+  // which could happen prior to the fix for https://issues.apache.org/jira/browse/KAFKA-10792
+  private final CountDownLatch startupComplete = new CountDownLatch(1);
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<String> blackHoleTopic;
   private Optional<String> intialOffsetTopic;
 
   private final SourceTaskLifecycle taskLifecycle = new SourceTaskLifecycle();
+  private final Watchdog watchdog = new Watchdog(taskLifecycle.taskUuid());
+
+  private final FirstCallTracker start = new FirstCallTracker();
+  private final FirstCallTracker cleanup = new FirstCallTracker();
+
+  private String taskUuid() {
+    return taskLifecycle.taskUuid();
+  }
 
   @Override
   public String version() {
@@ -135,78 +152,94 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @Override
   public void start(Map<String, String> properties) {
-    watchdog.start();
-
-    this.connectorName = properties.get("name");
-
-    CouchbaseSourceTaskConfig config;
-    try {
-      config = ConfigHelper.parse(CouchbaseSourceTaskConfig.class, properties);
-      if (isNullOrEmpty(connectorName)) {
-        throw new ConfigException("Connector must have a non-blank 'name' config property.");
-      }
-    } catch (ConfigException e) {
-      throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
+    if (start.alreadyCalled()) {
+      throw new IllegalStateException("This source task's start() method has already been called; this violates an important assumption about how the Kafka Connect framework manages the SourceTask lifecycle. taskUuid=" + taskUuid());
     }
 
-    this.meterRegistry = newMeterRegistry(connectorName, config);
-    this.handlerTimer = meterRegistry.timer("handler");
-    this.filterTimer = meterRegistry.timer("filter");
-    this.filteredCounter = meterRegistry.counter("filtered.out");
-    this.timeBetweenPollsTimer = meterRegistry.timer("time.between.polls");
+    try {
+      watchdog.start();
 
-    LogRedaction.setRedactionLevel(config.logRedaction());
-    RedactionLevel.set(toDcp(config.logRedaction()));
+      this.connectorName = properties.get("name");
 
-    Map<String, String> unmodifiableProperties = unmodifiableMap(properties);
+      CouchbaseSourceTaskConfig config;
+      try {
+        config = ConfigHelper.parse(CouchbaseSourceTaskConfig.class, properties);
+        if (isNullOrEmpty(connectorName)) {
+          throw new ConfigException("Connector must have a non-blank 'name' config property.");
+        }
+      } catch (ConfigException e) {
+        throw new ConnectException("Couldn't start CouchbaseSourceTask due to configuration error", e);
+      }
 
-    lifecycle = SourceDocumentLifecycle.create(config);
+      String taskNumber = ConnectHelper.getTaskIdFromLoggingContext().orElse(config.maybeTaskId());
 
-    filter = Utils.newInstance(config.eventFilter());
-    filter.init(unmodifiableProperties);
-    filterIsNoop = filter.getClass().equals(AllPassFilter.class); // not just instanceof, because user could do something silly like extend AllPassFilter.
+      this.meterRegistry = newMeterRegistry(connectorName, taskNumber, config);
+      this.handlerTimer = meterRegistry.timer("handler");
+      this.filterTimer = meterRegistry.timer("filter");
+      this.filteredCounter = meterRegistry.counter("filtered.out");
+      this.timeBetweenPollsTimer = meterRegistry.timer("time.between.polls");
 
-    sourceHandler = createSourceHandler(config);
-    sourceHandler.init(unmodifiableProperties);
+      LogRedaction.setRedactionLevel(config.logRedaction());
+      RedactionLevel.set(toDcp(config.logRedaction()));
 
-    headerSetter = new CouchbaseHeaderSetter(config.headerNamePrefix(), config.headers());
+      Map<String, String> unmodifiableProperties = unmodifiableMap(properties);
 
-    blackHoleTopic = Optional.ofNullable(emptyToNull(config.blackHoleTopic().trim()));
-    intialOffsetTopic = Optional.ofNullable(emptyToNull(config.initialOffsetTopic().trim()));
+      lifecycle = SourceDocumentLifecycle.create(config);
 
-    defaultTopicTemplate = config.topic();
-    collectionToTopic = TopicMap.parseCollectionToTopic(config.collectionToTopic());
-    bucket = config.bucket();
-    //noinspection deprecation
-    connectorNameInOffsets = config.connectorNameInOffsets();
-    batchSizeMax = config.batchSizeMax();
-    noValue = config.noValue();
+      filter = Utils.newInstance(config.eventFilter());
+      filter.init(unmodifiableProperties);
+      filterIsNoop = filter.getClass().equals(AllPassFilter.class); // not just instanceof, because user could do something silly like extend AllPassFilter.
 
-    PartitionSet partitionSet = PartitionSet.parse(config.partitions());
-    taskLifecycle.logTaskStarted(connectorName, partitionSet);
+      sourceHandler = createSourceHandler(config);
+      sourceHandler.init(unmodifiableProperties);
 
-    List<Integer> partitions = partitionSet.toList();
-    Map<Integer, SourceOffset> partitionToSavedSeqno = readSourceOffsets(partitions);
+      headerSetter = new CouchbaseHeaderSetter(config.headerNamePrefix(), config.headers());
 
-    Set<Integer> partitionsWithoutSavedOffsets = new HashSet<>(partitions);
-    partitionsWithoutSavedOffsets.removeAll(partitionToSavedSeqno.keySet());
+      blackHoleTopic = Optional.ofNullable(emptyToNull(config.blackHoleTopic().trim()));
+      intialOffsetTopic = Optional.ofNullable(emptyToNull(config.initialOffsetTopic().trim()));
 
-    taskLifecycle.logSourceOffsetsRead(
-        partitionToSavedSeqno,
-        PartitionSet.from(partitionsWithoutSavedOffsets)
-    );
+      defaultTopicTemplate = config.topic();
+      collectionToTopic = TopicMap.parseCollectionToTopic(config.collectionToTopic());
+      bucket = config.bucket();
+      //noinspection deprecation
+      connectorNameInOffsets = config.connectorNameInOffsets();
+      batchSizeMax = config.batchSizeMax();
+      noValue = config.noValue();
 
-    queue = new LinkedBlockingQueue<>();
-    errorQueue = new LinkedBlockingQueue<>(1);
-    couchbaseReader = new CouchbaseReader(config, connectorName, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry, intialOffsetTopic.isPresent(), taskLifecycle);
-    couchbaseReader.start();
+      PartitionSet partitionSet = PartitionSet.parse(config.partitions());
+      taskLifecycle.logTaskStarted(connectorName, partitionSet);
 
-    endOfLastPoll = NanoTimestamp.now();
-    watchdog.enterState("started");
+      List<Integer> partitions = partitionSet.toList();
+      Map<Integer, SourceOffset> partitionToSavedSeqno = readSourceOffsets(partitions);
+
+      Set<Integer> partitionsWithoutSavedOffsets = new HashSet<>(partitions);
+      partitionsWithoutSavedOffsets.removeAll(partitionToSavedSeqno.keySet());
+
+      taskLifecycle.logSourceOffsetsRead(
+          partitionToSavedSeqno,
+          PartitionSet.from(partitionsWithoutSavedOffsets)
+      );
+
+      queue = new LinkedBlockingQueue<>();
+      errorQueue = new LinkedBlockingQueue<>(1);
+      couchbaseReader = new CouchbaseReader(config, connectorName, taskNumber, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry, intialOffsetTopic.isPresent(), taskLifecycle);
+      couchbaseReader.start();
+
+      endOfLastPoll = NanoTimestamp.now();
+      watchdog.enterState("started");
+
+    } catch (Exception e) {
+      LOGGER.info("Scheduling cleanup because task failed to start. taskUuid={}", taskUuid(), e);
+      startupComplete.countDown(); // just so cleanup() doesn't complain about stop() being called before start() finishes.
+      cleanup();
+      throw e;
+
+    } finally {
+      startupComplete.countDown();
+    }
   }
 
-  private static MeterRegistry newMeterRegistry(String connectorName, CouchbaseSourceTaskConfig config) {
-    String taskId = ConnectHelper.getTaskIdFromLoggingContext().orElse(config.maybeTaskId());
+  private static MeterRegistry newMeterRegistry(String connectorName, String taskId, CouchbaseSourceTaskConfig config) {
     LinkedHashMap<String, String> commonKeyProperties = new LinkedHashMap<>();
     commonKeyProperties.put("connector", ObjectName.quote(connectorName));
     commonKeyProperties.put("task", taskId);
@@ -256,6 +289,13 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   @Override
+  public void stop() {
+    taskLifecycle.logTaskStopped();
+    LOGGER.info("Scheduling cleanup because task was asked to stop. taskUuid={}", taskUuid());
+    cleanup();
+  }
+
+  @Override
   public List<SourceRecord> poll() throws InterruptedException {
     timeBetweenPollsTimer.record(endOfLastPoll.elapsed());
     watchdog.enterState("polling");
@@ -269,7 +309,7 @@ public class CouchbaseSourceTask extends SourceTask {
       // to pause the connector.
       DocumentChange firstEvent = queue.poll(1, SECONDS);
       if (firstEvent == null) {
-        LOGGER.debug("Poll returns 0 results");
+        LOGGER.debug("Poll returns 0 results; taskUuid={}", taskUuid());
         watchdog.enterState("waiting for next poll (after 0 records)");
         return null; // Looks weird, but caller expects it.
       }
@@ -285,9 +325,9 @@ public class CouchbaseSourceTask extends SourceTask {
 
         filteredCounter.increment(results.dropped);
         if (results.synthetic > 0) {
-          LOGGER.info("Poll returns {} result(s) ({} synthetic; filtered out {})", results.published + results.synthetic, results.synthetic, results.dropped);
+          LOGGER.info("Poll returns {} result(s) ({} synthetic; filtered out {}); taskUuid={}", results.published + results.synthetic, results.synthetic, results.dropped, taskUuid());
         } else {
-          LOGGER.info("Poll returns {} result(s) (filtered out {})", results.published, results.dropped);
+          LOGGER.info("Poll returns {} result(s) (filtered out {}); taskUuid={}", results.published, results.dropped, taskUuid());
         }
 
         watchdog.enterState("waiting for next poll (after " + results.records.size() + " records)");
@@ -336,7 +376,7 @@ public class CouchbaseSourceTask extends SourceTask {
         lifecycle.logCommittedToKafkaTopic(couchbaseRecord, metadata);
       }
     } else {
-      LOGGER.warn("Committed a record we didn't create? Record key {}", record.key());
+      LOGGER.warn("Committed a record we didn't create? Record key {}; taskUuid={}", record.key(), taskUuid());
     }
 
     sourceHandler.onRecordCommitted(record, metadata);
@@ -466,27 +506,59 @@ public class CouchbaseSourceTask extends SourceTask {
     return result;
   }
 
-  @Override
-  public void stop() {
-    taskLifecycle.logTaskStopped();
-
-    this.watchdog.stop();
-
-    if (this.meterRegistry != null) {
-      this.meterRegistry.close();
+  private void cleanup() {
+    // The framework may call stop() multiple times. Only need to clean up once.
+    if (cleanup.alreadyCalled()) {
+      LOGGER.info("Ignoring redundant cleanup request; taskUuid={}", taskUuid());
+      return;
     }
 
-    if (couchbaseReader != null) {
-      couchbaseReader.shutdown();
+    // The connector's stop() method must return quickly. Do the actual cleanup work in a separate thread
+    // because it can take a while to ensure an orderly shutdown of the DCP client.
+    cleanupThreadFactory.newThread(() -> {
       try {
-        couchbaseReader.join(STOP_TIMEOUT_MILLIS);
-        if (couchbaseReader.isAlive()) {
-          LOGGER.error("Reader thread is still alive after shutdown request.");
+        Thread.currentThread().setName(Thread.currentThread().getName() + "-" + taskUuid());
+
+        if (startupComplete.getCount() != 0) {
+          // Prior to the fix for https://issues.apache.org/jira/browse/KAFKA-10792
+          // the framework could call stop() on a separate thread from start(),
+          // potentially before start() finished.
+
+          LOGGER.info("Task was asked to stop before it finished starting; deferring cleanup until start() completes. taskUuid={}", taskUuid());
+          // The framework should never call stop without also calling start, but out of paranoia let's not bank on it.
+          // In practice, we won't have to wait much longer than the bootstrap timeout which is _well_ under the safeguard timeout specified here.
+          Duration safeguardTimeout = Duration.ofMinutes(30);
+          if (!startupComplete.await(safeguardTimeout.toMillis(), MILLISECONDS)) {
+            LOGGER.error("This task's start() method did not complete within the safeguard timeout of {}. Making a last-ditch effort to clean up. taskUuid={}", safeguardTimeout, taskUuid());
+          }
         }
-      } catch (InterruptedException e) {
-        LOGGER.error("Interrupted while joining reader thread.", e);
+
+        LOGGER.info("Cleaning up now; taskUuid={}", taskUuid());
+
+        this.watchdog.stop();
+
+        if (this.meterRegistry != null) {
+          this.meterRegistry.close();
+        }
+
+        if (couchbaseReader != null) {
+          couchbaseReader.shutdown();
+          try {
+            couchbaseReader.join(STOP_TIMEOUT_MILLIS);
+            if (couchbaseReader.isAlive()) {
+              LOGGER.error("Reader thread is still alive after shutdown request.");
+            }
+          } catch (InterruptedException e) {
+            LOGGER.error("Interrupted while joining reader thread.", e);
+          }
+        }
+      } catch (Throwable t) {
+        LOGGER.error("Error while cleaning up resources; taskUuid={}", taskUuid(), t);
+
+      } finally {
+        taskLifecycle.logTaskCleanupComplete();
       }
-    }
+    }).start();
   }
 
   /**
@@ -499,7 +571,7 @@ public class CouchbaseSourceTask extends SourceTask {
     Map<Map<String, Object>, Map<String, Object>> offsets = context.offsetStorageReader()
         .offsets(sourcePartitions(partitions));
 
-    LOGGER.debug("Raw source offsets: {}", offsets);
+    LOGGER.debug("Raw source offsets: {}; taskUuid={}", offsets, taskUuid());
 
     // Remove partitions from this set as we see them in the map. Expect a map entry for each
     // requested partition. A null-valued entry indicates the partition has no saved offset.
@@ -521,8 +593,8 @@ public class CouchbaseSourceTask extends SourceTask {
     if (!missingPartitions.isEmpty()) {
       // Something is wrong with the offset storage reader.
       // We should have seen one entry for each requested partition.
-      LOGGER.error("Offset storage reader returned no information about these partitions: {}",
-          PartitionSet.from(missingPartitions)
+      LOGGER.error("Offset storage reader returned no information about these partitions: {}; taskUuid={}",
+          PartitionSet.from(missingPartitions), taskUuid()
       );
     }
 
