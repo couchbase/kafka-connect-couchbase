@@ -296,7 +296,6 @@
                             <componentTypes>
                                 <componentType>sink</componentType>
                                 <componentType>source</componentType>
-                                <componentType>transform</componentType>
                             </componentTypes>
 
                             <tags>
