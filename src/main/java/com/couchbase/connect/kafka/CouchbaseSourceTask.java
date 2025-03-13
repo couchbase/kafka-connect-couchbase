@@ -184,7 +184,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
       Map<String, String> unmodifiableProperties = unmodifiableMap(properties);
 
-      lifecycle = SourceDocumentLifecycle.create(config);
+      lifecycle = SourceDocumentLifecycle.create(taskUuid(), config);
 
       filter = Utils.newInstance(config.eventFilter());
       filter.init(unmodifiableProperties);
