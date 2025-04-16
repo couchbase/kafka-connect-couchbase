@@ -43,7 +43,7 @@ All set? In that case...
 
 ## Let's do this!
 
-Start by running `mvn clean verify -Prelease` to make sure the project builds successfully,
+Start by running `./mvnw clean verify -Prelease` to make sure the project builds successfully,
 artifact signing works, and the unit tests pass.
 When you're satisfied with the test results, it's time to...
 
@@ -58,7 +58,7 @@ Set the `KAFKAC_DOCS_REPO` environment variable to the path to the root director
 
 Run this command to regenerate the docs:
 
-    mvn clean test-compile exec:java
+    ./mvnw clean test-compile exec:java
 
 If any AsciiDoc files in the docs repo are modified as a result, make sure the changes look good and then commit them.
 
@@ -93,15 +93,21 @@ Otherwise it can be a pain to remove an unwanted tag from Gerrit.
 
 ## Go! Go! Go!
 
+Make sure you don't have any uncommitted files in your workspace:
+
+    git status
+
+should say "nothing to commit, working tree clean".
+
 Here it is, the moment of truth. When you're ready to deploy to the Maven Central Repository:
 
-    mvn clean deploy -Prelease
+    ./mvnw clean deploy -Prelease
 
 Alternatively, if you prefer to inspect the staging repository and
 [complete the release manually](https://central.sonatype.org/pages/releasing-the-deployment.html),
 set this additional property:
 
-    mvn clean deploy -Prelease -DautoReleaseAfterClose=false
+    ./mvnw clean deploy -Prelease -DautoReleaseAfterClose=false
 
 Remember, you can add `-DskipITs` to either command to skip integration tests if appropriate.
 
@@ -152,7 +158,7 @@ Commit the change.
 
 After every passing nightly build, a snapshot should be published to the Sonatype OSS snapshot repository by running this command:
 
-    mvn clean deploy -Psnapshot
+    ./mvnw clean deploy -Psnapshot
 
 ## Troubleshooting
 
