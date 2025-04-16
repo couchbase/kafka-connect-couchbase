@@ -1,29 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--~
-    ~ Copyright 2023 Couchbase, Inc.
-    ~
-    ~ Licensed under the Apache License, Version 2.0 (the "License");
-    ~ you may not use this file except in compliance with the License.
-    ~ You may obtain a copy of the License at
-    ~
-    ~     http://www.apache.org/licenses/LICENSE-2.0
-    ~
-    ~ Unless required by applicable law or agreed to in writing, software
-    ~ distributed under the License is distributed on an "AS IS" BASIS,
-    ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    ~ See the License for the specific language governing permissions and
-    ~ limitations under the License.
-    ~-->
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
-    <packaging>jar</packaging>
     <version>4.2.8-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
     <name>Kafka Connector for Couchbase</name>
     <organization>
         <name>Couchbase, Inc.</name>
@@ -46,7 +31,6 @@
         <connection>scm:git:git://github.com/couchbase/kafka-connect-couchbase.git</connection>
         <developerConnection>scm:git:git@github.com:couchbase/kafka-connect-couchbase.git</developerConnection>
         <url>https://github.com/couchbase/kafka-connect-couchbase</url>
-        <tag>HEAD</tag>
     </scm>
 
     <issueManagement>
@@ -55,11 +39,6 @@
     </issueManagement>
 
     <developers>
-        <developer>
-            <id>avsej</id>
-            <name>Sergey Avseyev</name>
-            <email>sergey@couchbase.com</email>
-        </developer>
         <developer>
             <id>dnault</id>
             <name>David Nault</name>
@@ -73,8 +52,6 @@
         <java-client.version>3.7.9</java-client.version>
         <runtime.javadoc.version>0.13.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.10.3</junit.version>
-        <mockito.version>5.12.0</mockito.version>
         <dist-archive-name>${project.artifactId}-${project.version}.zip</dist-archive-name>
 
         <!-- Don't sign artifacts unless the 'stage' or 'release' profile is active -->
@@ -170,20 +147,14 @@
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>${junit.version}</version>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.12.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
+            <version>5.17.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -197,7 +168,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.5.0</version>
                 <configuration>
                     <mainClass>com.couchbase.connect.kafka.util.config.AsciiDocGenerator</mainClass>
                     <classpathScope>test</classpathScope>
@@ -206,7 +177,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
+                <version>3.14.0</version>
                 <inherited>true</inherited>
                 <configuration>
                     <release>8</release>
@@ -223,7 +194,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.1</version>
+                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -236,7 +207,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.11.2</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -322,7 +293,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.1</version>
+                <version>3.5.3</version>
                 <configuration>
                     <useSystemClassLoader>false</useSystemClassLoader>
                     <argLine>-Djava.awt.headless=true</argLine>
@@ -331,7 +302,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.2.7</version>
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
@@ -345,13 +316,40 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.13</version>
+                <version>1.7.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>${autoReleaseAfterClose}</autoReleaseAfterClose>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.7.0</version>
+                <configuration>
+                    <flattenMode>ossrh</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <!-- Bind to phase `package` instead of `process-resources`
+                             to prevent conflict with maven-shade-plugin.
+                             See https://stackoverflow.com/q/52552329/457612 -->
+                        <phase>package</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
 

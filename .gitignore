@@ -1,5 +1,6 @@
 # Build products
 target/
+.flattened-pom.xml
 
 # IntelliJ data
 *.iml
