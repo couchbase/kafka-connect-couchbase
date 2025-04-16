@@ -94,6 +94,8 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
       return false;
     }
 
+    customizeMetadata(docEvent, metadata);
+
     try {
       byte[] value = objectMapper.writeValueAsBytes(metadata);
       if (docEvent.isMutation() && !params.noValue()) {
@@ -104,6 +106,21 @@ public class RawJsonWithMetadataSourceHandler extends RawJsonSourceHandler {
     } catch (JsonProcessingException e) {
       throw new DataException("Failed to serialize event metadata", e);
     }
+  }
+
+  /**
+   * Customizes the metadata based on the given document event.
+   * <p>
+   * This method is intended to be overridden in subclasses to modify or add metadata
+   * when a document event occurs. The metadata map allows storing key-value pairs
+   * related to the document event.
+   *
+   * @param docEvent The document event that triggers the metadata customization.
+   * It provides context about the change occurring in the document.
+   * @param metadata A map containing the existing metadata related to the document.
+   * Implementations may modify this map to add or update its entries.
+   */
+  protected void customizeMetadata(final DocumentEvent docEvent, final Map<String, Object> metadata) {
   }
 
   private static final byte[] contentFieldNameBytes = ",\"content\":".getBytes(UTF_8);
