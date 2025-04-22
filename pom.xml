@@ -6,7 +6,7 @@
 
     <groupId>com.couchbase.client</groupId>
     <artifactId>kafka-connect-couchbase</artifactId>
-    <version>4.2.8-SNAPSHOT</version>
+    <version>4.2.8</version>
     <packaging>jar</packaging>
 
     <name>Kafka Connector for Couchbase</name>
