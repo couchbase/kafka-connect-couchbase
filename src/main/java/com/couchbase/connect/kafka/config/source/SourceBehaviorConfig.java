@@ -179,7 +179,12 @@ public interface SourceBehaviorConfig {
    * state of Couchbase).
    * <p>
    * The synthetic records have a value of null, and the same key:
-   * `__COUCHBASE_INITIAL_OFFSET_TOMBSTONE__a54ee32b-4a7e-4d98-aa36-45d8417e942a`.
+   * <p>
+   * ----
+   * <p>
+   * __COUCHBASE_INITIAL_OFFSET_TOMBSTONE__a54ee32b-4a7e-4d98-aa36-45d8417e942a
+   * <p>
+   * ----
    * <p>
    * Consumers of this topic must ignore (or tolerate) these records.
    * <p>
