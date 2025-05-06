@@ -16,6 +16,7 @@
 
 package com.couchbase.connect.kafka.util.config;
 
+import com.couchbase.connect.kafka.util.config.annotation.ContextDocumentation;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import com.couchbase.connect.kafka.util.config.annotation.EnvironmentVariable;
 import org.apache.kafka.common.config.ConfigDef;
@@ -168,13 +169,15 @@ public class KafkaConfigProxyFactoryTest {
 
     @SuppressWarnings("unused")
     static ConfigDef.Validator stringValueValidator() {
-      return (name, value) -> {
-        if (((String) value).contains("z")) {
-          throw new ConfigException(name, value, "The letter 'z' has been outlawed.");
-        }
-      };
+      return PROHIBIT_LETTER_Z;
     }
   }
+
+  private static final ConfigDef.Validator PROHIBIT_LETTER_Z = (name, value) -> {
+    if (((String) value).contains("z")) {
+      throw new ConfigException(name, value, "The letter 'z' has been outlawed.");
+    }
+  };
 
   @Test
   public void customValidator() {
@@ -183,6 +186,52 @@ public class KafkaConfigProxyFactoryTest {
     assertEquals("hello", config.stringValue());
     assertThrows(ConfigException.class, () ->
             factory.newProxy(TestConfigWithValidator.class, singletonMap("foo.string.value", "xyzzy"), false),
+        "The letter 'z' has been outlawed"
+    );
+  }
+
+  public interface TestContextualConfigWithValidator {
+    @Default("hello")
+    @ContextDocumentation(
+        contextDescription = "test",
+        sampleContext = "foo",
+        sampleValue = "bar"
+    )
+    Contextual<String> stringValue();
+
+    @SuppressWarnings("unused")
+    static ConfigDef.Validator stringValueValidator() {
+      return PROHIBIT_LETTER_Z;
+    }
+  }
+
+  @Test
+  public void customValidatorIsAppliedToContextualValues() {
+    TestContextualConfigWithValidator config = factory.newProxy(
+        TestContextualConfigWithValidator.class,
+        singletonMap("foo.string.value[bar]", "cheese"),
+        false
+    );
+    assertEquals("hello", config.stringValue().get("unrecognized context"));
+    assertEquals("cheese", config.stringValue().get("bar"));
+
+    assertThrows(
+        ConfigException.class,
+        () -> factory.newProxy(
+            TestConfigWithValidator.class,
+            singletonMap("foo.string.value[f]", "xyzzy"),
+            false
+        ),
+        "The letter 'z' has been outlawed"
+    );
+
+    assertThrows(
+        ConfigException.class,
+        () -> factory.newProxy(
+            TestConfigWithValidator.class,
+            singletonMap("foo.string.value[bar]", "xyzzy"),
+            false
+        ),
         "The letter 'z' has been outlawed"
     );
   }

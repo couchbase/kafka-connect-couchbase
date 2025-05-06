@@ -17,6 +17,7 @@
 package com.couchbase.connect.kafka.util.config;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.connect.kafka.util.config.annotation.ContextDocumentation;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import com.couchbase.connect.kafka.util.config.annotation.Dependents;
 import com.couchbase.connect.kafka.util.config.annotation.DisplayName;
@@ -30,7 +31,9 @@ import com.github.therapi.runtimejavadoc.OtherJavadoc;
 import com.github.therapi.runtimejavadoc.RuntimeJavadoc;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,15 +48,18 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.couchbase.connect.kafka.util.config.HtmlRenderer.htmlToPlaintext;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -74,6 +80,7 @@ import static java.util.Objects.requireNonNull;
  *   <li>double
  *   <li>Class
  *   <li>List&lt;String&gt;
+ *   <li>{@link Contextual}&lt;T&gt; (where T is any other type in this list)
  *   <li>{@link Password}
  *   <li>{@link Duration}
  *   <li>{@link DataSize}
@@ -155,14 +162,23 @@ public class KafkaConfigProxyFactory {
    * given interface.
    */
   public <T> ConfigDef define(Class<T> configInterface) {
-    return define(configInterface, new ConfigDef());
+    return define(configInterface, new ConfigDef(), emptyMap());
   }
 
   /**
-   * Returns the given Kafka ConfigDef augmented with config keys from
+   * Returns the given Kafka ConfigDef, augmented with config keys from
    * the given interface.
+   * <p>
+   * Also adds config keys for contextual properties in the given property map
+   * that have a base name matching one of the property names derived from the interface.
    */
-  public <T> ConfigDef define(Class<T> configInterface, ConfigDef def) {
+  public <T> ConfigDef define(
+      Class<T> configInterface,
+      ConfigDef def,
+      Map<String, String> properties
+  ) {
+    Map<String, List<String>> index = baseNameToSubscriptedName(properties.keySet());
+
     for (Method method : configInterface.getMethods()) {
       if (Modifier.isStatic(method.getModifiers())) {
         continue;
@@ -170,23 +186,85 @@ public class KafkaConfigProxyFactory {
 
       validateReturnType(method);
 
-      def.define(new ConfigDef.ConfigKey(
-          getConfigKeyName(method),
-          getKafkaType(method),
-          getDefaultValue(method),
-          getValidator(method),
-          getImportance(method),
-          getDocumentation(method),
-          getGroup(method),
-          getOrderInGroup(method),
-          getWidth(method),
-          getDisplayName(method),
-          getDependents(method),
-          getRecommender(method),
-          false));
+      ConfigDef.Type kafkaType = getKafkaType(method);
+      Object defaultValue = getDefaultValue(method);
+      ConfigDef.Validator validator = getValidator(method);
+      ConfigDef.Importance importance = getImportance(method);
+      String documentation = getDocumentation(method);
+      String group = getGroup(method);
+      int orderInGroup = getOrderInGroup(method);
+      ConfigDef.Width width = getWidth(method);
+      String displayName = getDisplayName(method);
+      List<String> dependents = getDependents(method);
+      ConfigDef.Recommender recommender = getRecommender(method);
+
+      String baseName = getConfigKeyName(method);
+      List<String> subscriptedNames = index.getOrDefault(baseName, emptyList());
+      if (!subscriptedNames.isEmpty() && !method.getReturnType().equals(Contextual.class)) {
+        throw new ConfigException("Invalid config property '" + subscriptedNames.get(0) + "' ; property '" + baseName + "' does not support contextual overrides (square brackets)");
+      }
+
+      List<String> keysToDefine = new ArrayList<>();
+      keysToDefine.add(baseName);
+      keysToDefine.addAll(subscriptedNames);
+
+      keysToDefine.forEach(configKeyName ->
+          def.define(
+              new ConfigDef.ConfigKey(
+                  configKeyName,
+                  kafkaType,
+                  defaultValue,
+                  validator,
+                  importance,
+                  documentation,
+                  group,
+                  orderInGroup,
+                  width,
+                  displayName,
+                  dependents,
+                  recommender,
+                  false
+              )
+          )
+      );
     }
 
     return def;
+  }
+
+  /**
+   * Given a set of property names, returns a map where the keys are the base names
+   * and the values are the associated subscripted names (with square brackets).
+   * <p>
+   * For example, if given:
+   * <pre>
+   * Set.of(
+   *   "foo",
+   *   "foo[a]",
+   *   "foo[b]",
+   *   "bar[x]",
+   *   "zot"
+   * )
+   * </pre>
+   * returns:
+   * <pre>
+   * Map.of(
+   *   "foo", List.of("foo[a]", "foo[b]"),
+   *   "bar", List.of("bar[x]")
+   * )
+   * </pre>
+   */
+  static Map<String, List<String>> baseNameToSubscriptedName(Set<String> propertyNames) {
+    Map<String, List<String>> result = new LinkedHashMap<>();
+    propertyNames.forEach(key -> {
+      String subscript = getSubscript(key);
+
+      if (subscript != null) {
+        String base = key.substring(0, key.indexOf('['));
+        result.computeIfAbsent(base, k -> new ArrayList<>()).add(key);
+      }
+    });
+    return result;
   }
 
   /**
@@ -206,7 +284,7 @@ public class KafkaConfigProxyFactory {
    * @param doLog whether to log the config.
    */
   public <T> T newProxy(Class<T> configInterface, Map<String, String> properties, boolean doLog) {
-    ConfigDef configDef = define(configInterface, new ConfigDef());
+    ConfigDef configDef = define(configInterface, new ConfigDef(), properties);
     ConcreteKafkaConfig kafkaConfig = new ConcreteKafkaConfig(configDef, properties, doLog);
 
     return configInterface.cast(
@@ -217,11 +295,86 @@ public class KafkaConfigProxyFactory {
               @Override
               protected Object doInvoke(Object proxy, Method method, Object[] args) {
                 String configKeyName = getConfigKeyName(method);
+
+                if (method.getReturnType().equals(Contextual.class)) {
+                  return getContextual(method, configKeyName, properties, kafkaConfig);
+                }
+
                 Object result = getValueFromEnvironmentVariable(configKeyName, method)
                     .orElse(kafkaConfig.get(configKeyName));
-                return postProcessValue(method, result);
+                return postProcessValue(method, configKeyName, result);
               }
             }));
+  }
+
+  private static boolean isParameterizedType(Type t, Class<?> raw, Class<?>... params) {
+    if (!(t instanceof ParameterizedType)) {
+      return false;
+    }
+
+    ParameterizedType parameterizedType = (ParameterizedType) t;
+    if (!parameterizedType.getRawType().equals(raw)) {
+      return false;
+    }
+
+    Type[] actualParams = parameterizedType.getActualTypeArguments();
+
+    if (params.length != actualParams.length) {
+      return false;
+    }
+
+    return hasParameters(t, params);
+  }
+
+  private static boolean isListOfStrings(Type t) {
+    return isParameterizedType(t, List.class, String.class);
+  }
+
+  private Contextual<?> getContextual(
+      Method method,
+      String configKeyBaseName,
+      Map<String, String> properties,
+      ConcreteKafkaConfig kafkaConfig
+  ) {
+    Map<String, Object> contextToValue = new LinkedHashMap<>();
+
+    Type contextualValueJavaType = contexualValueType(method.getGenericReturnType());
+
+    Class<?> contextualValueJavaClass = contextualValueClass(method.getGenericReturnType());
+    if (contextualValueJavaClass == null) {
+      throw new IllegalArgumentException("Contextual value type must be a List<String> or a raw type, but got: " + contextualValueJavaType);
+    }
+
+    Map<String, List<String>> index = baseNameToSubscriptedName(properties.keySet());
+    index.getOrDefault(configKeyBaseName, emptyList()).forEach(subscriptedName -> {
+      String subscript = requireNonNull(getSubscript(subscriptedName), "oops, expected this key to have a subscript: " + subscriptedName);
+      contextToValue.put(subscript, getAndPostProcess(kafkaConfig, contextualValueJavaClass, subscriptedName));
+    });
+
+    Object fallbackValue = getAndPostProcess(kafkaConfig, contextualValueJavaClass, configKeyBaseName);
+    return new Contextual<>(configKeyBaseName, fallbackValue, contextToValue);
+  }
+
+  private Object getAndPostProcess(ConcreteKafkaConfig kafkaConfig, Class<?> valueClass, String configKeyName) {
+    Object value = kafkaConfig.get(configKeyName);
+    return postProcessValue(valueClass, configKeyName, value);
+  }
+
+  /**
+   * Given a string like {@code "foo[bar]"}, returns the substring between the square brackets.
+   * Returns null if there are no square brackets.
+   *
+   * @throws IllegalArgumentException If there are brackets, but not at the end of the string.
+   */
+  private static @Nullable String getSubscript(String s) {
+    int index = s.indexOf('[');
+    if (index == -1 || !s.endsWith("]")) {
+      if (s.contains("[") || s.contains("]")) {
+        throw new IllegalArgumentException("Invalid property name. Square brackets can only appear at end of name to enclose context (like \"some.property[some.context]\"), but got: " + s);
+      }
+      return null;
+    }
+    return s.substring(index + 1, s.length() - 1);
   }
 
   /**
@@ -274,19 +427,26 @@ public class KafkaConfigProxyFactory {
     }
   }
 
-  protected Object postProcessValue(Method method, Object value) {
-    Class<?> javaType = method.getReturnType();
+  protected Object postProcessValue(Method method, String keyName, Object value) {
+    return postProcessValue(method.getReturnType(), keyName, value);
+  }
 
-    CustomTypeHandler<?> customTypeHandler = customTypeMap.get(javaType);
-    if (customTypeHandler != null) {
-      return customTypeHandler.valueOf((String) value);
+  protected Object postProcessValue(Class<?> javaType, String keyName, Object value) {
+    try {
+      CustomTypeHandler<?> customTypeHandler = customTypeMap.get(javaType);
+      if (customTypeHandler != null) {
+        return customTypeHandler.valueOf((String) value);
+      }
+
+      if (javaType.isEnum()) {
+        return parseEnum(javaType, (String) value);
+      }
+
+      return value;
+
+    } catch (Exception e) {
+      throw new ConfigException(keyName, value, e.getMessage());
     }
-
-    if (javaType.isEnum()) {
-      return parseEnum(javaType, (String) value);
-    }
-
-    return value;
   }
 
   protected String getEnv(String environmentVariableName) {
@@ -388,6 +548,8 @@ public class KafkaConfigProxyFactory {
     getEnvironmentVariableName(method).ifPresent(envar ->
         javadoc.append("<p>May be overridden with the " + envar + " environment variable."));
 
+    appendContextDocumentation(javadoc, method);
+
     Stability.Uncommitted uncommitted = method.getAnnotation(Stability.Uncommitted.class);
     if (uncommitted != null) {
       javadoc.append("<p>UNCOMMITTED; this feature may change in a patch release without notice.");
@@ -402,6 +564,28 @@ public class KafkaConfigProxyFactory {
     }
 
     return htmlToPlaintext(javadoc.toString());
+  }
+
+  protected void appendContextDocumentation(StringBuilder javadoc, Method method) {
+    boolean isContextual = method.getReturnType().equals(Contextual.class);
+    ContextDocumentation contextDoc = getAnnotation(method, ContextDocumentation.class).orElse(null);
+
+    if (isContextual && contextDoc == null) {
+      throw new RuntimeException("Method returning " + Contextual.class.getSimpleName() + " not annotated with with @" + ContextDocumentation.class.getSimpleName() + " ; method = " + method);
+    }
+    if (!isContextual && contextDoc != null) {
+      throw new RuntimeException("Method annotated with @" + ContextDocumentation.class.getSimpleName() + " does not return " + Contextual.class.getSimpleName() + " ; method = " + method);
+    }
+
+    if (contextDoc != null) {
+      String exampleConfigKey = getConfigKeyName(method) + "[" + contextDoc.sampleContext() + "]=" + contextDoc.sampleValue();
+      javadoc.append(
+          "<p>*This property supports contextual overrides.* The context is " + contextDoc.contextDescription() + "." +
+              " Specify a context by enclosing it in square brackets and appending it to the property name." +
+              " When there is no matching override, the value of the base property (without brackets) is used instead." +
+              "<p>* Override example: `" + exampleConfigKey + "`"
+      );
+    }
   }
 
   protected Optional<String> getEnvironmentVariableName(Method method) {
@@ -478,8 +662,41 @@ public class KafkaConfigProxyFactory {
     return getDefaultValidator(method);
   }
 
+  private static @Nullable Type contexualValueType(Type maybeContextual) {
+    if (!(maybeContextual instanceof ParameterizedType)) {
+      return null;
+    }
+
+    ParameterizedType parameterizedType = (ParameterizedType) maybeContextual;
+    if (parameterizedType.getRawType() != Contextual.class) {
+      return null;
+    }
+
+    return parameterizedType.getActualTypeArguments()[0];
+  }
+
+  private static @Nullable Class<?> contextualValueClass(Type maybeContextualType) {
+    Type valueType = contexualValueType(maybeContextualType);
+    if (valueType == null) {
+      return null;
+    }
+    if (isListOfStrings(valueType)) {
+      return List.class;
+    }
+    if (valueType instanceof Class) {
+      return (Class<?>) valueType;
+    }
+
+    throw new IllegalArgumentException(valueType + " is not a supported Contextual value type; must be a raw class or List<String>");
+  }
+
   protected ConfigDef.Validator getDefaultValidator(Method method) {
-    CustomTypeHandler<?> customTypeHandler = customTypeMap.get(method.getReturnType());
+    Class<?> type = contextualValueClass(method.getGenericReturnType());
+    if (type == null) {
+      type = method.getReturnType();
+    }
+
+    CustomTypeHandler<?> customTypeHandler = customTypeMap.get(type);
     if (customTypeHandler != null) {
       ConfigDef.Validator v = customTypeHandler.validator();
       if (v != null) {
@@ -503,17 +720,34 @@ public class KafkaConfigProxyFactory {
 
   protected ConfigDef.Type getKafkaType(Method method) {
     Class<?> returnType = method.getReturnType();
-
-    ConfigDef.Type kafkaType = javaClassToKafkaType.get(returnType);
+    ConfigDef.Type kafkaType = getKafkaType(returnType);
     if (kafkaType != null) {
       return kafkaType;
     }
 
-    if (returnType.isEnum()) {
+    Class<?> contextualValueClass = contextualValueClass(method.getGenericReturnType());
+    if (contextualValueClass != null) {
+      kafkaType = getKafkaType(contextualValueClass);
+    }
+
+    if (kafkaType == null) {
+      throw new RuntimeException("Method " + method + " has unsupported return type: " + method.getGenericReturnType());
+    }
+
+    return kafkaType;
+  }
+
+  protected ConfigDef.@Nullable Type getKafkaType(Class<?> type) {
+    ConfigDef.Type kafkaType = javaClassToKafkaType.get(type);
+    if (kafkaType != null) {
+      return kafkaType;
+    }
+
+    if (type.isEnum()) {
       return ConfigDef.Type.STRING;
     }
 
-    throw new RuntimeException("Method " + method + " has unsupported return type.");
+    return null;
   }
 
   /**
