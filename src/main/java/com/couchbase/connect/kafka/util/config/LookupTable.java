@@ -28,9 +28,6 @@ import static java.util.stream.Collectors.toMap;
 
 /**
  * A read-only map that returns a default value for absent keys.
- *
- * Useful when
- *
  */
 public class LookupTable<K, V> {
   private final String propertyName;
