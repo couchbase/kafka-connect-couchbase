@@ -35,6 +35,7 @@ import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
 import com.couchbase.connect.kafka.util.ConnectHelper;
 import com.couchbase.connect.kafka.util.FirstCallTracker;
+import com.couchbase.connect.kafka.util.config.LookupTable;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
@@ -96,8 +97,7 @@ public class CouchbaseSourceTask extends SourceTask {
   private volatile CouchbaseReader couchbaseReader; // volatile because non-final and referenced by cleanup thread
   private BlockingQueue<DocumentChange> queue;
   private BlockingQueue<Throwable> errorQueue;
-  private String defaultTopicTemplate;
-  private Map<ScopeAndCollection, String> collectionToTopic;
+  private LookupTable<ScopeAndCollection, String> topicTemplate;
   private String bucket;
   private Filter filter;
   private boolean filterIsNoop;
@@ -198,8 +198,9 @@ public class CouchbaseSourceTask extends SourceTask {
       blackHoleTopic = Optional.ofNullable(emptyToNull(config.blackHoleTopic().trim()));
       intialOffsetTopic = Optional.ofNullable(emptyToNull(config.initialOffsetTopic().trim()));
 
-      defaultTopicTemplate = config.topic();
-      collectionToTopic = TopicMap.parseCollectionToTopic(config.collectionToTopic());
+      topicTemplate = config.topic().mapKeys(ScopeAndCollection::parse)
+          .withUnderlay(TopicMap.parseCollectionToTopic(config.collectionToTopic()));
+
       bucket = config.bucket();
       //noinspection deprecation
       connectorNameInOffsets = config.connectorNameInOffsets();
@@ -390,12 +391,18 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   private String getDefaultTopic(DocumentEvent docEvent) {
-    CollectionMetadata collectionMetadata = docEvent.collectionMetadata();
-    return defaultTopicTemplate
-        .replace("${bucket}", bucket)
-        .replace("${scope}", collectionMetadata.scopeName())
-        .replace("${collection}", collectionMetadata.collectionName())
-        .replace("%", "_"); // % is valid in Couchbase name but not Kafka topic name
+    ScopeAndCollection scopeAndCollection = scopeAndCollection(docEvent);
+    String topic = topicTemplate.get(scopeAndCollection);
+
+    if (topic.contains("${")) {
+      return topic
+          .replace("${bucket}", bucket)
+          .replace("${scope}", scopeAndCollection.getScope())
+          .replace("${collection}", scopeAndCollection.getCollection())
+          .replace("%", "_"); // % is valid in Couchbase name but not Kafka topic name
+    }
+
+    return topic;
   }
 
   private ConversionResult convertToSourceRecords(List<DocumentChange> events) {
@@ -474,10 +481,7 @@ public class CouchbaseSourceTask extends SourceTask {
   }
 
   private List<CouchbaseSourceRecord> convertToSourceRecords(DocumentChange change, DocumentEvent docEvent) {
-    String topic = collectionToTopic.getOrDefault(
-        scopeAndCollection(docEvent),
-        getDefaultTopic(docEvent)
-    );
+    String topic = getDefaultTopic(docEvent);
 
     List<SourceRecordBuilder> builders = handlerTimer.record(() ->
         sourceHandler.convertToSourceRecords(new SourceHandlerParams(docEvent, topic, noValue))

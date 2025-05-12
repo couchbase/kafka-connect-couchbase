@@ -20,8 +20,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseHeaderSetter;
-import com.couchbase.connect.kafka.handler.source.SourceHandler;
 import com.couchbase.connect.kafka.util.TopicMap;
+import com.couchbase.connect.kafka.util.config.Contextual;
+import com.couchbase.connect.kafka.util.config.annotation.ContextDocumentation;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import org.apache.kafka.common.config.ConfigDef;
 
@@ -31,8 +32,7 @@ import static com.couchbase.connect.kafka.util.config.ConfigHelper.validate;
 
 public interface SourceBehaviorConfig {
   /**
-   * Name of the default Kafka topic to publish data to, for collections
-   * that don't have an entry in the `couchbase.collection.to.topic` map.
+   * Name of the Kafka topic to publish data to.
    * <p>
    * This is a format string that recognizes the following placeholders:
    * <p>
@@ -43,7 +43,12 @@ public interface SourceBehaviorConfig {
    * ${collection} refers to the collection containing the document.
    */
   @Default("${bucket}.${scope}.${collection}")
-  String topic();
+  @ContextDocumentation(
+      contextDescription = "the name of the collection containing the document, qualified by scope",
+      sampleContext = "myScope.myCollection",
+      sampleValue = "some-other-topic"
+  )
+  Contextual<String> topic();
 
   /**
    * A map from Couchbase collection to Kafka topic.
@@ -60,7 +65,9 @@ public interface SourceBehaviorConfig {
    * the destination topic is determined by the `couchbase.topic` config property.
    *
    * @since 4.1.8
+   * @deprecated Instead, please use `couchbase.topic` with contextual overrides.
    */
+  @Deprecated
   @Default
   List<String> collectionToTopic();
 
