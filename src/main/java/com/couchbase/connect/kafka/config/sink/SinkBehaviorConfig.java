@@ -22,6 +22,8 @@ import com.couchbase.connect.kafka.handler.sink.SinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SubDocumentSinkHandler;
 import com.couchbase.connect.kafka.util.Keyspace;
 import com.couchbase.connect.kafka.util.TopicMap;
+import com.couchbase.connect.kafka.util.config.Contextual;
+import com.couchbase.connect.kafka.util.config.annotation.ContextDocumentation;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import org.apache.kafka.common.config.ConfigDef;
 
@@ -32,16 +34,22 @@ import static com.couchbase.connect.kafka.util.config.ConfigHelper.validate;
 
 public interface SinkBehaviorConfig {
 
+  String CONTEXT_IS_KAFKA_TOPIC = "the name of the Kafka topic the record came from";
+
   /**
-   * Qualified name (scope.collection or bucket.scope.collection) of the destination collection for messages
-   * from topics that don't have an entry in the `couchbase.topic.to.collection` map.
+   * Qualified name (scope.collection or bucket.scope.collection) of the destination collection.
    * <p>
    * If the bucket component contains a dot, escape it by enclosing it in backticks.
    * <p>
    * If the bucket component is omitted, it defaults to the value of the `couchbase.bucket` property.
    */
   @Default("_default._default")
-  String defaultCollection();
+  @ContextDocumentation(
+      contextDescription = CONTEXT_IS_KAFKA_TOPIC,
+      sampleContext = "widgets",
+      sampleValue = "inventory.widgets"
+  )
+  Contextual<String> defaultCollection();
 
   @SuppressWarnings("unused")
   static ConfigDef.Validator defaultCollectionValidator() {
@@ -69,9 +77,21 @@ public interface SinkBehaviorConfig {
    * <p>
    * Defaults to an empty map, with all documents going to the collection
    * specified by `couchbase.default.collection`.
+   *
+   * @deprecated Instead, please use `couchbase.default.collection` with contextual overrides.
    */
+  @Deprecated
   @Default
   List<String> topicToCollection();
+
+  @SuppressWarnings("unused")
+  static ConfigDef.Validator topicToCollectionValidator() {
+    return validate(
+        (List<String> value) -> TopicMap.parseTopicToCollection(value, null),
+        "topic1=scope.collection,topic2=other-bucket.scope.collection,..." +
+            " If a bucket component contains a dot, escape it by enclosing it in backticks."
+    );
+  }
 
   /**
    * A map of per-topic overrides for the `couchbase.document.id` configuration property.
@@ -98,15 +118,6 @@ public interface SinkBehaviorConfig {
     return validate(
         (List<String> value) -> TopicMap.parseTopicToDocumentId(value, true),
         "topic1=${/id},topic2=${/some/other/path},..."
-    );
-  }
-
-  @SuppressWarnings("unused")
-  static ConfigDef.Validator topicToCollectionValidator() {
-    return validate(
-        (List<String> value) -> TopicMap.parseTopicToCollection(value, null),
-        "topic1=scope.collection,topic2=other-bucket.scope.collection,..." +
-            " If a bucket component contains a dot, escape it by enclosing it in backticks."
     );
   }
 

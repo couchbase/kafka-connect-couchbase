@@ -33,6 +33,7 @@ import com.couchbase.connect.kafka.util.DocumentPathExtractor;
 import com.couchbase.connect.kafka.util.DurabilitySetter;
 import com.couchbase.connect.kafka.util.KafkaRetryHelper;
 import com.couchbase.connect.kafka.util.Keyspace;
+import com.couchbase.connect.kafka.util.config.LookupTable;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
@@ -67,8 +68,7 @@ import static java.util.Collections.unmodifiableMap;
 public class CouchbaseSinkTask extends SinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CouchbaseSinkTask.class);
 
-  private Keyspace defaultDestCollection;
-  private Map<String, Keyspace> topicToCollection;
+  private LookupTable<String, Keyspace> topicToCollection;
   private KafkaCouchbaseClient client;
   private JsonConverter converter;
   private DocumentIdExtractor defaultDocumentIdExtractor;
@@ -107,8 +107,10 @@ public class CouchbaseSinkTask extends SinkTask {
 
     LogRedaction.setRedactionLevel(config.logRedaction());
     client = new KafkaCouchbaseClient(config, clusterEnvProperties);
-    defaultDestCollection = Keyspace.parse(config.defaultCollection(), config.bucket());
-    topicToCollection = TopicMap.parseTopicToCollection(config.topicToCollection(), config.bucket());
+
+    topicToCollection = config.defaultCollection()
+        .mapValues(v -> Keyspace.parse(v, config.bucket()))
+        .withUnderlay(TopicMap.parseTopicToCollection(config.topicToCollection(), config.bucket()));
 
     converter = new JsonConverter();
     converter.configure(mapOf("schemas.enable", false), false);
@@ -186,7 +188,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
     List<SinkHandlerParams> paramsList = new ArrayList<>();
     for (SinkRecord record : records) {
-      Keyspace destCollectionSpec = topicToCollection.getOrDefault(record.topic(), defaultDestCollection);
+      Keyspace destCollectionSpec = topicToCollection.get(record.topic());
       ReactiveCollection destCollection = sinkHandlerUsesKvConnections ? client.collection(destCollectionSpec).reactive() : null;
 
       SinkHandlerParams params = new SinkHandlerParams(
