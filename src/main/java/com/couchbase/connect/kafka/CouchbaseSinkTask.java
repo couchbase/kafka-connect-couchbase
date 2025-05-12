@@ -79,8 +79,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
   private DurabilitySetter durabilitySetter;
 
-  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private Optional<Duration> documentExpiry;
+  private LookupTable<String, Optional<Duration>> topicToDocumentExpiry;
 
   @Override
   public String version() {
@@ -146,9 +145,8 @@ public class CouchbaseSinkTask extends SinkTask {
     LOGGER.info("Using sink handler: {}", sinkHandler);
 
     durabilitySetter = DurabilitySetter.create(config);
-    documentExpiry = config.documentExpiration().isZero()
-        ? Optional.empty()
-        : Optional.of(config.documentExpiration());
+    topicToDocumentExpiry = config.documentExpiration()
+        .mapValues(it -> it.isZero() ? Optional.empty() : Optional.of(it));
 
     retryHelper = new KafkaRetryHelper("CouchbaseSinkTask.put()", config.retryTimeout());
 
@@ -197,7 +195,7 @@ public class CouchbaseSinkTask extends SinkTask {
           destCollectionSpec,
           record,
           toSinkDocument(record),
-          documentExpiry,
+          topicToDocumentExpiry.get(record.topic()),
           durabilitySetter
       );
 

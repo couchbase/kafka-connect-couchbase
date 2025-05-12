@@ -167,7 +167,12 @@ public interface SinkBehaviorConfig {
    * A value of "0" (the default) means documents never expire.
    */
   @Default("0")
-  Duration documentExpiration();
+  @ContextDocumentation(
+      contextDescription = CONTEXT_IS_KAFKA_TOPIC,
+      sampleContext = "alerts",
+      sampleValue = "14d"
+  )
+  Contextual<Duration> documentExpiration();
 
   /**
    * Retry failed writes to Couchbase until this deadline is reached.
