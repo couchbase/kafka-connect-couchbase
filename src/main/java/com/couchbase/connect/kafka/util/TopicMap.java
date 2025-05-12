@@ -25,16 +25,20 @@ import java.util.function.Function;
 
 import static java.util.stream.Collectors.toMap;
 
+/**
+ * Helper methods for parsing legacy map-like config options.
+ *
+ * @deprecated New map-like config options should use contextual overrides.
+ * See {@link com.couchbase.connect.kafka.util.config.Contextual}.
+ */
+@Deprecated
 public class TopicMap {
   private TopicMap() {
     throw new AssertionError("not instantiable");
   }
 
-  public static Map<String, DocumentIdExtractor> parseTopicToDocumentId(
-      List<String> topicToDocumentIdFormat,
-      boolean removeDocumentId
-  ) {
-    return mapValues(parseCommon(topicToDocumentIdFormat), docIdFormat -> new DocumentIdExtractor(docIdFormat, removeDocumentId));
+  public static Map<String, DocumentIdExtractor> parseTopicToDocumentId(List<String> topicToDocumentIdFormat) {
+    return mapValues(parseCommon(topicToDocumentIdFormat), DocumentIdExtractor::from);
   }
 
   public static Map<String, Keyspace> parseTopicToCollection(

@@ -158,8 +158,8 @@ public class SubDocumentSinkHandler implements SinkHandler {
     }
 
     try {
-      DocumentPathExtractor extractor = new DocumentPathExtractor(path, true);
-      DocumentPathExtractor.DocumentExtraction extraction = extractor.extractDocumentPath(doc.content());
+      DocumentPathExtractor extractor = new DocumentPathExtractor(path);
+      DocumentPathExtractor.DocumentExtraction extraction = extractor.extractDocumentPath(doc.content(), true);
       return new SubdocOperation(documentId, extraction.getPathValue(), extraction.getData());
 
     } catch (IOException | DocumentPathExtractor.DocumentPathNotFoundException e) {

@@ -25,20 +25,24 @@ import java.io.IOException;
  * <p>
  * Immutable.
  */
-public class DocumentIdExtractor {
-
-  private final DocumentPathExtractor pathExtractor;
-
-  public DocumentIdExtractor(String documentIdFormat, boolean removeDocumentId) {
-    pathExtractor = new DocumentPathExtractor(documentIdFormat, removeDocumentId);
-  }
+public interface DocumentIdExtractor {
 
   /**
    * @param json The document content encoded as UTF-8. If this method returns normally,
    * it may modify the contents of the array to remove the fields used by the document ID.
    */
-  public SinkDocument extractDocumentId(final byte[] json) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException {
-    DocumentPathExtractor.DocumentExtraction extraction = pathExtractor.extractDocumentPath(json);
-    return new SinkDocument(extraction.getPathValue(), extraction.getData());
+  SinkDocument extractDocumentId(final byte[] json, boolean removeDocumentId) throws IOException, DocumentPathExtractor.DocumentPathNotFoundException;
+
+  static DocumentIdExtractor from(String documentIdFormat) {
+    if (documentIdFormat.isEmpty()) {
+      return (json, removeDocumentPath) -> new SinkDocument(null, json);
+    }
+
+    DocumentPathExtractor pathExtractor = new DocumentPathExtractor(documentIdFormat);
+
+    return (json, removeDocumentId) -> {
+      DocumentPathExtractor.DocumentExtraction extraction = pathExtractor.extractDocumentPath(json, removeDocumentId);
+      return new SinkDocument(extraction.getPathValue(), extraction.getData());
+    };
   }
 }

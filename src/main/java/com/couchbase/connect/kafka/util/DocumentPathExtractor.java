@@ -97,11 +97,9 @@ public class DocumentPathExtractor {
   private final String documentPathFormat;
   private final Map<String, JsonPointer> placeholderToJsonPointer;
 
-  private final boolean removeDocumentPath;
-
   private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{(.+?)}");
 
-  public DocumentPathExtractor(String documentPathFormat, boolean removeDocumentPath) {
+  public DocumentPathExtractor(String documentPathFormat) {
     if (documentPathFormat.isEmpty()) {
       throw new IllegalArgumentException("Document ID format must not be empty");
     }
@@ -126,14 +124,13 @@ public class DocumentPathExtractor {
 
     this.placeholderToJsonPointer = unmodifiableMap(placeholderToJsonPointerTemp);
     this.documentPathFormat = documentPathFormat;
-    this.removeDocumentPath = removeDocumentPath;
   }
 
   /**
    * @param json The document content encoded as UTF-8. If this method returns normally,
    * it may modify the contents of the array to remove the fields used by the document ID.
    */
-  public DocumentExtraction extractDocumentPath(final byte[] json) throws IOException, DocumentPathNotFoundException {
+  public DocumentExtraction extractDocumentPath(final byte[] json, boolean removeDocumentPath) throws IOException, DocumentPathNotFoundException {
     final List<ByteRange> rangesToRemove = new ArrayList<>(placeholderToJsonPointer.size());
 
     String documentId = documentPathFormat;

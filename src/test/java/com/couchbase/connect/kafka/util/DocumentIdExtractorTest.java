@@ -29,6 +29,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Optional.ofNullable;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DocumentIdExtractorTest {
@@ -48,12 +49,12 @@ public class DocumentIdExtractorTest {
     document = toValidJson(document);
     expectedResultDocument = toValidJson(expectedResultDocument);
 
-    SinkDocument result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
+    SinkDocument result = DocumentIdExtractor.from(pointer).extractDocumentId(document.getBytes(UTF_8), true);
     assertEquals(ofNullable(expectedDocumentId), result.id());
     assertJsonEquals(expectedResultDocument, result);
 
     // and again without removing the document id
-    result = new DocumentIdExtractor(pointer, false).extractDocumentId(document.getBytes(UTF_8));
+    result = DocumentIdExtractor.from(pointer).extractDocumentId(document.getBytes(UTF_8), false);
     assertEquals(ofNullable(expectedDocumentId), result.id());
     byte[] content = result.content();
     assertEquals(document, new String(content, UTF_8));
@@ -62,7 +63,7 @@ public class DocumentIdExtractorTest {
     for (char c : ",:[]{}".toCharArray()) {
       document = document.replace(Character.toString(c), "  " + c + "  ");
     }
-    result = new DocumentIdExtractor(pointer, true).extractDocumentId(document.getBytes(UTF_8));
+    result = DocumentIdExtractor.from(pointer).extractDocumentId(document.getBytes(UTF_8), true);
     assertEquals(ofNullable(expectedDocumentId), result.id());
     assertJsonEquals(expectedResultDocument, result);
   }
@@ -72,7 +73,7 @@ public class DocumentIdExtractorTest {
     final byte[] documentBytes = document.getBytes(UTF_8);
 
     assertThrows(DocumentPathExtractor.DocumentPathNotFoundException.class, (() ->
-        new DocumentIdExtractor(pointer, true).extractDocumentId(documentBytes))
+        DocumentIdExtractor.from(pointer).extractDocumentId(documentBytes, true))
     );
     assertArrayEquals(document.getBytes(UTF_8), documentBytes,
         "ID extractor must not modified the byte array when throwing exception"
@@ -89,8 +90,8 @@ public class DocumentIdExtractorTest {
     assertJsonEquals(expected, new String(actual.content(), UTF_8));
   }
 
-  private static SinkDocument extract(DocumentIdExtractor extractor, String s) throws Exception {
-    return extractor.extractDocumentId(toValidJson(s).getBytes(UTF_8));
+  private static SinkDocument extract(DocumentIdExtractor extractor, String s, boolean removeDocumentId) throws Exception {
+    return extractor.extractDocumentId(toValidJson(s).getBytes(UTF_8), removeDocumentId);
   }
 
   private static String toValidJson(String json) throws IOException {
@@ -99,9 +100,9 @@ public class DocumentIdExtractorTest {
 
   @Test
   public void extractorIsReusable() throws Exception {
-    DocumentIdExtractor extractor = new DocumentIdExtractor("/id", true);
+    DocumentIdExtractor extractor = DocumentIdExtractor.from("/id");
     for (int i = 0; i < 2; i++) {
-      SinkDocument result = extract(extractor, "{'id':1}");
+      SinkDocument result = extract(extractor, "{'id':1}", true);
       assertEquals(Optional.of("1"), result.id());
       assertJsonEquals("{}", result);
     }
@@ -215,14 +216,17 @@ public class DocumentIdExtractorTest {
   }
 
   @Test
-  public void pointerMustNotBeEmpty() {
-    assertThrows(IllegalArgumentException.class, () ->
-        new DocumentIdExtractor("", true));
+  public void emptyPointerMeansNoop() throws Exception {
+    byte[] json = "{}".getBytes(UTF_8);
+    assertSame(
+        json,
+        DocumentIdExtractor.from("").extractDocumentId(json, true).content()
+    );
   }
 
   @Test
   public void pointerMustBeValid() {
     assertThrows(IllegalArgumentException.class, () ->
-        new DocumentIdExtractor("a/b", true));
+        DocumentIdExtractor.from("a/b"));
   }
 }

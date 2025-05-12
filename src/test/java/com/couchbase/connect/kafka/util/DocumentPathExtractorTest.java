@@ -45,12 +45,12 @@ public class DocumentPathExtractorTest {
     document = toValidJson(document);
     expectedResultDocument = toValidJson(expectedResultDocument);
 
-    DocumentPathExtractor.DocumentExtraction result = new DocumentPathExtractor(pointer, true).extractDocumentPath(document.getBytes(UTF_8));
+    DocumentPathExtractor.DocumentExtraction result = new DocumentPathExtractor(pointer).extractDocumentPath(document.getBytes(UTF_8), true);
     assertEquals(expectedDocumentId, result.getPathValue());
     assertJsonEquals(expectedResultDocument, asString(result));
 
     // and again without removing the document id
-    result = new DocumentPathExtractor(pointer, false).extractDocumentPath(document.getBytes(UTF_8));
+    result = new DocumentPathExtractor(pointer).extractDocumentPath(document.getBytes(UTF_8), false);
     assertEquals(expectedDocumentId, result.getPathValue());
     assertEquals(document, asString(result));
 
@@ -58,7 +58,7 @@ public class DocumentPathExtractorTest {
     for (char c : ",:[]{}".toCharArray()) {
       document = document.replace(Character.toString(c), "  " + c + "  ");
     }
-    result = new DocumentPathExtractor(pointer, true).extractDocumentPath(document.getBytes(UTF_8));
+    result = new DocumentPathExtractor(pointer).extractDocumentPath(document.getBytes(UTF_8), true);
     assertEquals(expectedDocumentId, result.getPathValue());
     assertJsonEquals(expectedResultDocument, asString(result));
   }
@@ -68,7 +68,7 @@ public class DocumentPathExtractorTest {
     final byte[] documentBytes = document.getBytes(UTF_8);
 
     assertThrows(DocumentPathExtractor.DocumentPathNotFoundException.class, () ->
-        new DocumentPathExtractor(pointer, true).extractDocumentPath(documentBytes)
+        new DocumentPathExtractor(pointer).extractDocumentPath(documentBytes, true)
     );
     assertArrayEquals(documentBytes, document.getBytes(UTF_8),
         "path extractor must not modified the byte array when throwing exception"
@@ -81,8 +81,8 @@ public class DocumentPathExtractorTest {
     assertEquals(parsedExpected, parsedActual);
   }
 
-  private static DocumentPathExtractor.DocumentExtraction extract(DocumentPathExtractor extractor, String s) throws Exception {
-    return extractor.extractDocumentPath(toValidJson(s).getBytes(UTF_8));
+  private static DocumentPathExtractor.DocumentExtraction extract(DocumentPathExtractor extractor, String s, boolean removeDocumentPath) throws Exception {
+    return extractor.extractDocumentPath(toValidJson(s).getBytes(UTF_8), removeDocumentPath);
   }
 
   private static String toValidJson(String json) throws IOException {
@@ -95,9 +95,9 @@ public class DocumentPathExtractorTest {
 
   @Test
   public void extractorIsReusable() throws Exception {
-    DocumentPathExtractor extractor = new DocumentPathExtractor("/id", true);
+    DocumentPathExtractor extractor = new DocumentPathExtractor("/id");
     for (int i = 0; i < 2; i++) {
-      DocumentPathExtractor.DocumentExtraction result = extract(extractor, "{'id':1}");
+      DocumentPathExtractor.DocumentExtraction result = extract(extractor, "{'id':1}", true);
       assertEquals("1", result.getPathValue());
       assertJsonEquals("{}", asString(result));
     }
@@ -212,11 +212,11 @@ public class DocumentPathExtractorTest {
 
   @Test
   public void pointerMustNotBeEmpty() {
-    assertThrows(IllegalArgumentException.class, () -> new DocumentPathExtractor("", true));
+    assertThrows(IllegalArgumentException.class, () -> new DocumentPathExtractor(""));
   }
 
   @Test
   public void pointerMustBeValid() {
-    assertThrows(IllegalArgumentException.class, () -> new DocumentPathExtractor("a/b", true));
+    assertThrows(IllegalArgumentException.class, () -> new DocumentPathExtractor("a/b"));
   }
 }

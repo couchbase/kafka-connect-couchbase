@@ -108,15 +108,17 @@ public interface SinkBehaviorConfig {
    * configuration property is applied to documents from all topics.
    *
    * @since 4.2.4
+   * @deprecated Instead, please use `couchbase.document.id` with contextual overrides.
    */
   @Stability.Uncommitted
+  @Deprecated
   @Default
   List<String> topicToDocumentId();
 
   @SuppressWarnings("unused")
   static ConfigDef.Validator topicToDocumentIdValidator() {
     return validate(
-        (List<String> value) -> TopicMap.parseTopicToDocumentId(value, true),
+        TopicMap::parseTopicToDocumentId,
         "topic1=${/id},topic2=${/some/other/path},..."
     );
   }
@@ -148,17 +150,29 @@ public interface SinkBehaviorConfig {
   DocumentMode documentMode();
 
   /**
-   * Format string to use for the Couchbase document ID (overriding the message key).
+   * Format string to use for the Couchbase document ID.
    * May refer to document fields via placeholders like ${/path/to/field}
+   * <p>
+   * If not specified, the Couchbase document ID is the Kafka record key.
    */
   @Default
-  String documentId();
+  @ContextDocumentation(
+      contextDescription = CONTEXT_IS_KAFKA_TOPIC,
+      sampleContext = "widgets",
+      sampleValue = "widget::${/widgetId}"
+  )
+  Contextual<String> documentId();
 
   /**
    * Whether to remove the ID identified by 'couchbase.documentId' from the document before storing in Couchbase.
    */
   @Default("false")
-  boolean removeDocumentId();
+  @ContextDocumentation(
+      contextDescription = CONTEXT_IS_KAFKA_TOPIC,
+      sampleContext = "widgets",
+      sampleValue = "true"
+  )
+  Contextual<Boolean> removeDocumentId();
 
   /**
    * Document expiration time specified as an integer followed by a time unit (s = seconds, m = minutes, h = hours, d = days).

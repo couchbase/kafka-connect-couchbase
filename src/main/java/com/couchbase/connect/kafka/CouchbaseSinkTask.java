@@ -71,8 +71,8 @@ public class CouchbaseSinkTask extends SinkTask {
   private LookupTable<String, Keyspace> topicToCollection;
   private KafkaCouchbaseClient client;
   private JsonConverter converter;
-  private DocumentIdExtractor defaultDocumentIdExtractor;
-  private Map<String, DocumentIdExtractor> topicToDocumentIdExtractor;
+  private LookupTable<String, DocumentIdExtractor> topicToDocumentIdExtractor;
+  private LookupTable<String, Boolean> topicToRemoveDocumentId;
   private SinkHandler sinkHandler;
   private boolean sinkHandlerUsesKvConnections;
   private KafkaRetryHelper retryHelper;
@@ -114,11 +114,11 @@ public class CouchbaseSinkTask extends SinkTask {
     converter = new JsonConverter();
     converter.configure(mapOf("schemas.enable", false), false);
 
-    String docIdPointer = config.documentId();
-    if (docIdPointer != null && !docIdPointer.isEmpty()) {
-      defaultDocumentIdExtractor = new DocumentIdExtractor(docIdPointer, config.removeDocumentId());
-    }
-    topicToDocumentIdExtractor = TopicMap.parseTopicToDocumentId(config.topicToDocumentId(), config.removeDocumentId());
+    topicToDocumentIdExtractor = config.documentId()
+        .mapValues(DocumentIdExtractor::from)
+        .withUnderlay(TopicMap.parseTopicToDocumentId(config.topicToDocumentId()));
+
+    topicToRemoveDocumentId = config.removeDocumentId();
 
     Class<? extends SinkHandler> sinkHandlerClass = config.sinkHandler();
 
@@ -248,10 +248,8 @@ public class CouchbaseSinkTask extends SinkTask {
 
     byte[] valueAsJsonBytes = converter.fromConnectData(record.topic(), record.valueSchema(), record.value());
     try {
-      DocumentIdExtractor documentIdExtractor = topicToDocumentIdExtractor.getOrDefault(record.topic(), defaultDocumentIdExtractor);
-      if (documentIdExtractor != null) {
-        return documentIdExtractor.extractDocumentId(valueAsJsonBytes);
-      }
+      DocumentIdExtractor documentIdExtractor = topicToDocumentIdExtractor.get(record.topic());
+      return documentIdExtractor.extractDocumentId(valueAsJsonBytes, topicToRemoveDocumentId.get(record.topic()));
 
     } catch (DocumentPathExtractor.DocumentPathNotFoundException e) {
       LOGGER.warn(e.getMessage() + "; letting sink handler use fallback ID");
