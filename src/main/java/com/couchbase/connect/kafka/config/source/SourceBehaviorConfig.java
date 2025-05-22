@@ -17,6 +17,7 @@
 package com.couchbase.connect.kafka.config.source;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.connect.kafka.CouchbaseSourceTask;
 import com.couchbase.connect.kafka.StreamFrom;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseHeaderSetter;
@@ -126,6 +127,7 @@ public interface SourceBehaviorConfig {
   @Default
   List<String> headers();
 
+  @SuppressWarnings("unused")
   static ConfigDef.Validator headersValidator() {
     return validate((List<String> headers) -> new CouchbaseHeaderSetter("somePrefix", headers), "Zero or more of " + CouchbaseHeaderSetter.validHeaders());
   }
@@ -263,4 +265,26 @@ public interface SourceBehaviorConfig {
    */
   @Default
   List<String> collections();
+
+  /**
+   * If you wish to filter the documents being sent, in addition to or instead of using a custom Filter class,
+   * this is applied before the couchbase.event.filter or the couchbase.source.handler
+   * <p>
+   * A document passes the jsonpath filter if the expression matches something in the document.
+   * If the property is blank or not specified then all documents will pass
+   * <p>
+   * Examples and uses of jsonpath can be found here: https://github.com/json-path/JsonPath
+   */
+  @Default
+  @ContextDocumentation(
+      contextDescription = "the name of the collection containing the document, qualified by scope",
+      sampleContext = "myScope.myCollection",
+      sampleValue = "$.key"
+  )
+  Contextual<String> jsonpathFilter();
+
+  @SuppressWarnings("unused")
+  static ConfigDef.Validator jsonpathFilterValidator() {
+    return validate(CouchbaseSourceTask::parseJsonpath, "A JSONPath expression");
+  }
 }

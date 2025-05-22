@@ -46,6 +46,7 @@ public class SourceDocumentLifecycle {
   public enum Milestone {
     RECEIVED_FROM_COUCHBASE,
 
+    SKIPPED_BECAUSE_JSONPATH_SAYS_IGNORE,
     SKIPPED_BECAUSE_FILTER_SAYS_IGNORE,
     SKIPPED_BECAUSE_HANDLER_SAYS_IGNORE,
 
@@ -91,6 +92,8 @@ public class SourceDocumentLifecycle {
       logMilestone(event, Milestone.RECEIVED_FROM_COUCHBASE, details);
     }
   }
+
+  public void logSkippedBecauseJsonpathFilterSaysIgnore(DocumentChange event) {logMilestone(event, Milestone.SKIPPED_BECAUSE_JSONPATH_SAYS_IGNORE);}
 
   public void logSkippedBecauseFilterSaysIgnore(DocumentChange event) {
     logMilestone(event, Milestone.SKIPPED_BECAUSE_FILTER_SAYS_IGNORE);

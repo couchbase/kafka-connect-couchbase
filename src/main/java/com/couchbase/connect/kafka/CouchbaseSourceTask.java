@@ -41,6 +41,12 @@ import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.Watchdog;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
+import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -59,6 +65,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -100,6 +108,21 @@ public class CouchbaseSourceTask extends SourceTask {
   private LookupTable<ScopeAndCollection, String> topicTemplate;
   private String bucket;
   private Filter filter;
+
+  private LookupTable<ScopeAndCollection, JsonPath> jsonPaths;
+  private static final JsonPath ROOT_JSON_PATH = JsonPath.compile("$");
+  public static JsonPath parseJsonpath(String s) {
+    return s.isEmpty() || s.equals("$") ? ROOT_JSON_PATH : JsonPath.compile(s);
+  }
+  private static final Configuration jsonpathConf = Configuration.builder()
+      .jsonProvider(new JacksonJsonProvider())
+      .mappingProvider(new JacksonMappingProvider())
+      .options(
+          Option.AS_PATH_LIST,
+          Option.SUPPRESS_EXCEPTIONS
+      )
+      .build();
+
   private boolean filterIsNoop;
   private MultiSourceHandler sourceHandler;
   private CouchbaseHeaderSetter headerSetter;
@@ -185,6 +208,10 @@ public class CouchbaseSourceTask extends SourceTask {
       Map<String, String> unmodifiableProperties = unmodifiableMap(properties);
 
       lifecycle = SourceDocumentLifecycle.create(taskUuid(), config);
+
+      jsonPaths = config.jsonpathFilter()
+          .mapKeys(ScopeAndCollection::parse)
+          .mapValues(CouchbaseSourceTask::parseJsonpath);
 
       filter = Utils.newInstance(config.eventFilter());
       filter.init(unmodifiableProperties);
@@ -390,6 +417,18 @@ public class CouchbaseSourceTask extends SourceTask {
     }
   }
 
+  private static boolean jsonpathMatch(JsonPath filter, byte[] document) {
+    try {
+      if (filter == ROOT_JSON_PATH) {
+        return true;
+      }
+      List<?> result = filter.read(new ByteArrayInputStream(document), jsonpathConf);
+      return !result.isEmpty();
+    } catch (InvalidJsonException | IOException e) {
+      return false;
+    }
+  }
+
   private String getDefaultTopic(DocumentEvent docEvent) {
     ScopeAndCollection scopeAndCollection = scopeAndCollection(docEvent);
     String topic = topicTemplate.get(scopeAndCollection);
@@ -424,6 +463,18 @@ public class CouchbaseSourceTask extends SourceTask {
         lifecycle.logConvertedToKafkaRecord(e, sourceRecord);
         results.add(sourceRecord);
         initialOffsets++;
+        continue;
+      }
+
+      // Pre-filter with jsonpath
+      boolean jsonpathPassed = jsonpathMatch(jsonPaths.get(
+          ScopeAndCollection.parse(docEvent.collectionMetadata().scopeName() + "." + docEvent.collectionMetadata().collectionName())),
+          docEvent.content()
+      );
+      if (!jsonpathPassed) {
+        lifecycle.logSkippedBecauseJsonpathFilterSaysIgnore(e);
+        dropped++;
+        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e)));
         continue;
       }
 
