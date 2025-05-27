@@ -144,7 +144,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<String> blackHoleTopic;
-  private Optional<String> intialOffsetTopic;
+  private Optional<String> initialOffsetTopic;
 
   private final SourceTaskLifecycle taskLifecycle = new SourceTaskLifecycle();
   private final Watchdog watchdog = new Watchdog(taskLifecycle.taskUuid());
@@ -223,7 +223,7 @@ public class CouchbaseSourceTask extends SourceTask {
       headerSetter = new CouchbaseHeaderSetter(config.headerNamePrefix(), config.headers());
 
       blackHoleTopic = Optional.ofNullable(emptyToNull(config.blackHoleTopic().trim()));
-      intialOffsetTopic = Optional.ofNullable(emptyToNull(config.initialOffsetTopic().trim()));
+      initialOffsetTopic = Optional.ofNullable(emptyToNull(config.initialOffsetTopic().trim()));
 
       topicTemplate = config.topic().mapKeys(ScopeAndCollection::parse)
           .withUnderlay(TopicMap.parseCollectionToTopic(config.collectionToTopic()));
@@ -250,7 +250,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
       queue = new LinkedBlockingQueue<>();
       errorQueue = new LinkedBlockingQueue<>(1);
-      couchbaseReader = new CouchbaseReader(config, connectorName, taskNumber, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry, intialOffsetTopic.isPresent(), taskLifecycle);
+      couchbaseReader = new CouchbaseReader(config, connectorName, taskNumber, queue, errorQueue, partitions, partitionToSavedSeqno, lifecycle, meterRegistry, initialOffsetTopic.isPresent(), taskLifecycle);
       couchbaseReader.start();
 
       endOfLastPoll = NanoTimestamp.now();
@@ -457,8 +457,8 @@ public class CouchbaseSourceTask extends SourceTask {
       //
       // We could assume the topic config is always present, but maybe a trickster
       // inserted a real document with the same key as a synthetic tombstone.
-      if (isSyntheticInitialOffsetTombstone(e) && intialOffsetTopic.isPresent()) {
-        String topic = intialOffsetTopic.get();
+      if (isSyntheticInitialOffsetTombstone(e) && initialOffsetTopic.isPresent()) {
+        String topic = initialOffsetTopic.get();
         SourceRecord sourceRecord = createSourceOffsetUpdateRecord(e.getKey(), topic, e);
         lifecycle.logConvertedToKafkaRecord(e, sourceRecord);
         results.add(sourceRecord);
