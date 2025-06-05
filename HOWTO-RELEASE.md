@@ -31,7 +31,7 @@ At a minimum, your `~/.m2/settings.xml` should look something like:
     <settings>
       <servers>
         <server>
-          <id>ossrh</id>
+          <id>central</id>
           <username>xxxxxxxx</username>
           <password>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</password>
         </server>
