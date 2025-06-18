@@ -47,6 +47,8 @@ public class SourceTaskLifecycle {
 
     private final LogLevel logLevel;
 
+    private final Logger logger = LoggerFactory.getLogger(SourceTaskLifecycle.class.getName() + "." + this.name());
+
     Milestone() {
       this(LogLevel.INFO);
     }
@@ -55,8 +57,6 @@ public class SourceTaskLifecycle {
       this.logLevel = requireNonNull(logLevel);
     }
   }
-
-  private static final Logger log = LoggerFactory.getLogger(SourceTaskLifecycle.class);
 
   private final String uuid = UUID.randomUUID().toString();
 
@@ -107,15 +107,15 @@ public class SourceTaskLifecycle {
       message.put("taskUuid", uuid);
       getConnectorContextFromLoggingContext().ifPresent(it -> message.put("context", it));
       message.putAll(milestoneDetails);
-      doLog(milestone.logLevel, message);
+      doLog(milestone, message);
     }
   }
 
-  private void doLog(LogLevel level, Object message) {
+  private void doLog(Milestone milestone, Object message) {
     try {
-      level.log(log, "{}", Mapper.encodeAsString(message));
+      milestone.logLevel.log(milestone.logger, "{}", Mapper.encodeAsString(message));
     } catch (Exception e) {
-      level.log(log, "{}", message);
+      milestone.logLevel.log(milestone.logger, "{}", message);
     }
   }
 

@@ -57,6 +57,8 @@ public class SourceDocumentLifecycle {
     // to tell Kafka Connect about the ignored event's source offset.
     SOURCE_OFFSET_UPDATE_COMMITTED_TO_BLACK_HOLE_TOPIC,
     ;
+
+    private final Logger logger = LoggerFactory.getLogger(SourceDocumentLifecycle.class.getName() + "." + this.name());
   }
 
   private static final Logger log = LoggerFactory.getLogger(SourceDocumentLifecycle.class);
@@ -65,8 +67,8 @@ public class SourceDocumentLifecycle {
   private final String taskUuid;
   private final LogLevel logLevel;
 
-  public boolean enabled() {
-    return logLevel.isEnabled(log);
+  private boolean enabled(Milestone milestone) {
+    return logLevel.isEnabled(milestone.logger);
   }
 
   public static SourceDocumentLifecycle create(String taskUuid, LoggingConfig config) {
@@ -80,7 +82,7 @@ public class SourceDocumentLifecycle {
   }
 
   public void logReceivedFromCouchbase(DocumentChange event) {
-    if (enabled()) {
+    if (enabled(Milestone.RECEIVED_FROM_COUCHBASE)) {
       LinkedHashMap<String, Object> details = new LinkedHashMap<>();
       details.put("connectTaskId", taskId);
       details.put("revision", event.getRevision());
@@ -104,7 +106,7 @@ public class SourceDocumentLifecycle {
   }
 
   public void logConvertedToKafkaRecord(DocumentChange event, SourceRecord record) {
-    if (enabled()) {
+    if (enabled(Milestone.CONVERTED_TO_KAFKA_RECORD)) {
       LinkedHashMap<String, Object> details = new LinkedHashMap<>();
       details.put("topic", record.topic());
       details.put("key", record.key());
@@ -141,7 +143,7 @@ public class SourceDocumentLifecycle {
   }
 
   private void logMilestone(CouchbaseSourceRecord sourceRecord, Milestone milestone, Map<String, Object> milestoneDetails) {
-    if (enabled()) {
+    if (enabled(milestone)) {
       LinkedHashMap<String, Object> message = new LinkedHashMap<>();
       message.put("milestone", milestone);
       message.put("tracingToken", sourceRecord.getTracingToken());
@@ -152,12 +154,12 @@ public class SourceDocumentLifecycle {
       message.put("documentId", sourceRecord.getCouchbaseDocumentId());
       message.putAll(milestoneDetails);
       message.put("taskUuid", taskUuid);
-      doLog(message);
+      doLog(milestone.logger, message);
     }
   }
 
   private void logMilestone(DocumentChange event, Milestone milestone, Map<String, Object> milestoneDetails) {
-    if (enabled()) {
+    if (enabled(milestone)) {
       LinkedHashMap<String, Object> message = new LinkedHashMap<>();
       message.put("milestone", milestone);
       message.put("tracingToken", event.getTracingToken());
@@ -168,15 +170,15 @@ public class SourceDocumentLifecycle {
       message.put("documentId", event.getQualifiedKey());
       message.putAll(milestoneDetails);
       message.put("taskUuid", taskUuid);
-      doLog(message);
+      doLog(milestone.logger, message);
     }
   }
 
-  private void doLog(Object message) {
+  private void doLog(Logger logger, Object message) {
     try {
-      logLevel.log(log, Mapper.encodeAsString(message));
+      logLevel.log(logger, Mapper.encodeAsString(message));
     } catch (Exception e) {
-      logLevel.log(log, message.toString());
+      logLevel.log(logger, message.toString());
     }
   }
 }

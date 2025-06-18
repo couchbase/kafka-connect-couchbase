@@ -42,11 +42,12 @@ public class ConnectorLifecycle {
      * which Couchbase partitions each task should stream from.
      */
     PARTITIONS_ASSIGNED,
+    ;
+
+    private final Logger logger = LoggerFactory.getLogger(ConnectorLifecycle.class.getName() + "." + this.name());
   }
 
   private final LogLevel logLevel = LogLevel.INFO;
-
-  private static final Logger log = LoggerFactory.getLogger(ConnectorLifecycle.class);
 
   private final String uuid = UUID.randomUUID().toString();
 
@@ -76,15 +77,15 @@ public class ConnectorLifecycle {
       message.put("connectorUuid", uuid);
       getTaskIdFromLoggingContext().ifPresent(id -> message.put("taskId", id));
       message.putAll(milestoneDetails);
-      doLog(message);
+      doLog(milestone.logger, message);
     }
   }
 
-  private void doLog(Object message) {
+  private void doLog(Logger logger, Object message) {
     try {
-      logLevel.log(log, Mapper.encodeAsString(message));
+      logLevel.log(logger, Mapper.encodeAsString(message));
     } catch (Exception e) {
-      logLevel.log(log, message.toString());
+      logLevel.log(logger, message.toString());
     }
   }
 
