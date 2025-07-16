@@ -86,13 +86,13 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-api</artifactId>
-            <version>${kafka.version}</version>
+            <version>3.9.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-json</artifactId>
-            <version>${kafka.version}</version>
+            <version>3.9.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -103,12 +103,12 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>java-client</artifactId>
-            <version>${java-client.version}</version>
+            <version>3.8.0</version>
         </dependency>
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>dcp-client</artifactId>
-            <version>${dcp-client.version}</version>
+            <version>0.54.0</version>
             <exclusions>
                 <!-- SLF4J is provided by Kafka; don't want it in uber jar -->
                 <exclusion>
@@ -120,7 +120,7 @@
         <dependency>
             <groupId>com.github.therapi</groupId>
             <artifactId>therapi-runtime-javadoc</artifactId>
-            <version>${runtime.javadoc.version}</version>
+            <version>0.13.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -139,7 +139,7 @@
         <dependency>
             <groupId>com.jayway.jsonpath</groupId>
             <artifactId>json-path</artifactId>
-            <version>2.9.0</version>
+            <version>1.10.4</version>
             <exclusions>
                 <!-- Jackson is on the class path as part of Kafka Connect,
                      so we'll prefer that over `json-smart` -->
