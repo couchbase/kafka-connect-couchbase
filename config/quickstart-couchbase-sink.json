@@ -10,8 +10,7 @@
     "couchbase.bucket": "default",
     "couchbase.username": "Administrator",
     "couchbase.password": "password",
-    "couchbase.persist.to": "NONE",
-    "couchbase.replicate.to": "NONE",
+    "couchbase.durability": "NONE",
     "key.converter": "org.apache.kafka.connect.storage.StringConverter",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false"
