@@ -18,7 +18,7 @@ package com.couchbase.connect.kafka.handler.sink;
 
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import org.apache.commons.lang3.tuple.Pair;
+import com.couchbase.connect.kafka.handler.sink.AnalyticsSinkHandler.StatementAndArgs;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -33,19 +33,19 @@ public class AnalyticsSinkHandlerTest {
 
     String expectedDeleteStatement = "DELETE FROM bucket.scope.collection WHERE `UserID`=? AND `Name`=?;";
     JsonArray expectedPositionalParameters = JsonArray.from(Arrays.asList(27, "Jinesh"));
-    Pair<String, JsonArray> obtainedDeleteQuery = AnalyticsSinkHandler.deleteQuery(
+    StatementAndArgs obtainedDeleteQuery = AnalyticsSinkHandler.deleteQuery(
         "bucket.scope.collection", JsonObject.fromJson("{\"UserID\":27,\"Name\":\"Jinesh\"}"));
 
-    assertEquals(expectedDeleteStatement, obtainedDeleteQuery.getLeft());
-    assertEquals(expectedPositionalParameters, obtainedDeleteQuery.getRight());
+    assertEquals(expectedDeleteStatement, obtainedDeleteQuery.statement());
+    assertEquals(expectedPositionalParameters, obtainedDeleteQuery.args());
 
     expectedDeleteStatement = "DELETE FROM bucket.scope.collection WHERE `array with spaces`=?;";
     expectedPositionalParameters = JsonArray.from(Collections.singletonList(Arrays.asList("a", "b")));
     obtainedDeleteQuery = AnalyticsSinkHandler.deleteQuery(
         "bucket.scope.collection", JsonObject.fromJson("{\"array with spaces\":[\"a\",\"b\"]}"));
 
-    assertEquals(expectedDeleteStatement, obtainedDeleteQuery.getLeft());
-    assertEquals(expectedPositionalParameters, obtainedDeleteQuery.getRight());
+    assertEquals(expectedDeleteStatement, obtainedDeleteQuery.statement());
+    assertEquals(expectedPositionalParameters, obtainedDeleteQuery.args());
 
   }
 

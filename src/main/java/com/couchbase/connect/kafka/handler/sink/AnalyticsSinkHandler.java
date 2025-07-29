@@ -27,20 +27,18 @@ import com.couchbase.connect.kafka.util.AnalyticsBatchBuilder;
 import com.couchbase.connect.kafka.util.N1qlData;
 import com.couchbase.connect.kafka.util.N1qlData.OperationType;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.kafka.common.config.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -49,25 +47,42 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 @Stability.Volatile
 public class AnalyticsSinkHandler implements SinkHandler {
+
+  protected static final class StatementAndArgs {
+    private final String statement;
+    private final JsonArray args;
+
+    public StatementAndArgs(String statement, JsonArray args) {
+      this.statement = requireNonNull(statement);
+      this.args = requireNonNull(args);
+    }
+
+    public String statement() {
+      return statement;
+    }
+
+    public JsonArray args() {
+      return args;
+    }
+  }
+
   private static final Logger log = LoggerFactory.getLogger(AnalyticsSinkHandler.class);
   protected String bucketName;
   protected int maxRecordsInBatchLimit;
   protected long maxSizeOfRecordsInBytesLimit;
   protected Duration analyticsQueryTimeout;
 
-  private static Pair<String, JsonArray> prepareWhereClauseForDelete(JsonObject documentKeys) {
-
-    List<Object> values = new ArrayList<>();
+  protected static StatementAndArgs deleteQuery(String keySpace, JsonObject documentKeys) {
+    JsonArray values = JsonArray.create();
     String whereClause = documentKeys.getNames().stream().map(key -> {
       values.add(documentKeys.get(key));
       return "`" + key + "`=?";
     }).collect(Collectors.joining(" AND "));
-    return Pair.of(whereClause, JsonArray.from(values));
-  }
 
-  protected static Pair<String, JsonArray> deleteQuery(String keySpace, JsonObject documentKeys) {
-    Pair<String, JsonArray> whereClause = prepareWhereClauseForDelete(documentKeys);
-    return Pair.of("DELETE FROM " + keySpace + " WHERE " + whereClause.getLeft() + ";", whereClause.getRight());
+    return new StatementAndArgs(
+        "DELETE FROM " + keySpace + " WHERE " + whereClause + ";",
+        values
+    );
   }
 
   protected static JsonObject getJsonObject(String object) {
@@ -144,10 +159,10 @@ public class AnalyticsSinkHandler implements SinkHandler {
         return SinkAction.ignore();
       }
 
-      Pair<String, JsonArray> deleteQuery = deleteQuery(keySpace, documentKeysJson);
+      StatementAndArgs deleteQuery = deleteQuery(keySpace, documentKeysJson);
       Mono<?> action = Mono.defer(() ->
           params.cluster()
-              .analyticsQuery(deleteQuery.getLeft(), analyticsOptions().timeout(analyticsQueryTimeout).parameters(deleteQuery.getRight()))
+              .analyticsQuery(deleteQuery.statement(), analyticsOptions().timeout(analyticsQueryTimeout).parameters(deleteQuery.args()))
               .map(ReactiveAnalyticsResult::metaData)); // metadata arrival signals query completion
 
       ConcurrencyHint concurrencyHint = ConcurrencyHint.of(documentKeys);
