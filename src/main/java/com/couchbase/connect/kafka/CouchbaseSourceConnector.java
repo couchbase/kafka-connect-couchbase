@@ -16,7 +16,9 @@
 package com.couchbase.connect.kafka;
 
 
-import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.topology.ClusterIdentifier;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.CouchbaseBucketTopology;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceConfig;
@@ -43,6 +45,7 @@ import static java.util.stream.Collectors.toList;
 public class CouchbaseSourceConnector extends SourceConnector {
   private Map<String, String> configProperties;
   private int numPartitions;
+  private String clusterUuid;
   private final ConnectorLifecycle lifecycle = new ConnectorLifecycle();
 
   @Override
@@ -65,7 +68,12 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
       try (KafkaCouchbaseClient client = new KafkaCouchbaseClient(config)) {
         Bucket bucket = client.bucket();
-        numPartitions = ((CouchbaseBucketConfig) CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout())).numberOfPartitions();
+        ClusterTopologyWithBucket topology = CouchbaseHelper.getConfig(bucket, config.bootstrapTimeout());
+        CouchbaseBucketTopology bucketTopology = (CouchbaseBucketTopology) topology.bucket();
+        numPartitions = bucketTopology.numberOfPartitions();
+
+        ClusterIdentifier id = topology.id();
+        clusterUuid = id == null ? "" : id.clusterUuid();
       }
 
     } catch (ConfigException e) {
@@ -96,6 +104,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
 
     String partitionsKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::partitions);
     String taskIdKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::maybeTaskId);
+    String clusterUuidKey = keyName(CouchbaseSourceTaskConfig.class, CouchbaseSourceTaskConfig::clusterUuid);
 
     List<Map<String, String>> taskConfigs = new ArrayList<>();
     int taskId = 0;
@@ -105,6 +114,7 @@ public class CouchbaseSourceConnector extends SourceConnector {
       Map<String, String> taskProps = new HashMap<>(configProperties);
       taskProps.put(partitionsKey, formattedPartitions);
       taskProps.put(taskIdKey, "maybe-" + taskId++);
+      taskProps.put(clusterUuidKey, clusterUuid);
       taskConfigs.add(taskProps);
     }
     return taskConfigs;

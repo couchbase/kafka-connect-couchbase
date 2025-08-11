@@ -35,12 +35,12 @@ import com.couchbase.connect.kafka.handler.source.SourceHandlerParams;
 import com.couchbase.connect.kafka.handler.source.SourceRecordBuilder;
 import com.couchbase.connect.kafka.util.ConnectHelper;
 import com.couchbase.connect.kafka.util.FirstCallTracker;
-import com.couchbase.connect.kafka.util.config.LookupTable;
 import com.couchbase.connect.kafka.util.ScopeAndCollection;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.Watchdog;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import com.couchbase.connect.kafka.util.config.LookupTable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.InvalidJsonException;
 import com.jayway.jsonpath.JsonPath;
@@ -195,8 +195,15 @@ public class CouchbaseSourceTask extends SourceTask {
       }
 
       String taskNumber = ConnectHelper.getTaskIdFromLoggingContext().orElse(config.maybeTaskId());
+      String clusterUuid = config.clusterUuid();
+      String bucketName = config.bucket();
 
       this.meterRegistry = newMeterRegistry(connectorName, taskNumber, config);
+      this.meterRegistry.config().commonTags(
+          "bucket", bucketName,
+          "clusterUuid", clusterUuid
+      );
+
       this.handlerTimer = meterRegistry.timer("handler");
       this.filterTimer = meterRegistry.timer("filter");
       this.filteredCounter = meterRegistry.counter("filtered.out");

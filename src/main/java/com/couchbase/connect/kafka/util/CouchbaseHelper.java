@@ -17,38 +17,39 @@
 package com.couchbase.connect.kafka.util;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.CouchbaseBucketTopology;
 import com.couchbase.client.java.Bucket;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
 public class CouchbaseHelper {
-  public static Mono<BucketConfig> getConfig(Core core, String bucketName) {
+  public static Mono<ClusterTopologyWithBucket> getConfig(Core core, String bucketName) {
     return core
         .configurationProvider()
         .configs()
         .flatMap(clusterConfig ->
-            Mono.justOrEmpty(clusterConfig.bucketConfig(bucketName)))
+            Mono.justOrEmpty(clusterConfig.bucketTopology(bucketName)))
         .filter(CouchbaseHelper::hasPartitionInfo)
         .next();
   }
 
   /**
-   * Returns true unless the config is from a newly-created bucket
+   * Returns true unless the topology is from a newly-created bucket
    * whose partition count is not yet available.
    */
-  private static boolean hasPartitionInfo(BucketConfig config) {
-    return ((CouchbaseBucketConfig) config).numberOfPartitions() > 0;
+  private static boolean hasPartitionInfo(ClusterTopologyWithBucket topology) {
+    CouchbaseBucketTopology bucketTopology = (CouchbaseBucketTopology) topology.bucket();
+    return bucketTopology.numberOfPartitions() > 0;
   }
 
 
-  public static Mono<BucketConfig> getConfig(Bucket bucket) {
+  public static Mono<ClusterTopologyWithBucket> getConfig(Bucket bucket) {
     return getConfig(bucket.core(), bucket.name());
   }
 
-  public static BucketConfig getConfig(Bucket bucket, Duration timeout) {
+  public static ClusterTopologyWithBucket getConfig(Bucket bucket, Duration timeout) {
     return getConfig(bucket).block(timeout);
   }
 }

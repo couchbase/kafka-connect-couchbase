@@ -17,8 +17,7 @@
 package com.couchbase.connect.kafka.config.source;
 
 import com.couchbase.client.dcp.util.PartitionSet;
-
-import java.util.List;
+import com.couchbase.connect.kafka.util.config.annotation.Default;
 
 public interface CouchbaseSourceTaskConfig extends CouchbaseSourceConfig {
   /**
@@ -35,4 +34,10 @@ public interface CouchbaseSourceTaskConfig extends CouchbaseSourceConfig {
    * by Connector.taskConfigs(int).
    */
   String maybeTaskId();
+
+  /**
+   * The unique identifier of the Couchbase Server cluster, or empty string if unknown.
+   */
+  @Default
+  String clusterUuid();
 }
