@@ -19,7 +19,7 @@ package com.couchbase.connect.kafka.filter;
 import com.couchbase.connect.kafka.handler.source.DocumentEvent;
 
 /**
- * Allows publication of any event, including events in system scopes.
+ * Allows publication of any event, including transaction metadata and events in system scopes.
  */
 public class AllPassIncludingSystemFilter implements Filter {
   @Override
