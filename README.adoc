@@ -1,5 +1,5 @@
-https://docs.couchbase.com/kafka-connector/4.2/release-notes.html[*Download*]
-| https://docs.couchbase.com/kafka-connector/4.2/index.html[*Documentation*]
+https://docs.couchbase.com/kafka-connector/current/release-notes.html[*Download*]
+| https://docs.couchbase.com/kafka-connector/current/index.html[*Documentation*]
 | https://issues.couchbase.com/projects/KAFKAC[*Issues*]
 | https://forums.couchbase.com/c/Kafka-Connector[*Discussion*]
 
