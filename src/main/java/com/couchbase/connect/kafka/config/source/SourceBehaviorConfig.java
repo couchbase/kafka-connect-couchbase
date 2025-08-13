@@ -150,11 +150,9 @@ public interface SourceBehaviorConfig {
    * The class name of the event filter to use.
    * The event filter determines whether a database change event is ignored.
    * <p>
-   * As of version 4.2.4, the default filter ignores
-   * events from the Couchbase `_system` scope.
-   * <p>
-   * As of version 4.3.0, the default filter also ignores transaction
-   * metadata documents (documents whose keys start with "_txn:").
+   * As of version 4.3.0, the default filter ignores events from the
+   * Couchbase `_system` scope, and also ignores transaction metadata documents
+   * (documents whose keys start with "_txn:").
    * <p>
    * If you are interested in those events too, set this property to
    * `com.couchbase.connect.kafka.filter.AllPassIncludingSystemFilter`.

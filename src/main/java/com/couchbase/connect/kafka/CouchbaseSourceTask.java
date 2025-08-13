@@ -123,7 +123,6 @@ public class CouchbaseSourceTask extends SourceTask {
       )
       .build();
 
-  private boolean filterIsNoop;
   private MultiSourceHandler sourceHandler;
   private CouchbaseHeaderSetter headerSetter;
   private int batchSizeMax;
@@ -222,7 +221,6 @@ public class CouchbaseSourceTask extends SourceTask {
 
       filter = Utils.newInstance(config.eventFilter());
       filter.init(unmodifiableProperties);
-      filterIsNoop = filter.getClass().equals(AllPassFilter.class); // not just instanceof, because user could do something silly like extend AllPassFilter.
 
       sourceHandler = createSourceHandler(config);
       sourceHandler.init(unmodifiableProperties);
@@ -485,8 +483,7 @@ public class CouchbaseSourceTask extends SourceTask {
         continue;
       }
 
-      // Don't record filter timings unless the filter is actually doing something.
-      boolean passed = filterIsNoop || filterTimer.record(() -> filter.pass(docEvent));
+      boolean passed = filterTimer.record(() -> filter.pass(docEvent));
       if (!passed) {
         lifecycle.logSkippedBecauseFilterSaysIgnore(e);
         dropped++;
