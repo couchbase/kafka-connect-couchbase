@@ -16,6 +16,8 @@
 
 package com.couchbase.connect.kafka.util;
 
+import com.couchbase.connect.kafka.handler.source.DocumentEvent;
+
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -46,6 +48,10 @@ public class ScopeAndCollection {
           e
       );
     }
+  }
+
+  public static ScopeAndCollection from(DocumentEvent docEvent) {
+    return new ScopeAndCollection(docEvent.collectionMetadata().scopeName(), docEvent.collectionMetadata().collectionName());
   }
 
   public ScopeAndCollection(String scope, String collection) {

@@ -473,7 +473,7 @@ public class CouchbaseSourceTask extends SourceTask {
 
       // Pre-filter with jsonpath
       boolean jsonpathPassed = jsonpathMatch(jsonPaths.get(
-          ScopeAndCollection.parse(docEvent.collectionMetadata().scopeName() + "." + docEvent.collectionMetadata().collectionName())),
+          ScopeAndCollection.from(docEvent)),
           docEvent.content()
       );
       if (!jsonpathPassed) {
