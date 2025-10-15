@@ -227,7 +227,8 @@ public interface SourceBehaviorConfig {
   String initialOffsetTopic();
 
   /**
-   * Controls maximum size of the batch for writing into topic.
+   * When the Kafka Connect framework polls the connector for new records,
+   * the connector returns no more than this many records at a time.
    */
   @Default("2000")
   int batchSizeMax();
