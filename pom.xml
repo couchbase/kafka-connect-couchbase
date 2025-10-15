@@ -48,7 +48,7 @@
 
     <properties>
         <kafka.version>2.8.2</kafka.version>
-        <dcp-client.version>0.55.0</dcp-client.version>
+        <dcp-client.version>0.56.0-SNAPSHOT</dcp-client.version>
         <runtime.javadoc.version>0.13.0</runtime.javadoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <dist-archive-name>${project.artifactId}-${project.version}.zip</dist-archive-name>
@@ -74,7 +74,7 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>couchbase-client-bom</artifactId>
-                <version>3.9.0</version>
+                <version>3.9.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
