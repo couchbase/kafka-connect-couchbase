@@ -404,6 +404,7 @@
                 <configuration>
                     <autoPublish>true</autoPublish>
                     <waitUntil>published</waitUntil>
+                    <ignorePublishedComponents>true</ignorePublishedComponents>
                 </configuration>
             </plugin>
             <plugin>

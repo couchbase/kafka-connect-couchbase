@@ -1,0 +1,71 @@
+name: Maven Deploy Release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        description: Tag to release. Must already exist.
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Verify the ref is actually a tag
+        run: git tag --list | grep --line-regexp ${{ inputs.tag }}
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+          server-id: 'central'
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
+          cache: 'maven'
+
+      - name: Printing maven version
+        run: ./mvnw --version
+
+      - name: Build and deploy to Maven Central
+        run: ./mvnw deploy --batch-mode -Dgpg.signer=bc -Prelease
+        env:
+          MAVEN_USERNAME: ${{ vars.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          MAVEN_GPG_KEY: ${{ secrets.SDK_ROBOT_GPG_PRIVATE_KEY }}
+          MAVEN_GPG_PASSPHRASE: ''
+
+      - uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::786014483886:role/SDK_GHA
+          aws-region: us-west-1
+
+      - name: Sign and publish connector package
+        # There isn't a nice way to sign an arbitrary file using the Maven GPG plugin,
+        # so cheat by "deploying" to a fake repository. We expect gpg:sign-and-deploy-file
+        # to fail, but not before it generates the signature.
+        run: |
+          VERS=${{ inputs.tag }}
+          ARTIFACT=couchbase-kafka-connect-couchbase-${VERS}.zip
+          cd target/components/packages
+          ls ${ARTIFACT}
+          ../../../mvnw gpg:sign-and-deploy-file -Dgpg.signer=bc -Dfile=${ARTIFACT} -Durl=fake -DgroupId=fake -DartifactId=fake -Dversion=fake -DgeneratePom=false || true
+          SIGNATURE=${ARTIFACT}.asc
+          ls ${SIGNATURE}
+          aws s3 cp --acl public-read ${ARTIFACT} s3://packages.couchbase.com/clients/kafka/${VERS}/${ARTIFACT}
+          aws s3 cp --acl public-read ${SIGNATURE} s3://packages.couchbase.com/clients/kafka/${VERS}/${SIGNATURE}
+
+      - name: Remove artifacts from Maven repo so they're not cached
+        run: rm -rfv ~/.m2/repository/com/couchbase/client/
