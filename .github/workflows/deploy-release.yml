@@ -66,6 +66,9 @@ jobs:
           ls ${SIGNATURE}
           aws s3 cp --acl public-read ${ARTIFACT} s3://packages.couchbase.com/clients/kafka/${VERS}/${ARTIFACT}
           aws s3 cp --acl public-read ${SIGNATURE} s3://packages.couchbase.com/clients/kafka/${VERS}/${SIGNATURE}
+        env:
+          MAVEN_GPG_KEY: ${{ secrets.SDK_ROBOT_GPG_PRIVATE_KEY }}
+          MAVEN_GPG_PASSPHRASE: ''
 
       - name: Remove artifacts from Maven repo so they're not cached
         run: rm -rfv ~/.m2/repository/com/couchbase/client/
