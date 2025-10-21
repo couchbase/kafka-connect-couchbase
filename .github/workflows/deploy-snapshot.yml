@@ -40,7 +40,7 @@ jobs:
         run: ./mvnw --version
 
       - name: Build and deploy to Maven Central
-        run: ./mvnw deploy --batch-mode -Dgpg.signer=bc -Psnapshot
+        run: ./mvnw -e -X deploy --batch-mode -Dgpg.signer=bc -Psnapshot
         env:
           MAVEN_USERNAME: ${{ vars.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
