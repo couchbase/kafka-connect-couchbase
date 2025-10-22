@@ -62,7 +62,8 @@ jobs:
           ARTIFACT=couchbase-kafka-connect-couchbase-${VERS}.zip
           cd target/components/packages
           ls ${ARTIFACT}
-          ../../../mvnw gpg:sign-and-deploy-file -Dgpg.signer=bc -Dfile=${ARTIFACT} -Durl=fake -DgroupId=fake -DartifactId=fake -Dversion=fake -DgeneratePom=false || true
+          ../../../mvnw gpg:sign-and-deploy-file --batch-mode -Dgpg.signer=bc -Dfile=${ARTIFACT} -Durl=fake -DgroupId=fake -DartifactId=fake -Dversion=fake -DgeneratePom=false || true
+          echo "Don't worry, we expected that to print a bunch of error messages. All that matters is that it created the signature file."
           SIGNATURE=${ARTIFACT}.asc
           ls ${SIGNATURE}
           aws s3 cp --acl public-read ${ARTIFACT} s3://packages.couchbase.com/clients/kafka/${VERS}/${ARTIFACT}
