@@ -67,6 +67,11 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <name>Confluent</name>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
@@ -134,6 +139,11 @@
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
             <version>1.12.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>7.9.0</version>
         </dependency>
         <dependency>
             <groupId>org.jspecify</groupId>

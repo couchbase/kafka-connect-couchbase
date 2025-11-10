@@ -95,25 +95,6 @@ public interface SourceBehaviorConfig {
   Class<?> sourceHandler();
 
   /**
-   * The schema to apply to the value of each record.
-   * <p>
-   * This property will be ignored unless the source handler specified by `couchbase.source.handler` supports it.
-   * <p>
-   * The built-in `com.couchbase.connect.kafka.handler.source.ConfigurableSchemaSourceHandler` supports this property.
-   * ConfigurableSchemaSourceHandler expects the schema to be an Avro Schema Record, stored in a JSON object. Reference: https://avro.apache.org/docs/1.12.0/specification/
-   * <p>
-   * ConfigurableSchemaSourceHandler will filter out documents that do not have a JSON Object at the root, and any that do not match the specified Schema..
-   */
-  @Stability.Uncommitted
-  @Default
-  @ContextDocumentation(
-      contextDescription = "the name of the collection to apply the schema to, qualified by scope",
-      sampleContext = "myScope.myCollection",
-      sampleValue = "{\"type\": \"typeName\", ...attributes...}"
-  )
-  Contextual<String> valueSchema();
-
-  /**
    * Comma-delimited list of Couchbase metadata headers to add to records.
    * Recognized values:
    * <p>
