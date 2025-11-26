@@ -17,14 +17,10 @@
 package com.couchbase.connect.kafka.handler.source;
 
 import com.couchbase.connect.kafka.transform.DeserializeJson;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
+import com.couchbase.connect.kafka.util.JsonHelper;
 import org.apache.kafka.connect.data.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 /**
  * This handler propagates JSON documents from Couchbase to Kafka verbatim with no schema.
@@ -61,48 +57,8 @@ import java.io.IOException;
 public class RawJsonSourceHandler implements SourceHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(RawJsonSourceHandler.class);
 
-  private static final JsonFactory jsonFactory = new JsonFactory();
-
   protected static boolean isValidJson(byte[] bytes) {
-    try {
-      final JsonParser parser = jsonFactory.createParser(bytes);
-      final JsonToken firstToken = parser.nextToken();
-
-      final JsonToken incrementDepthToken;
-      final JsonToken decrementDepthToken;
-
-      if (firstToken == JsonToken.START_OBJECT) {
-        incrementDepthToken = JsonToken.START_OBJECT;
-        decrementDepthToken = JsonToken.END_OBJECT;
-
-      } else if (firstToken == JsonToken.START_ARRAY) {
-        incrementDepthToken = JsonToken.START_ARRAY;
-        decrementDepthToken = JsonToken.END_ARRAY;
-
-      } else {
-        // valid if there's exactly one token.
-        return firstToken != null && parser.nextToken() == null;
-      }
-
-      int depth = 1;
-      JsonToken token;
-      while ((token = parser.nextToken()) != null) {
-        if (token == incrementDepthToken) {
-          depth++;
-        } else if (token == decrementDepthToken) {
-          depth--;
-          if (depth == 0 && parser.nextToken() != null) {
-            // multiple JSON roots, or trailing garbage
-            return false;
-          }
-        }
-      }
-    } catch (IOException e) {
-      // malformed
-      return false;
-    }
-
-    return true;
+    return JsonHelper.isValidJson(bytes);
   }
 
   @Override
@@ -142,7 +98,7 @@ public class RawJsonSourceHandler implements SourceHandler {
         }
 
         final byte[] document = docEvent.content();
-        if (!isValidJson(document)) {
+        if (!docEvent.isJson()) {
           LOGGER.warn("Skipping non-JSON document: bucket={} key={}", docEvent.bucket(), docEvent.qualifiedKey());
           return false;
         }

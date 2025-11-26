@@ -23,7 +23,6 @@ import com.couchbase.client.dcp.core.logging.RedactionLevel;
 import com.couchbase.client.dcp.highlevel.DocumentChange;
 import com.couchbase.client.dcp.util.PartitionSet;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
-import com.couchbase.connect.kafka.filter.AllPassFilter;
 import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CollectionMetadata;
 import com.couchbase.connect.kafka.handler.source.CouchbaseHeaderSetter;
@@ -471,16 +470,18 @@ public class CouchbaseSourceTask extends SourceTask {
         continue;
       }
 
-      // Pre-filter with jsonpath
-      boolean jsonpathPassed = jsonpathMatch(jsonPaths.get(
-          ScopeAndCollection.from(docEvent)),
-          docEvent.content()
-      );
-      if (!jsonpathPassed) {
-        lifecycle.logSkippedBecauseJsonpathFilterSaysIgnore(e);
-        dropped++;
-        blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e)));
-        continue;
+      // Pre-filter with jsonpath, only for JSON docs
+      if (docEvent.isJson()) { // This checks for valid JSON and returns false for non-mutation events
+        boolean jsonpathPassed = jsonpathMatch(jsonPaths.get(
+                ScopeAndCollection.from(docEvent)),
+            docEvent.content()
+        );
+        if (!jsonpathPassed) {
+          lifecycle.logSkippedBecauseJsonpathFilterSaysIgnore(e);
+          dropped++;
+          blackHoleTopic.ifPresent(topic -> results.add(createSourceOffsetUpdateRecord(topic, e)));
+          continue;
+        }
       }
 
       boolean passed = filterTimer.record(() -> filter.pass(docEvent));

@@ -19,7 +19,7 @@ package com.couchbase.connect.kafka.handler.source;
 
 import org.junit.jupiter.api.Test;
 
-import static com.couchbase.connect.kafka.handler.source.RawJsonSourceHandler.isValidJson;
+import static com.couchbase.connect.kafka.util.JsonHelper.isValidJson;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

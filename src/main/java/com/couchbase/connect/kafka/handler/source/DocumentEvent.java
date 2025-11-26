@@ -28,6 +28,7 @@ import java.util.Optional;
 import static com.couchbase.connect.kafka.handler.source.DocumentEvent.Type.DELETION;
 import static com.couchbase.connect.kafka.handler.source.DocumentEvent.Type.EXPIRATION;
 import static com.couchbase.connect.kafka.handler.source.DocumentEvent.Type.UNKNOWN;
+import static com.couchbase.connect.kafka.util.JsonHelper.isValidJson;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -55,6 +56,8 @@ public class DocumentEvent {
   private final DocumentChange change;
   private final String bucket;
 
+  private final boolean isJson;
+
   public static DocumentEvent create(DocumentChange change, String bucket) {
     return new DocumentEvent(change, bucket);
   }
@@ -62,6 +65,12 @@ public class DocumentEvent {
   private DocumentEvent(DocumentChange change, String bucket) {
     this.change = requireNonNull(change);
     this.bucket = requireNonNull(bucket);
+
+    if (this.isMutation()) {
+      this.isJson = isValidJson(change.getContent());
+    } else {
+      this.isJson = false;
+    }
   }
 
   /**
@@ -148,6 +157,14 @@ public class DocumentEvent {
     return isMutation()
         ? Optional.of(new MutationMetadata((Mutation) change))
         : Optional.empty();
+  }
+
+  /**
+   * Returns true if the mutation content is valid JSON,
+   * otherwise false. Non-mutation events always return false.
+   */
+  public boolean isJson() {
+    return this.isJson;
   }
 
   /**
