@@ -42,6 +42,7 @@ import com.couchbase.connect.kafka.util.config.ConfigHelper;
 import com.couchbase.connect.kafka.util.config.LookupTable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
@@ -428,7 +429,7 @@ public class CouchbaseSourceTask extends SourceTask {
       }
       List<?> result = filter.read(new ByteArrayInputStream(document), jsonpathConf);
       return !result.isEmpty();
-    } catch (InvalidJsonException | IOException e) {
+    } catch (InvalidJsonException | IOException | InvalidPathException e) {
       return false;
     }
   }
