@@ -23,6 +23,7 @@ import com.couchbase.connect.kafka.filter.Filter;
 import com.couchbase.connect.kafka.handler.source.CouchbaseHeaderSetter;
 import com.couchbase.connect.kafka.util.TopicMap;
 import com.couchbase.connect.kafka.util.config.Contextual;
+import com.couchbase.connect.kafka.util.config.SchemaFailureAction;
 import com.couchbase.connect.kafka.util.config.annotation.ContextDocumentation;
 import com.couchbase.connect.kafka.util.config.annotation.Default;
 import org.apache.kafka.common.config.ConfigDef;
@@ -52,26 +53,25 @@ public interface SchemaConfig {
   Contextual<String> valueSchema();
 
   /**
+   * Determines the behaviour when a Schema Mismatch or Missing Schema is encountered for a document using the Schema Registry.
    * This property will be ignored unless the source handler specified by `couchbase.source.handler` supports it.
    * The built-in 'com.couchbase.connect.kafka.handler.source.SchemaRegistrySourceHandler' supports this property.
    * <p>
-   * If set to a non-empty string, Documents that do not match the registered schema for a topic will be sent to the specified schema.
-   * <p>
-   * If left empty, Documents that do not match the registered schema for a topic will cause the Connector Task to fail.
+   * TERMINATE will stop processing documents so that the user can intervene or investigate. DROP will mark the document as SKIPPED_BECAUSE_HANDLER_SAYS_IGNORE.
+   * DLQ will send the document to a default topic acting as a dead letter queue, which can optionally be specified by the user.
    */
   @Stability.Uncommitted
-  @Default
-  String schemaMismatchTopic();
+  @Default("TERMINATE")
+  SchemaFailureAction schemaFailureAction();
 
   /**
    * This property will be ignored unless the source handler specified by `couchbase.source.handler` supports it.
    * The built-in 'com.couchbase.connect.kafka.handler.source.SchemaRegistrySourceHandler' supports this property.
    * <p>
-   * If set to a non-empty string, Documents sent to a topic with no registered schema will be sent to the specified missing schema topic
-   * <p>
-   * If left empty, Documents sent to a topic with no registered schema will cause the Connector Task to fail.
+   * If couchbase.schema.failure.action is set to DLQ then documents that encounter any Schema failures will be sent to this topic.
+   * Headers will be added for future investigation such as the intended destination and the reason it was sent to the DLQ
    */
   @Stability.Uncommitted
-  @Default
-  String missingSchemaTopic();
+  @Default("couchbase.dlq")
+  String dlqTopic();
 }

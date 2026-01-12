@@ -19,6 +19,8 @@ package com.couchbase.connect.kafka.handler.source;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.connect.kafka.config.source.CouchbaseSourceTaskConfig;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import com.couchbase.connect.kafka.util.config.SchemaFailureAction;
+import com.couchbase.connect.kafka.util.config.SchemaFailureReason;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientFactory;
@@ -41,8 +43,9 @@ public class SchemaRegistrySourceHandler implements SourceHandler{
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaRegistrySourceHandler.class);
   private SchemaRegistryClient schemaRegistry;
-  private String missingSchemaTopic;
-  private String mismatchSchemaTopic;
+  private String dlqTopic;
+  private SchemaFailureAction schemaFailureAction;
+  private String connectorName;
 
   @Override
   public void init(Map<String, String> configProperties) {
@@ -55,8 +58,9 @@ public class SchemaRegistrySourceHandler implements SourceHandler{
     );
 
     CouchbaseSourceTaskConfig config = ConfigHelper.parse(CouchbaseSourceTaskConfig.class, configProperties);
-    missingSchemaTopic = config.missingSchemaTopic();
-    mismatchSchemaTopic = config.schemaMismatchTopic();
+    dlqTopic = config.dlqTopic();
+    schemaFailureAction = config.schemaFailureAction();
+    connectorName = configProperties.get("name");
   }
 
   @Override
@@ -80,13 +84,25 @@ public class SchemaRegistrySourceHandler implements SourceHandler{
     }
 
     if (schema == null) {
-      if (missingSchemaTopic != null && !missingSchemaTopic.isEmpty()) {
-        LOGGER.info("No Schema found for topic: {}. Sending document with key: {} to missing schema topic: {}", params.topic(), params.documentEvent().key(), missingSchemaTopic);
-        builder.topic(missingSchemaTopic);
-        builder.value(Schema.BYTES_SCHEMA, params.documentEvent().content());
-        return builder;
-      } else {
-        throw new RuntimeException("No Schema found for topic: " + params.topic() + ". \n Register a schema or set couchbase.missing.schema.topic to send documents to a missing schema topic.");
+      switch (schemaFailureAction) {
+        case DLQ:
+          LOGGER.info("No Schema found for topic: {}. Sending document with key: {} to missing schema topic: {}", params.topic(), params.documentEvent().key(), dlqTopic);
+          builder.topic(dlqTopic);
+          builder.value(Schema.BYTES_SCHEMA, params.documentEvent().content());
+          builder.headers()
+              .addString("couchbase.dlq.reason", SchemaFailureReason.SCHEMA_MISSING.name())
+              .addString("couchbase.dlq.description", "No Schema found for topic: " + params.topic())
+              .addString("couchbase.connector.name", connectorName)
+              .addString("couchbase.destination.topic", params.topic())
+              .addString("couchbase.source.document.id", params.documentEvent().qualifiedKey());
+          return builder;
+        case DROP:
+          LOGGER.debug("No Schema found for topic: {}. Dropping document with key: {}", params.topic(), params.documentEvent().key());
+          return null;
+        case TERMINATE:
+          throw new RuntimeException("No Schema found for topic: " + params.topic() + ". \n Register a schema or set couchbase.schema.failure.action to specify a different action to take when a schema is missing.");
+        default:
+          throw new RuntimeException("Unexpected schema failure action: " + schemaFailureAction);
       }
     }
 
@@ -97,14 +113,26 @@ public class SchemaRegistrySourceHandler implements SourceHandler{
 
       builder.value(schema, record);
     } catch (Exception e) {
-      if (mismatchSchemaTopic != null && !mismatchSchemaTopic.isEmpty()) {
-        LOGGER.debug("Schema mismatch: ", e);
-        LOGGER.info("Schema mismatch for document with key: {} Sending to mismatch topic: {}", params.documentEvent().key(), mismatchSchemaTopic);
-        builder.topic(mismatchSchemaTopic);
-        builder.value(Schema.BYTES_SCHEMA, params.documentEvent().content());
-        return builder;
-      } else {
-        throw new RuntimeException("Schema mismatch for document with key: " + params.documentEvent().key() + ". \n Set couchbase.schema.mismatch.topic to send mismatched documents to a mismatch topic instead of throwing this error.", e);
+      switch (schemaFailureAction) {
+        case DLQ:
+          LOGGER.debug("Schema mismatch: ", e);
+          LOGGER.info("Schema mismatch for document with key: {} Sending to mismatch topic: {}", params.documentEvent().key(), dlqTopic);
+          builder.topic(dlqTopic);
+          builder.value(Schema.BYTES_SCHEMA, params.documentEvent().content());
+          builder.headers()
+              .addString("couchbase.dlq.reason", SchemaFailureReason.SCHEMA_MISMATCH.name())
+              .addString("couchbase.dlq.description", "Schema mismatch for destination topic. Version: " + schema.version())
+              .addString("couchbase.connector.name", connectorName)
+              .addString("couchbase.destination.topic", params.topic())
+              .addString("couchbase.source.document.id", params.documentEvent().qualifiedKey());
+          return builder;
+        case DROP:
+          LOGGER.debug("Dropping document with key: {}, due to Schema Mismatch", params.documentEvent().key());
+          return null;
+        case TERMINATE:
+          throw new RuntimeException("Schema mismatch for document with key: " + params.documentEvent().key() + ". \n Set couchbase.schema.failure.action to specify a different action to take when there is a schema mismatch.", e);
+        default:
+          throw new RuntimeException("Unexpected schema failure action: " + schemaFailureAction);
       }
     }
 
