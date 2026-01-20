@@ -96,6 +96,9 @@ This is a manual process.
 Send a polite email to our friends at Confluent.
 Let them know about the new download links for the connector and the GPG signature.
 
+## Announce the Release
+Send the release announcement to the sdk_distribution mailing list.
+
 ## Prepare for next dev cycle
 
 Increment the version number in `pom.xml` and restore the `-SNAPSHOT` suffix.
