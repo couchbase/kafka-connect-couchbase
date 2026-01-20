@@ -55,7 +55,7 @@ public interface SchemaConfig {
   /**
    * Determines the behaviour when a Schema Mismatch or Missing Schema is encountered for a document using the Schema Registry.
    * This property will be ignored unless the source handler specified by `couchbase.source.handler` supports it.
-   * The built-in 'com.couchbase.connect.kafka.handler.source.SchemaRegistrySourceHandler' supports this property.
+   * The built-in `com.couchbase.connect.kafka.handler.source.SchemaRegistrySourceHandler` supports this property.
    * <p>
    * TERMINATE will stop processing documents so that the user can intervene or investigate. DROP will mark the document as SKIPPED_BECAUSE_HANDLER_SAYS_IGNORE.
    * DLQ will send the document to a default topic acting as a dead letter queue, which can optionally be specified by the user.
@@ -66,9 +66,9 @@ public interface SchemaConfig {
 
   /**
    * This property will be ignored unless the source handler specified by `couchbase.source.handler` supports it.
-   * The built-in 'com.couchbase.connect.kafka.handler.source.SchemaRegistrySourceHandler' supports this property.
+   * The built-in `com.couchbase.connect.kafka.handler.source.SchemaRegistrySourceHandler` supports this property.
    * <p>
-   * If couchbase.schema.failure.action is set to DLQ then documents that encounter any Schema failures will be sent to this topic.
+   * If `couchbase.schema.failure.action` is set to DLQ then documents that encounter any Schema failures will be sent to this topic.
    * Headers will be added for future investigation such as the intended destination and the reason it was sent to the DLQ
    */
   @Stability.Uncommitted
