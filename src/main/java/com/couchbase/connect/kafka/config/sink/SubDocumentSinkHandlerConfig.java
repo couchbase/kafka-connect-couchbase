@@ -43,6 +43,8 @@ public interface SubDocumentSinkHandlerConfig {
   /**
    * Whether to add the parent paths if they are missing in the document.
    * <p>
+   * This property being set to false has no effect if `couchbase.subdocument.create.document` is set to true.
+   * <p>
    * This property is specific to `SubDocumentSinkHandler`.
    */
   @Default("true")
