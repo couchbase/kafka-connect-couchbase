@@ -43,18 +43,18 @@ public class DeserializeJson<R extends ConnectRecord<R>> implements Transformati
   @Override
   public R apply(R record) {
     final Object value = record.value();
-    final Map newValue;
+    final Object newValue;
 
     try {
       if (value == null) {
         return record;
 
       } else if (value instanceof byte[]) {
-        newValue = objectMapper.readValue((byte[]) value, Map.class);
+        newValue = objectMapper.readValue((byte[]) value, Object.class);
 
       } else if (value instanceof ByteBuffer) {
         try (ByteBufferInputStream in = new ByteBufferInputStream((ByteBuffer) value)) {
-          newValue = objectMapper.readValue(in, Map.class);
+          newValue = objectMapper.readValue(in, Object.class);
         }
 
       } else {
