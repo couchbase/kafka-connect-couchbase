@@ -61,10 +61,16 @@ public class DeserializeJson<R extends ConnectRecord<R>> implements Transformati
         throw new DataException(getClass().getSimpleName() + " transform expected value to be a byte array or ByteBuffer but got " + value.getClass().getName());
       }
 
-      return record.newRecord(record.topic(), record.kafkaPartition(),
+      R recordToReturn = record.newRecord(record.topic(), record.kafkaPartition(),
           record.keySchema(), record.key(),
           record.valueSchema(), newValue,
           record.timestamp());
+
+      if (newValue instanceof Map) {
+        recordToReturn.headers().addBoolean("couchbase.value.is.json.object", true);
+      }
+
+      return recordToReturn;
 
     } catch (IOException e) {
       throw new DataException(getClass().getSimpleName() + " transform expected value to be JSON but got something else.", e);
