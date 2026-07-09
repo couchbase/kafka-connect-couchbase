@@ -409,11 +409,10 @@
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.7.0</version>
+                <version>0.10.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <autoPublish>true</autoPublish>
-                    <waitUntil>published</waitUntil>
                     <ignorePublishedComponents>true</ignorePublishedComponents>
                 </configuration>
             </plugin>
