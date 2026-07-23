@@ -19,6 +19,7 @@ package com.couchbase.connect.kafka;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import dev.reo.census.ReoEventLogger;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
@@ -37,6 +38,13 @@ public class CouchbaseSinkConnector extends SinkConnector {
 
   @Override
   public void start(Map<String, String> properties) {
+    new ReoEventLogger(
+        ReoEventLogger.DEFAULT_ENDPOINT,
+        3.0,
+        "kafka-connect-couchbase",
+        Version.getVersion()
+    ).logEvent();
+
     configProperties = properties;
   }
 

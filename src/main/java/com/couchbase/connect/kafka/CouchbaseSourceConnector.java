@@ -27,6 +27,7 @@ import com.couchbase.connect.kafka.util.CouchbaseHelper;
 import com.couchbase.connect.kafka.util.ListHelper;
 import com.couchbase.connect.kafka.util.Version;
 import com.couchbase.connect.kafka.util.config.ConfigHelper;
+import dev.reo.census.ReoEventLogger;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.Task;
@@ -56,6 +57,13 @@ public class CouchbaseSourceConnector extends SourceConnector {
   @Override
   public void start(Map<String, String> properties) {
     lifecycle.logConnectorStarted(properties.get("name"));
+
+    new ReoEventLogger(
+        ReoEventLogger.DEFAULT_ENDPOINT,
+        3.0,
+        "kafka-connect-couchbase",
+        Version.getVersion()
+    ).logEvent();
 
     try {
       configProperties = properties;
