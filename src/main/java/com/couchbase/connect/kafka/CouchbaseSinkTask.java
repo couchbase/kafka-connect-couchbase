@@ -20,6 +20,7 @@ import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.connect.kafka.config.sink.CouchbaseSinkConfig;
 import com.couchbase.connect.kafka.config.sink.SinkBehaviorConfig.DocumentMode;
+import com.couchbase.connect.kafka.converter.SchemalessJsonConverter;
 import com.couchbase.connect.kafka.handler.sink.N1qlSinkHandler;
 import com.couchbase.connect.kafka.handler.sink.SinkAction;
 import com.couchbase.connect.kafka.handler.sink.SinkDocument;
@@ -42,7 +43,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
@@ -59,7 +59,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
 import static com.couchbase.connect.kafka.util.config.ConfigHelper.keyName;
@@ -70,7 +69,7 @@ public class CouchbaseSinkTask extends SinkTask {
 
   private LookupTable<String, Keyspace> topicToCollection;
   private KafkaCouchbaseClient client;
-  private JsonConverter converter;
+  private SchemalessJsonConverter converter;
   private LookupTable<String, DocumentIdExtractor> topicToDocumentIdExtractor;
   private LookupTable<String, Boolean> topicToRemoveDocumentId;
   private SinkHandler sinkHandler;
@@ -111,8 +110,7 @@ public class CouchbaseSinkTask extends SinkTask {
         .mapValues(v -> Keyspace.parse(v, config.bucket()))
         .withUnderlay(TopicMap.parseTopicToCollection(config.topicToCollection(), config.bucket()));
 
-    converter = new JsonConverter();
-    converter.configure(mapOf("schemas.enable", false), false);
+    converter = new SchemalessJsonConverter();
 
     topicToDocumentIdExtractor = config.documentId()
         .mapValues(DocumentIdExtractor::from)
