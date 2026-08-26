@@ -23,6 +23,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -83,6 +84,10 @@ public class KafkaCouchbaseClient implements Closeable {
     security
         .enableTls(config.enableTls())
         .enableHostnameVerification(config.enableHostnameVerification());
+
+    if (!CbCollections.isNullOrEmpty(config.cipherSuites())) {
+      security.ciphers(config.cipherSuites());
+    }
 
     if (!isNullOrEmpty(config.trustStorePath())) {
       security.trustStore(Paths.get(config.trustStorePath()), config.trustStorePassword().value(), Optional.empty());

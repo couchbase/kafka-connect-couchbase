@@ -23,6 +23,8 @@ import com.couchbase.connect.kafka.util.config.annotation.EnvironmentVariable;
 import com.couchbase.connect.kafka.util.config.annotation.Width;
 import org.apache.kafka.common.config.types.Password;
 
+import java.util.List;
+
 import static org.apache.kafka.common.config.ConfigDef.Width.LONG;
 
 public interface SecurityConfig {
@@ -41,6 +43,7 @@ public interface SecurityConfig {
       "couchbase.enable.hostname.verification",
       "couchbase.client.certificate.path",
       "couchbase.client.certificate.password",
+      "couchbase.cipher.suites",
   })
   @Default("false")
   @DisplayName("Enable TLS")
@@ -104,4 +107,14 @@ public interface SecurityConfig {
   @EnvironmentVariable("KAFKA_COUCHBASE_CLIENT_CERTIFICATE_PASSWORD")
   @Default
   Password clientCertificatePassword();
+
+  /**
+   * The custom list of ciphers to use when connecting to Couchbase using regular or DCP clients.
+   * <p>
+   * Note that this config is considered advanced, please only customize the cipher list if you know what
+   * you are doing (for example if you want to shrink the cipher list down to a very specific subset for security
+   * or compliance reasons).
+   */
+  @Default
+  List<String> cipherSuites();
 }
