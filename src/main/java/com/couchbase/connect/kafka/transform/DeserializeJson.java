@@ -16,10 +16,10 @@
 
 package com.couchbase.connect.kafka.transform;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
@@ -33,6 +33,10 @@ public class DeserializeJson<R extends ConnectRecord<R>> implements Transformati
 
   static {
     objectMapper.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+    // Don't let Jackson embed a fragment of the (potentially sensitive) record value in a
+    // parse error's location. Without this, the "[Source: (byte[])\"...\"]" clause carries the
+    // raw record value into the DataException below, and on into the log and task-status trace.
+    objectMapper.getFactory().disable(JsonParser.Feature.INCLUDE_SOURCE_IN_LOCATION);
   }
 
   public static final String OVERVIEW_DOC =
@@ -53,9 +57,10 @@ public class DeserializeJson<R extends ConnectRecord<R>> implements Transformati
         newValue = objectMapper.readValue((byte[]) value, Object.class);
 
       } else if (value instanceof ByteBuffer) {
-        try (ByteBufferInputStream in = new ByteBufferInputStream((ByteBuffer) value)) {
-          newValue = objectMapper.readValue(in, Object.class);
-        }
+        ByteBuffer buf = ((ByteBuffer) value).duplicate();
+        byte[] bytes = new byte[buf.remaining()];
+        buf.get(bytes);
+        newValue = objectMapper.readValue(bytes, Object.class);
 
       } else {
         throw new DataException(getClass().getSimpleName() + " transform expected value to be a byte array or ByteBuffer but got " + value.getClass().getName());
