@@ -1,0 +1,48 @@
+name: Smoke Test
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'master'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          # Java 8 runs the tests (via -Djvm), to check the connector still works on Java 8.
+          # Java 17 is listed last so it becomes JAVA_HOME, which runs Maven and compiles with --release 8.
+          java-version: |
+            8
+            17
+          cache: 'maven'
+
+      - name: run package tests
+        run: ./mvnw clean package --batch-mode --no-transfer-progress -Dmaven.javadoc.skip=true -Djvm=${JAVA_HOME_8_X64}/bin/java
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-results
+          path: '**/surefire-reports/**'
+          retention-days: 7
+
+      - name: Publish test results
+        if: ${{ !cancelled() }}
+        run: |
+          curl https://raw.githubusercontent.com/couchbaselabs/junit-markdown/refs/heads/main/JunitMarkdown.java --output ${{ runner.temp }}/JunitMarkdown.java
+          java ${{ runner.temp }}/JunitMarkdown.java . >> $GITHUB_STEP_SUMMARY
